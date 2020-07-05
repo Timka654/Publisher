@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "Publisher.Client": {
+      "commandName": "Project",
+      "commandLineArgs": "/action:publish /project_id:0c013e3e-6936-48de-ac99-236c4220c842 /directory:Release\\WebApi /auth_key_path:Publisher\\api_Timka_4e67fd6c-c3bf-4e14-87e4-0e617b3a2f18.pubuk /ip:45.84.227.218 /port:6583 /cipher_out_key:\"!{b1HX11R**\" /cipher_in_key:\"!{b1HX11R**\" /success_args:\"/newVersion:0.0.0.0 /os:Windows\"",
+      "workingDirectory": "D:\\Projects\\AppFox\\CRM\\AppFoxCMS"
+    }
+  }
+}
