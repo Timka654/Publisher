@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Publisher.Basic
+﻿namespace Publisher.Basic
 {
     public enum ClientPackets
     {
@@ -12,10 +6,17 @@ namespace Publisher.Basic
         FileListResult,
 
         ServerLog,
-        RunNotify,
-        ProjectPublishStart,
+        ProjectPublishStart = 5,
         ProjectPublishEndResult,
-        ProjectFileStartResult,
-        UploadFileResult
+        FilePublishStartResult,
+        UploadFileBytesResult,
+        ExplorerDownloadFileResult,
+        ExplorerCreateSignFileResult,
+        ExplorerSignInResult,
+        ExplorerRemoveSignFileResult,
+        ExplorerPathRemoveResult,
+        ExplorerGetProjectListResult,
+        ExplorerGetFileListResult,
+        ExplorerUploadFileResult
     }
 }

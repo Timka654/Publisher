@@ -1,10 +1,7 @@
 ﻿using Publisher.Server.Info;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Publisher.Server.Managers.Storages
 {
@@ -54,7 +51,7 @@ namespace Publisher.Server.Managers.Storages
 
         internal bool ExistProject(string directory)
         {
-            return storage.Any(x => string.Compare(x.Value.ProjectDirPath, directory,true) > -1);
+            return storage.Any(x => x.Value.ProjectDirPath.Equals(directory, StringComparison.OrdinalIgnoreCase));
         }
     }
 }

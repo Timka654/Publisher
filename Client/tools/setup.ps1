@@ -6,7 +6,9 @@ Set-Location ..
 
 $currLocation = (Get-Location).Path
 
-if ([System.IO.File]::Exists("Publisher.Client.deps.json") -eq $false) {
+Set-Location $backLocation
+
+if ([System.IO.File]::Exists("$currLocation/Publisher.Client.deps.json") -eq $false) {
     Write-Error "Client files not found in current path $currLocation"
     exit
 }
@@ -14,7 +16,7 @@ if ([System.IO.File]::Exists("Publisher.Client.deps.json") -eq $false) {
 $setupPath = ""
 do {
     $setupPath = GetValue -text "Install path"
-    if (([System.IO.Directory]::Exists($setupPath) -eq $true) -and ([System.IO.Directory]::GetFiles($setupPath).Count -ne 0)) {
+    if (([System.IO.Directory]::Exists($setupPath) -eq $true) -and ([System.IO.Directory]::GetFiles($setupPath).Count -ne 0) -and (([System.IO.File]::Exists("$setupPath/Publisher.Client.deps.json") -eq $false))) {
         Write-Host "Install path ""$setupPath"" must be empty"
         continue
     }
@@ -24,7 +26,7 @@ do {
 }
 while ($true);
 
-Copy-Item -Path $currLocation -Destination $setupPath -Recurse -Container
+Copy-Item -Path "$currLocation/*" -Destination $setupPath -Recurse -Container -Force -Confirm:$true
 
 Set-Location $setupPath
 

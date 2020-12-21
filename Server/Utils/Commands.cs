@@ -1,14 +1,11 @@
-﻿using Publisher.Server.Info;
-using Publisher.Server.Managers;
+﻿using Publisher.Basic;
+using Publisher.Server.Info;
 using Publisher.Server.Network;
 using ServerOptions.Extensions.Manager;
 using SocketServer;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Publisher.Server.Tools
 {
@@ -119,7 +116,7 @@ namespace Publisher.Server.Tools
 
             options.HelperLogger = StaticInstances.ServerLogger;
 
-            options.LoadManagers(Assembly.GetExecutingAssembly(), typeof(ManagerLoadAttribute));
+            options.LoadManagers<NetworkClient>(Assembly.GetExecutingAssembly(), typeof(ManagerLoadAttribute));
 
             action(args);
 

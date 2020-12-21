@@ -6,11 +6,7 @@ using ServerOptions.Extensions.Manager;
 using ServerOptions.Extensions.Packet;
 using SocketServer;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Publisher.Server.Network
 {
@@ -45,16 +41,16 @@ namespace Publisher.Server.Network
             options = StaticInstances.ServerConfiguration.LoadConfigurationServerOptions<NetworkClient>("server");
             options.HelperLogger = StaticInstances.ServerLogger;
 
-            options.LoadManagers(Assembly.GetExecutingAssembly(), typeof(ManagerLoadAttribute));
+            options.LoadManagers<NetworkClient>(Assembly.GetExecutingAssembly(), typeof(ManagerLoadAttribute));
             options.LoadPackets(Assembly.GetExecutingAssembly(), typeof(ServerPacketAttribute));
 
             options.OnClientConnectEvent += Options_OnClientConnectEvent;
             options.OnClientDisconnectEvent += Options_OnClientDisconnectEvent;
-            options.OnExtensionEvent += Options_OnExtensionEvent;
+            options.OnExceptionEvent += Options_OnExceptionEvent;
 
 
-            options.inputCipher = new XRC4Cipher(StaticInstances.ServerConfiguration.GetValue("server/io.input.key"));
-            options.outputCipher = new XRC4Cipher(StaticInstances.ServerConfiguration.GetValue("server/io.output.key"));
+            options.inputCipher = new XRC4Cipher(StaticInstances.ServerConfiguration.GetValue("server.io.input.key"));
+            options.outputCipher = new XRC4Cipher(StaticInstances.ServerConfiguration.GetValue("server.io.output.key"));
 
             server = new ServerListener<NetworkClient>(options);
 #if DEBUG
@@ -76,7 +72,7 @@ namespace Publisher.Server.Network
             StaticInstances.ServerLogger.AppendInfo($"Stop binding on {options.IpAddress}:{options.Port}");
         }
 
-        private void Options_OnExtensionEvent(Exception ex, NetworkClient client)
+        private void Options_OnExceptionEvent(Exception ex, NetworkClient client)
         {
             StaticInstances.ServerLogger.AppendInfo($"client error {client?.Network?.GetRemovePoint()} - {ex}");
         }

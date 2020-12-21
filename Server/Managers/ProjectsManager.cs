@@ -1,17 +1,13 @@
 ﻿using Cipher.RSA;
 using Newtonsoft.Json;
-using Publisher.Server.Configuration;
 using Publisher.Server.Info;
 using Publisher.Server.Managers.Storages;
 using Publisher.Server.Network;
 using ServerOptions.Extensions.Manager;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Publisher.Server.Managers
 {
@@ -20,7 +16,9 @@ namespace Publisher.Server.Managers
     {
         public static ProjectsManager Instance { get; private set; }
 
-        public static string ProjectsFilePath => StaticInstances.ServerConfiguration.GetValue("paths/projects_library");
+        public static string ProjectsFilePath => StaticInstances.ServerConfiguration.GetValue("paths.projects_library");
+
+        public static string ProjectsBackupDirPath => StaticInstances.ServerConfiguration.GetValue("paths.projects_backup.dir");
 
         private FileSystemWatcher directoryWatcher;
 
@@ -33,14 +31,13 @@ namespace Publisher.Server.Managers
             StaticInstances.ServerLogger.AppendInfo("Load projects finished");
         }
 
-
         internal void SignIn(NetworkClient client, string project_id, string user_id, byte[] key)
         {
             var session = StaticInstances.SessionManager.GetUser(user_id);
 
             if (session != null && session.CurrentNetwork != null && session.CurrentNetwork.AliveState)
             {
-                Network.Packets.Project.SignIn.Send(client, Basic.SignStateEnum.AlreadyConnected);
+                Network.Packets.Project.SignInPacket.Send(client, Basic.SignStateEnum.AlreadyConnected);
                 return;
             }
 
@@ -48,7 +45,7 @@ namespace Publisher.Server.Managers
 
             if (proj == null)
             {
-                Network.Packets.Project.SignIn.Send(client, Basic.SignStateEnum.ProjectNotFound);
+                Network.Packets.Project.SignInPacket.Send(client, Basic.SignStateEnum.ProjectNotFound);
                 return;
             }
 
@@ -56,7 +53,7 @@ namespace Publisher.Server.Managers
 
             if (user == null)
             {
-                Network.Packets.Project.SignIn.Send(client, Basic.SignStateEnum.UserNotFound);
+                Network.Packets.Project.SignInPacket.Send(client, Basic.SignStateEnum.UserNotFound);
                 return;
             }
 
@@ -78,16 +75,15 @@ namespace Publisher.Server.Managers
                 StaticInstances.SessionManager.AddUser(client.UserInfo);
 
                 client.RunAliveChecker();
-                Network.Packets.Project.SignIn.Send(client, Basic.SignStateEnum.Ok);
+                Network.Packets.Project.SignInPacket.Send(client, Basic.SignStateEnum.Ok);
 
                 proj.StartProcess(user);
                 return;
             }
 
 
-            Network.Packets.Project.SignIn.Send(client, Basic.SignStateEnum.UserNotFound);
+            Network.Packets.Project.SignInPacket.Send(client, Basic.SignStateEnum.UserNotFound);
         }
-
 
         private void LoadWatcher()
         {

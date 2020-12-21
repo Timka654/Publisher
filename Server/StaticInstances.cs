@@ -1,12 +1,7 @@
-﻿using Logger;
+﻿using SCLogger;
 using Publisher.Server.Configuration;
 using Publisher.Server.Managers;
 using Publisher.Server.Network;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Publisher.Server
 {

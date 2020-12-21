@@ -2,24 +2,23 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp5.0</TargetFramework>
+    <TargetFramework>net5.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="ConfigurationEngine.Providers.Json" Version="2020.12.18.445" />
     <PackageReference Include="Microsoft.PowerShell.Commands.Diagnostics" Version="7.1.0-preview.3" />
     <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.1.0-preview.3" />
+    <PackageReference Include="SCLogger" Version="2020.12.18.445" />
+    <PackageReference Include="ServerOptions.Extensions.ConfigurationEngine" Version="2020.12.18.445" />
+    <PackageReference Include="SocketCore.Extensions.Manager" Version="2020.12.18.445" />
+    <PackageReference Include="SocketCore.Extensions.Packet" Version="2020.12.18.445" />
+    <PackageReference Include="SocketServer" Version="2020.12.18.445" />
     <PackageReference Include="System.Management.Automation" Version="7.1.0-preview.3" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Publisher.Basic\Publisher.Basic.csproj" />
-    <ProjectReference Include="D:\Projects\AppFox\SocketServerLibrary\Cipher(NET.Standard)\Cipher.csproj" />
-    <ProjectReference Include="D:\Projects\AppFox\SocketServerLibrary\ConfigurationEngine.Providers.Json\ConfigurationEngine.Providers.Json.csproj" />
-    <ProjectReference Include="D:\Projects\AppFox\SocketServerLibrary\Configuration\ConfigurationEngine.csproj" />
-    <ProjectReference Include="D:\Projects\AppFox\SocketServerLibrary\ServerOptions.Extensions.ConfigurationEngine\ServerOptions.Extensions.ConfigurationEngine.csproj" />
-    <ProjectReference Include="D:\Projects\AppFox\SocketServerLibrary\ServerOptions.Extensions.Manager\ServerOptions.Extensions.Manager.csproj" />
-    <ProjectReference Include="D:\Projects\AppFox\SocketServerLibrary\ServerOptions.Extensions.Packet\ServerOptions.Extensions.Packet.csproj" />
-    <ProjectReference Include="D:\Projects\AppFox\SocketServerLibrary\SocketServer\SocketServer.csproj" />
   </ItemGroup>
 
   <ItemGroup>

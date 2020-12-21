@@ -1,15 +1,16 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp5.0</TargetFramework>
+    <TargetFramework>net5.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Publisher.Basic\Publisher.Basic.csproj" />
-    <ProjectReference Include="D:\Projects\AppFox\SocketServerLibrary\ClientOptions.Extensions.Packet\ClientOptions.Extensions.Packet.csproj" />
-    <ProjectReference Include="D:\Projects\AppFox\SocketServerLibrary\Logger\Logger.csproj" />
-    <ProjectReference Include="D:\Projects\AppFox\SocketServerLibrary\SCL\SCL.csproj" />
+    <None Remove="run_debug.ps1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Publisher.Client.Library\Publisher.Client.Library.csproj" />
   </ItemGroup>
 
   <ItemGroup>

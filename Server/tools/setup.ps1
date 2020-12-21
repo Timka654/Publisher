@@ -49,6 +49,7 @@ else {
 	}
 	$execFilePath = [System.IO.Path]::Combine($setupPath, "Publisher.Server")
 	chmod +x $execFilePath
+	ln -sfn $execFilePath /usr/bin/PublisherServer
 	Write-Host "Invoke ./setup-service-linux for install publisher linux server with sudo"
 }
 Set-Location $setupPath/tools/

@@ -1,13 +1,7 @@
 ﻿using ConfigurationEngine;
 using ConfigurationEngine.Info;
 using ConfigurationEngine.Providers.Json;
-using Publisher.Server.Info;
-using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Publisher.Server.Configuration
 {
@@ -18,7 +12,7 @@ namespace Publisher.Server.Configuration
             //new ConfigurationInfo("project/directory","","")
         };
 
-        public DefaultConfigurationManager(string fileName, char nodeSeparator = '/') : base(fileName, nodeSeparator)
+        public DefaultConfigurationManager(string fileName) : base(fileName)
         {
             Provider = new LoadingProvider();
             OnLog += StaticInstances.ServerLogger.Append;

@@ -1,9 +1,7 @@
-﻿using Logger;
+﻿using SCLogger;
 using Newtonsoft.Json;
-using Publisher.Server.Configuration;
 using Publisher.Server.Network;
 using Publisher.Server.Network.Packets;
-using Publisher.Server.Tools;
 using SocketCore.Utils.Buffer;
 using System;
 using System.Collections.Concurrent;
@@ -12,11 +10,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Management.Automation;
-using System.Management.Automation.Runspaces;
-using System.Runtime.Intrinsics.X86;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
+using Publisher.Basic;
+using Publisher.Server.Managers;
 
 namespace Publisher.Server.Info
 {
@@ -399,6 +395,27 @@ namespace Publisher.Server.Info
             UsersWatch.Changed += UsersWatch_Changed; 
             UsersWatch.Deleted += UsersWatch_Deleted;
             UsersWatch.EnableRaisingEvents = true;
+
+            SettingsWatch = new FileSystemWatcher(PublisherDirPath, new FileInfo(ProjectFilePath).Name);
+
+            SettingsWatch.Changed += SettingsWatch_Changed;
+            SettingsWatch.Deleted += SettingsWatch_Deleted;
+            SettingsWatch.EnableRaisingEvents = true;
+        }
+
+        private void SettingsWatch_Deleted(object sender, FileSystemEventArgs e)
+        {
+            ProjectsManager.Instance.RemoveProject(this);
+        }
+
+        private void SettingsWatch_Changed(object sender, FileSystemEventArgs e)
+        {
+            try
+            {
+                string json = File.ReadAllText(ProjectFilePath);
+                Reload(JsonConvert.DeserializeObject<ProjectInfoData>(json));
+            }
+            catch { }
         }
 
         private void UsersWatch_Deleted(object sender, FileSystemEventArgs e)
@@ -408,10 +425,10 @@ namespace Publisher.Server.Info
 
         private void UsersWatch_Changed(object sender, FileSystemEventArgs e)
         {
-            UserInfo user = null;
-            try { user = new UserInfo(e.FullPath); } catch { return; }
-
-            AddOrUpdateUser(user);
+            try { 
+                var user = new UserInfo(e.FullPath);
+                AddOrUpdateUser(user); 
+            } catch {  }
         }
 
         private void AddOrUpdateUser(UserInfo user)
@@ -478,6 +495,8 @@ namespace Publisher.Server.Info
         private readonly List<UserInfo> users = new List<UserInfo>();
 
         public FileSystemWatcher UsersWatch;
+
+        public FileSystemWatcher SettingsWatch;
 
         private void CreateDefault()
         {

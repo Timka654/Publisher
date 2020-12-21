@@ -1,16 +1,13 @@
 ﻿using Cipher.RSA;
 using Publisher.Basic;
-using Publisher.Client.Packets.Project;
-using Publisher.Server.Tools;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
+using System.Text.Json;
 
 namespace Publisher.Client
 {
@@ -107,11 +104,12 @@ namespace Publisher.Client
                 if (!File.Exists(authKeyPath))
                 {
                     StaticInstances.ServerLogger.AppendError($"Auth key file {temp_path} or {authKeyPath} not exists");
+                    Environment.Exit(0);
                 }
             }
 
-            var inputKey = args.ContainsKey("cipher_out_key") ? args["cipher_out_key"] : "!{b1HX11R**";
-            var outputKey = args.ContainsKey("cipher_in_key") ? args["cipher_in_key"] : "!{b1HX11R**";
+            var inputKey = args["cipher_out_key"];
+            var outputKey = args["cipher_in_key"];
 
             projectId = args["project_id"];
 
@@ -123,10 +121,10 @@ namespace Publisher.Client
                 Environment.Exit(0);
             }
 
-            Packets.Project.ProjectPublishStart.Instance.OnReceiveEvent += ProjectPublishStart_OnReceiveEvent;
-            ServerLog.Instance.OnReceiveEvent += Instance_OnReceiveEvent;
+            network.OnProjectPublishStartMessage += ProjectPublishStart_OnReceiveEvent;
+            network.OnServerLogMessage += Instance_OnReceiveEvent;
 
-            userInfo = System.Text.Json.JsonSerializer.Deserialize<BasicUserInfo>(File.ReadAllText(authKeyPath), options: new System.Text.Json.JsonSerializerOptions() { IgnoreNullValues = true, IgnoreReadOnlyProperties = true,  });
+            userInfo = JsonSerializer.Deserialize<BasicUserInfo>(File.ReadAllText(authKeyPath), options: new JsonSerializerOptions() { IgnoreNullValues = true, IgnoreReadOnlyProperties = true, });
 
             var result = await SignIn();
 
@@ -154,7 +152,7 @@ namespace Publisher.Client
                 item.CalculateHash();
             }
 
-            remoteFileList = await FileList.Send();
+            remoteFileList = await network.GetFileList();
 
             uploadFileList.RemoveAll(x => remoteFileList.Any(r => r.RelativePath == x.RelativePath && r.Hash == x.Hash));
 
@@ -172,7 +170,7 @@ namespace Publisher.Client
             {
                 currLen = bufLen;
 
-                await ProjectFileStart.Send(item);
+                await network.FilePublishStart(item);
 
                 fs = item.FileInfo.OpenRead();
 
@@ -183,7 +181,7 @@ namespace Publisher.Client
                     if (currLen == 0)
                         break;
 
-                    await UploadFile.Send(buf, currLen);
+                    await network.UploadFileBytes(buf, currLen);
 
                 } while (currLen == bufLen);
 
@@ -191,9 +189,9 @@ namespace Publisher.Client
 
             }
 
-            await ProjectPublishEnd.Send(successArgs);
+            await network.ProjectPublishEnd(successArgs);
 
-            network.Client.Disconnect();
+            network.Disconnect();
             //await Task.Delay(15000);
 
             Environment.Exit(0);
@@ -228,7 +226,7 @@ namespace Publisher.Client
             var temp = Encoding.ASCII.GetBytes(userInfo.Id);
             temp = rsa.Encode(temp,0, temp.Length);
 
-           return await Packets.Project.SignIn.Send(projectId, userInfo, temp);
+           return await network.SignIn(projectId, userInfo, temp);
         }
     }
 }
