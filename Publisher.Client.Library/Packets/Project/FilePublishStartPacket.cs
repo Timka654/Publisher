@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Publisher.Client.Packets.Project
 {
-    [ClientPacket(Basic.ClientPackets.FilePublishStartResult)]
+    [ClientPacket(Basic.PublisherClientPackets.FilePublishStartResult)]
     internal class FilePublishStartPacket : IPacketReceive<NetworkClient,object>
     {
         private static FilePublishStartPacket Instance;
@@ -24,7 +24,7 @@ namespace Publisher.Client.Packets.Project
         public static async Task Send(BasicFileInfo file)
         {
             var packet = new OutputPacketBuffer();
-            packet.SetPacketId(ServerPackets.FilePublishStart);
+            packet.SetPacketId(PublisherServerPackets.FilePublishStart);
 
             packet.WritePath(file.RelativePath);
 

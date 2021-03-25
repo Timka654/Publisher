@@ -11,7 +11,7 @@ $project_id = GetValue -text "Введите идентификатор прое
 $project_name = GetValue -text "Введите название проекта"
 
 if ($IsWindows) {
-    $execFile = "Publisher.Server.exe"
+    $execFile = "./Publisher.Server.exe"
 }
 else {
     $execFile = "./Publisher.Server"

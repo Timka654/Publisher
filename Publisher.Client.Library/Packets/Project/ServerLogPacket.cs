@@ -4,7 +4,7 @@ using SocketCore.Utils.Buffer;
 
 namespace Publisher.Client.Packets.Project
 {
-    [ClientPacket(Basic.ClientPackets.ServerLog)]
+    [ClientPacket(Basic.PublisherClientPackets.ServerLog)]
     internal class ServerLogPacket : IPacketMessage<NetworkClient, string>
     {
         public static ServerLogPacket Instance { get; private set; }

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Publisher.Client.Packets.Project
 {
-    [ClientPacket(Basic.ClientPackets.FileListResult)]
+    [ClientPacket(Basic.PublisherClientPackets.FileListResult)]
     internal class FileListPacket : IPacketReceive<NetworkClient, List<BasicFileInfo>>
     {
         private static FileListPacket Instance;
@@ -39,7 +39,7 @@ namespace Publisher.Client.Packets.Project
         public static async Task<List<BasicFileInfo>> Send()
         {
             var packet = new OutputPacketBuffer();
-            packet.SetPacketId(ServerPackets.ProjectFileList);
+            packet.SetPacketId(PublisherServerPackets.ProjectFileList);
             return await Instance.SendWaitAsync(packet);
         }
     }

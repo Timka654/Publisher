@@ -10,11 +10,7 @@ namespace Client
         static void Main(string[] args)
         {
             AppDomain.CurrentDomain.ProcessExit += CurrentDomain_ProcessExit;
-            if (Commands.Process())
-                while (true)
-                {
-                    Thread.Sleep(500);
-                }
+            Commands.Process();
         }
 
         private static void CurrentDomain_ProcessExit(object sender, EventArgs e)

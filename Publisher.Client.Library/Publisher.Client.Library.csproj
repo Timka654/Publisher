@@ -5,9 +5,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="SCL" Version="2020.12.18.445" />
-    <PackageReference Include="SCLogger" Version="2020.12.18.445" />
-    <PackageReference Include="SocketCore.Extensions.Packet" Version="2020.12.18.445" />
+    <PackageReference Include="SCL" Version="2021.3.25.1111" />
+    <PackageReference Include="SCLogger" Version="2021.3.25.1111" />
+    <PackageReference Include="SocketCore.Extensions.Packet" Version="2021.3.25.1111" />
   </ItemGroup>
 
   <ItemGroup>

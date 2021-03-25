@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace Publisher.Client.Packets.Project
 {
-    [ClientPacket(Basic.ClientPackets.ProjectPublishStart)]
+    [ClientPacket(Basic.PublisherClientPackets.ProjectPublishStart)]
     internal class ProjectPublishStartPacket : IPacketMessage<NetworkClient,List<string>>
     {
         public static ProjectPublishStartPacket Instance { get; private set; }

@@ -8,7 +8,7 @@ namespace Publisher.Client.Tools
     {
         private static readonly Dictionary<string, Action<CommandLineArgs>> commands = new Dictionary<string, Action<CommandLineArgs>>()
         {
-            { "publish", (new Publish()).Run },
+            { "publish", (cmd) => (new Publish()).Run(cmd).ConfigureAwait(true).GetAwaiter().GetResult() },
         };
 
         public static bool Process()

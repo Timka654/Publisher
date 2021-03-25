@@ -3,4 +3,7 @@
 https://go.microsoft.com/fwlink/?LinkID=208121. 
 -->
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <History>True|2021-03-23T09:37:20.3805107Z;True|2021-03-23T11:21:23.7712989+02:00;True|2021-03-23T11:13:00.9077652+02:00;True|2021-03-23T11:10:32.8335029+02:00;True|2021-03-23T01:58:25.6392178+02:00;</History>
+  </PropertyGroup>
 </Project>

@@ -5,7 +5,7 @@ namespace Publisher.Client
 {
     internal class ClientPacketAttribute : PacketAttribute
     {
-        public ClientPacketAttribute(ClientPackets packetId) : base((ushort)packetId)
+        public ClientPacketAttribute(PublisherClientPackets packetId) : base((ushort)packetId)
         {
         }
     }

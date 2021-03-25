@@ -2,6 +2,7 @@
 {
     public enum SignStateEnum
     {
+        CannotConnected,
         UserNotFound,
         ProjectNotFound,
         AlreadyConnected,

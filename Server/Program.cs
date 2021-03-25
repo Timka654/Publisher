@@ -15,7 +15,7 @@ namespace Publisher.Server
             ServerConfigurationManager.Initialize();
 
 
-            if (Commands.Process())
+            if ((new Commands()).Process())
                 return;
 
             if (args.Contains("/service"))
@@ -24,7 +24,7 @@ namespace Publisher.Server
             }
             else
             {
-                NetworkServer.Start();
+                PublisherNetworkServer.Instance.Load();
 
                 Thread.Sleep(Timeout.Infinite);
             }

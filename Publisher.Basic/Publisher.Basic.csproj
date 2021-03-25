@@ -5,7 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="SocketCore" Version="2020.12.18.445" />
+    <PackageReference Include="SocketCore" Version="2021.3.25.1111" />
   </ItemGroup>
 
 </Project>

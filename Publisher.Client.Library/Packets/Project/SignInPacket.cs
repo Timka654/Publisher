@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Publisher.Client.Packets.Project
 {
-    [ClientPacket(Basic.ClientPackets.SignInResult)]
+    [ClientPacket(Basic.PublisherClientPackets.SignInResult)]
     internal class SignInPacket : IPacketReceive<NetworkClient,SignStateEnum>
     {
         private static SignInPacket Instance;
@@ -25,7 +25,7 @@ namespace Publisher.Client.Packets.Project
         public static async Task<SignStateEnum> Send(string projectId, BasicUserInfo user, byte[] encoded)
         {
             var packet = new OutputPacketBuffer();
-            packet.SetPacketId(ServerPackets.SignIn);
+            packet.SetPacketId(PublisherServerPackets.SignIn);
             packet.WriteString16(user.Id);
             packet.WriteString16(projectId);
             packet.WriteInt32(encoded.Length);

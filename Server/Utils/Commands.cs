@@ -5,20 +5,28 @@ using ServerOptions.Extensions.Manager;
 using SocketServer;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Management.Automation.Remoting;
 using System.Reflection;
 
 namespace Publisher.Server.Tools
 {
     public class Commands
     {
-        private static readonly Dictionary<string, Action<CommandLineArgs>> commands = new Dictionary<string, Action<CommandLineArgs>>()
+        protected readonly Dictionary<string, Action<CommandLineArgs>> commands;
+
+        public Commands()
         {
-            { "create_project", CreateProject },
-            { "create_user", CreateUser }
-        };
+            commands = new Dictionary<string, Action<CommandLineArgs>>()
+            {
+                { "create_project", CreateProject },
+                { "create_user", CreateUser },
+                { "add_user", AddUser },
+                { "clone_identity", CloneIdentity }
+            };
+        }
 
-
-        private static void CreateProject(CommandLineArgs args)
+        protected void CreateProject(CommandLineArgs args)
         {
             StaticInstances.ServerLogger.AppendInfo("Create project");
 
@@ -32,7 +40,11 @@ namespace Publisher.Server.Tools
                 StaticInstances.ServerLogger.AppendError($"create project must have \"name\" parameter");
                 return;
             }
-
+            if (args.ContainsKey("project_id") && !Guid.TryParse(args["project_id"], out var pid))
+            {
+                StaticInstances.ServerLogger.AppendError($"create project \"project_id\" parameter must have GUID format");
+                return;
+            }
 
             if (StaticInstances.ProjectsManager.ExistProject(args["directory"]))
             {
@@ -50,7 +62,7 @@ namespace Publisher.Server.Tools
             StaticInstances.ServerLogger.AppendInfo($"project {proj.Info.Name} by id {proj.Info.Id} created");
         }
 
-        private static void CreateUser(CommandLineArgs args)
+        protected void CreateUser(CommandLineArgs args)
         {
             StaticInstances.ServerLogger.AppendInfo("Create user");
 
@@ -84,7 +96,6 @@ namespace Publisher.Server.Tools
                 else
                 {
                     StaticInstances.ServerLogger.AppendError($"create user must have \"project_name\" or \"project_id\" parameter");
-                    return;
                 }
                 return;
             }
@@ -96,7 +107,105 @@ namespace Publisher.Server.Tools
                 StaticInstances.ServerLogger.AppendInfo($"user {user.Name} by id {user.Id} created");
         }
 
-        public static bool Process()
+        protected void AddUser(CommandLineArgs args)
+        {
+            StaticInstances.ServerLogger.AppendInfo("Add user");
+            if (!args.ContainsKey("project_id"))
+            {
+                StaticInstances.ServerLogger.AppendError($"Add user must have \"project_id\" parameter");
+                return;
+            }
+
+            if (!args.ContainsKey("path"))
+            {
+                StaticInstances.ServerLogger.AppendError($"Add user must have \"path\" parameter");
+                return;
+            }
+
+            ProjectInfo pi = StaticInstances.ProjectsManager.GetProject(args["project_id"]);
+
+            if (pi == null)
+            {
+                StaticInstances.ServerLogger.AppendError($"project by project_id = {args["project_id"]} not found");
+                return;
+            }
+
+            var f = new FileInfo(args["path"]);
+
+            if (f.Extension != "priuk")
+            {
+                StaticInstances.ServerLogger.AppendError($"{f.FullName} must have .priuk extension");
+                return;
+            }
+
+            var dest = Path.Combine(pi.UsersDirPath, f.Name);
+
+            File.Copy(args["path"], dest);
+
+            StaticInstances.ServerLogger.AppendError($"{f.FullName} private key copied to {pi.Info.Name} project ({dest})");
+        }
+
+        protected void CloneIdentity(CommandLineArgs args)
+        {
+            StaticInstances.ServerLogger.AppendInfo("Clone identity");
+
+            if (!args.ContainsKey("source_project_id"))
+            {
+                StaticInstances.ServerLogger.AppendError($"Clone identity must have \"source_project_id\" parameter");
+                return;
+            }
+
+            if (!args.ContainsKey("destination_project_id"))
+            {
+                StaticInstances.ServerLogger.AppendError($"Clone identity must have \"destination_project_id\" parameter");
+                return;
+            }
+
+            ProjectInfo pisrc = StaticInstances.ProjectsManager.GetProject(args["source_project_id"]);
+            ProjectInfo pidest = StaticInstances.ProjectsManager.GetProject(args["destination_project_id"]);
+
+            if (pisrc == null || pidest == null)
+            {
+                if (pisrc == null)
+                {
+                    StaticInstances.ServerLogger.AppendError($"project by source_project_id = {args["source_project_id"]} not found");
+                }
+                else
+                {
+                    StaticInstances.ServerLogger.AppendError($"project by destination_project_id = {args["destination_project_id"]} not found");
+                }
+
+                return;
+            }
+
+            var files = new DirectoryInfo(pisrc.UsersDirPath).GetFiles("*.priuk");
+
+            var priKeyCount = files.Length;
+
+            foreach (var item in files)
+            {
+                item.CopyTo(Path.Combine(pidest.UsersDirPath, item.Name), true);
+            }
+
+            if (!args.ContainsKey("only_private"))
+            {
+                files = new DirectoryInfo(pisrc.UsersPublicksDirPath).GetFiles("*.pubuk");
+
+                var pubKeyCount = files.Length;
+
+                foreach (var item in files)
+                {
+                    item.CopyTo(Path.Combine(pidest.UsersPublicksDirPath, item.Name), true);
+                }
+                StaticInstances.ServerLogger.AppendError($"{priKeyCount} private and {pubKeyCount} public keys copied from  {pisrc.Info.Name} to {pidest.Info.Name}");
+                return;
+            }
+
+            StaticInstances.ServerLogger.AppendError($"{priKeyCount} private keys copied from  {pisrc.Info.Name} to {pidest.Info.Name}");
+
+        }
+
+        public bool Process()
         {
             CommandLineArgs args = new CommandLineArgs();
 
@@ -112,11 +221,11 @@ namespace Publisher.Server.Tools
             }
             StaticInstances.CommandExecutor = true;
 
-            ServerOptions<NetworkClient> options = new ServerOptions<NetworkClient>();
+            ServerOptions<PublisherNetworkClient> options = new ServerOptions<PublisherNetworkClient>();
 
             options.HelperLogger = StaticInstances.ServerLogger;
 
-            options.LoadManagers<NetworkClient>(Assembly.GetExecutingAssembly(), typeof(ManagerLoadAttribute));
+            options.LoadManagers<PublisherNetworkClient>(Assembly.GetExecutingAssembly(), typeof(ManagerLoadAttribute));
 
             action(args);
 

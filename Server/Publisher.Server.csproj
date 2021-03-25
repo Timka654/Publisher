@@ -6,15 +6,18 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ConfigurationEngine.Providers.Json" Version="2020.12.18.445" />
+    <PackageReference Include="ConfigurationEngine.Providers.Json" Version="2021.3.25.1111" />
     <PackageReference Include="Microsoft.PowerShell.Commands.Diagnostics" Version="7.1.0-preview.3" />
     <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.1.0-preview.3" />
-    <PackageReference Include="SCLogger" Version="2020.12.18.445" />
-    <PackageReference Include="ServerOptions.Extensions.ConfigurationEngine" Version="2020.12.18.445" />
-    <PackageReference Include="SocketCore.Extensions.Manager" Version="2020.12.18.445" />
-    <PackageReference Include="SocketCore.Extensions.Packet" Version="2020.12.18.445" />
-    <PackageReference Include="SocketServer" Version="2020.12.18.445" />
+    <PackageReference Include="NetScript" Version="2021.3.25.1111" />
+    <PackageReference Include="Network.Extensions" Version="2021.3.25.1111" />
+    <PackageReference Include="SCLogger" Version="2021.3.25.1111" />
+    <PackageReference Include="ServerOptions.Extensions.ConfigurationEngine" Version="2021.3.25.1111" />
+    <PackageReference Include="SocketCore.Extensions.Manager" Version="2021.3.25.1111" />
+    <PackageReference Include="SocketCore.Extensions.Packet" Version="2021.3.25.1111" />
+    <PackageReference Include="SocketServer" Version="2021.3.25.1111" />
     <PackageReference Include="System.Management.Automation" Version="7.1.0-preview.3" />
+    <PackageReference Include="Utils" Version="2021.3.25.1111" />
   </ItemGroup>
 
   <ItemGroup>
@@ -29,12 +32,18 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="ServerSettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
     <None Update="setup.ps1">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="tools\clone_identity.ps1">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="tools\create_project.ps1">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="tools\add_user.ps1">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="tools\create_user.ps1">

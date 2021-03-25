@@ -9,7 +9,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Publisher.Client", "Client\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Publisher.Basic", "Publisher.Basic\Publisher.Basic.csproj", "{091AFF09-6DD6-4DD2-9DFA-7AC472005C82}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Publisher.Client.Library", "Publisher.Client.Library\Publisher.Client.Library.csproj", "{A99E06D6-1A3E-403A-B6FF-DCAFD40AD309}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Publisher.Client.Library", "Publisher.Client.Library\Publisher.Client.Library.csproj", "{A99E06D6-1A3E-403A-B6FF-DCAFD40AD309}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

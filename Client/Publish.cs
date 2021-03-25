@@ -13,7 +13,7 @@ namespace Publisher.Client
 {
     public class Publish
     {
-        private readonly int bufLen = 16198;
+        private readonly int bufLen = 40960;
 
         public static Publish Instance { get; set; }
 
@@ -37,7 +37,7 @@ namespace Publisher.Client
             StaticInstances.ServerLogger.AppendInfo(v);
         }
 
-        public async void Run(CommandLineArgs args)
+        public async Task Run(CommandLineArgs args)
         {
             StaticInstances.ServerLogger.AppendInfo("run");
 
@@ -131,19 +131,9 @@ namespace Publisher.Client
             if (result != SignStateEnum.Ok)
             {
                 StaticInstances.ServerLogger.AppendInfo($"sign result {Enum.GetName(typeof(SignStateEnum),result)}, error");
-                Environment.Exit(0);
             }
-
-        }
-
-        private void Instance_OnReceiveEvent(string value)
-        {
-            StaticInstances.ServerLogger.AppendInfo(value);
-        }
-
-        private async void ProjectPublishStart_OnReceiveEvent(List<string> value)
-        {
-            ignorePatternList = value;
+            
+            StepLocker.WaitOne();
 
             uploadFileList = GetFiles(publishDirectory).Select(x => new BasicFileInfo(publishDirectory, x)).ToList();
 
@@ -158,6 +148,19 @@ namespace Publisher.Client
 
             await UploadFiles();
         }
+
+        private void Instance_OnReceiveEvent(string value)
+        {
+            StaticInstances.ServerLogger.AppendInfo(value);
+        }
+
+        private void ProjectPublishStart_OnReceiveEvent(List<string> value)
+        {
+            ignorePatternList = value;
+            StepLocker.Set();
+        }
+
+        private System.Threading.AutoResetEvent StepLocker = new System.Threading.AutoResetEvent(false);
 
         private async Task UploadFiles()
         {

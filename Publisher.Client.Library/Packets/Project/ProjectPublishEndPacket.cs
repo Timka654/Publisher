@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Publisher.Client.Packets.Project
 {
-    [ClientPacket(Basic.ClientPackets.ProjectPublishEndResult)]
+    [ClientPacket(Basic.PublisherClientPackets.ProjectPublishEndResult)]
     internal class ProjectPublishEndPacket : IPacketReceive<NetworkClient, bool>
     {
         private static ProjectPublishEndPacket Instance { get; set; }
@@ -26,7 +26,7 @@ namespace Publisher.Client.Packets.Project
         {
             var packet = new OutputPacketBuffer();
 
-            packet.SetPacketId(Basic.ServerPackets.ProjectPublishEnd);
+            packet.SetPacketId(Basic.PublisherServerPackets.ProjectPublishEnd);
 
             var a = args.GetArgs();
 

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Publisher.Client.Packets.Project
 {
-    [ClientPacket(Basic.ClientPackets.UploadFileBytesResult)]
+    [ClientPacket(Basic.PublisherClientPackets.UploadFileBytesResult)]
     internal class UploadFileBytesPacket : IPacketReceive<NetworkClient, bool>
     {
         private static UploadFileBytesPacket Instance { get; set; }
@@ -25,7 +25,7 @@ namespace Publisher.Client.Packets.Project
         {
             var packet = new OutputPacketBuffer(len);
 
-            packet.SetPacketId(Basic.ServerPackets.UploadFileBytes);
+            packet.SetPacketId(Basic.PublisherServerPackets.UploadFileBytes);
 
             packet.WriteInt32(len);
             packet.Write(buf);
