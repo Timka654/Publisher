@@ -9,7 +9,7 @@
     <PackageReference Include="ConfigurationEngine.Providers.Json" Version="2021.3.25.1111" />
     <PackageReference Include="Microsoft.PowerShell.Commands.Diagnostics" Version="7.1.0-preview.3" />
     <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.1.0-preview.3" />
-    <PackageReference Include="NetScript" Version="2021.3.25.1111" />
+    <PackageReference Include="NetScript" Version="2021.3.25.354" />
     <PackageReference Include="Network.Extensions" Version="2021.3.25.1111" />
     <PackageReference Include="SCLogger" Version="2021.3.25.1111" />
     <PackageReference Include="ServerOptions.Extensions.ConfigurationEngine" Version="2021.3.25.1111" />
@@ -35,6 +35,9 @@
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
     <None Update="setup.ps1">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="tools\check_scripts.ps1">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="tools\clone_identity.ps1">

@@ -60,17 +60,29 @@ namespace Publisher.Server.Info
 
         public string ScriptsDirPath => Path.Combine(PublisherDirPath, "scripts");
 
-        public string OnStartScriptPath => Path.Combine(ScriptsDirPath, "OnStart.ps1");
+        public string OnStartScriptPath => Path.Combine(ScriptsDirPath, "OnStart.cs");
 
-        public string OnEndScriptPath => Path.Combine(ScriptsDirPath, "OnEnd.ps1");
+        public string OnEndScriptPath => Path.Combine(ScriptsDirPath, "OnEnd.cs");
 
-        public string OnFileStartScriptPath => Path.Combine(ScriptsDirPath, "OnFileStart.ps1");
+        public string OnFileStartScriptPath => Path.Combine(ScriptsDirPath, "OnFileStart.cs");
 
-        public string OnFileEndScriptPath => Path.Combine(ScriptsDirPath, "OnFileEnd.ps1");
+        public string OnFileEndScriptPath => Path.Combine(ScriptsDirPath, "OnFileEnd.cs");
 
-        public string OnSuccessEndScriptPath => Path.Combine(ScriptsDirPath, "OnSuccessEnd.ps1");
+        public string OnSuccessEndScriptPath => Path.Combine(ScriptsDirPath, "OnSuccessEnd.cs");
 
-        public string OnFailedScriptPath => Path.Combine(ScriptsDirPath, "OnFailedEnd.ps1");
+        public string OnFailedScriptPath => Path.Combine(ScriptsDirPath, "OnFailedEnd.cs");
+
+        //public string OnStartScriptPath => Path.Combine(ScriptsDirPath, "OnStart.ps1");
+
+        //public string OnEndScriptPath => Path.Combine(ScriptsDirPath, "OnEnd.ps1");
+
+        //public string OnFileStartScriptPath => Path.Combine(ScriptsDirPath, "OnFileStart.ps1");
+
+        //public string OnFileEndScriptPath => Path.Combine(ScriptsDirPath, "OnFileEnd.ps1");
+
+        //public string OnSuccessEndScriptPath => Path.Combine(ScriptsDirPath, "OnSuccessEnd.ps1");
+
+        //public string OnFailedScriptPath => Path.Combine(ScriptsDirPath, "OnFailedEnd.ps1");
 
         #endregion
 
@@ -78,70 +90,232 @@ namespace Publisher.Server.Info
 
         #region Scripts
 
-        private void buildScripts()
-        { 
-        
-        }
-
-
-        private void runScript(string fname, IEnumerable<KeyValuePair<string, object>> pms)
+        private void CheckScriptsExists(NetScript.Script script = null)
         {
-            if (!File.Exists(fname))
-                return;
+            if (File.Exists(Path.Combine(ScriptsDirPath, "ScriptCore.cs")) == false)
+                File.WriteAllText(Path.Combine(ScriptsDirPath, "ScriptCore.cs"), (script ?? new NetScript.Script()).DumpCoreCode());
 
-            PowerShell ps = PowerShell.Create();
-
-
-                ps.Streams.Error.DataAdded += Error_DataAdded;
-            ps.Streams.Debug.DataAdded += Error_DataAdded;
-            ps.Streams.Information.DataAdded += Error_DataAdded;
-            ps.Streams.Progress.DataAdded += Error_DataAdded;
-            ps.Streams.Verbose.DataAdded += Error_DataAdded;
-            ps.Streams.Warning.DataAdded += Error_DataAdded;
-
-
-            //ps.AddScript("Set-ExecutionPolicy AllSigned -Scope LocalMachine");
-            ps.AddCommand(fname, true);
-            foreach (var item in pms)
+            if (File.Exists(OnStartScriptPath) == false)
             {
-                ps.AddParameter(item.Key, item.Value);
+                StringBuilder scriptContent = new StringBuilder();
+                scriptContent.AppendLine("public partial class PublisherScript {");
+
+                scriptContent.AppendLine("\tpublic static void OnStart() {");
+                scriptContent.AppendLine("\t}");
+
+                scriptContent.AppendLine("}");
+
+                File.WriteAllText(OnStartScriptPath, scriptContent.ToString());
             }
 
+            if (File.Exists(OnEndScriptPath) == false)
+            {
+                StringBuilder scriptContent = new StringBuilder();
+                scriptContent.AppendLine("public partial class PublisherScript {");
 
-            var result = ps.Invoke();
+                scriptContent.AppendLine("\tpublic static void OnEnd() {");
+                scriptContent.AppendLine("\t}");
+
+                scriptContent.AppendLine("}");
+
+                File.WriteAllText(OnEndScriptPath, scriptContent.ToString());
+            }
+
+            if (File.Exists(OnFileStartScriptPath) == false)
+            {
+                StringBuilder scriptContent = new StringBuilder();
+
+                scriptContent.AppendLine("using System.Collections;");
+                scriptContent.AppendLine("using System.Collections.Generic;");
+
+                scriptContent.AppendLine();
+
+                scriptContent.AppendLine("public partial class PublisherScript {");
+
+                scriptContent.AppendLine("\tpublic static void OnFileStart(Dictionary<string, object> args) {");
+                scriptContent.AppendLine("\t}");
+
+                scriptContent.AppendLine("}");
+
+                File.WriteAllText(OnFileStartScriptPath, scriptContent.ToString());
+            }
+
+            if (File.Exists(OnFileEndScriptPath) == false)
+            {
+                StringBuilder scriptContent = new StringBuilder();
+
+                scriptContent.AppendLine("using System.Collections;");
+                scriptContent.AppendLine("using System.Collections.Generic;");
+
+                scriptContent.AppendLine();
+
+                scriptContent.AppendLine("public partial class PublisherScript {");
+
+                scriptContent.AppendLine("\tpublic static void OnFileEnd(Dictionary<string, object> args) {");
+                scriptContent.AppendLine("\t}");
+
+                scriptContent.AppendLine("}");
+
+                File.WriteAllText(OnFileEndScriptPath, scriptContent.ToString());
+            }
+
+            if (File.Exists(OnSuccessEndScriptPath) == false)
+            {
+                StringBuilder scriptContent = new StringBuilder();
+
+                scriptContent.AppendLine("using System.Collections;");
+                scriptContent.AppendLine("using System.Collections.Generic;");
+
+                scriptContent.AppendLine();
+
+                scriptContent.AppendLine("public partial class PublisherScript {");
+
+                scriptContent.AppendLine("\tpublic static void OnSuccessEnd(Dictionary<string, object> args) {");
+                scriptContent.AppendLine("\t}");
+
+                scriptContent.AppendLine("}");
+
+                File.WriteAllText(OnSuccessEndScriptPath, scriptContent.ToString());
+            }
+
+            if (File.Exists(OnFailedScriptPath) == false)
+            {
+                StringBuilder scriptContent = new StringBuilder();
+                scriptContent.AppendLine("public partial class PublisherScript {");
+
+                scriptContent.AppendLine("\tpublic static void OnFailed() {");
+                scriptContent.AppendLine("\t}");
+
+                scriptContent.AppendLine("}");
+
+                File.WriteAllText(OnFailedScriptPath, scriptContent.ToString());
+            }
         }
 
-        private void Error_DataAdded(object sender, DataAddedEventArgs e)
+        NetScript.Script script;
+
+        DateTime? scriptLatestBuilded;
+        DateTime? scriptLatestChanged;
+
+        private NetScript.Script getScript()
         {
-            if (sender is PSDataCollection<ProgressRecord> p)
-            {
-                BroadcastMessage($"Complete {p[e.Index].PercentComplete}%");
-            }
-            else if (sender is PSDataCollection<ErrorRecord> err)
-            {
-                BroadcastMessage(err[e.Index].ToString());
-            }
-            else if (sender is PSDataCollection<InformationRecord> info)
-            {
-                BroadcastMessage(info[e.Index].ToString());
-            }
-            else if (sender is PSDataCollection<VerboseRecord> verb)
-            {
-                BroadcastMessage(verb[e.Index].ToString());
-            }
-            else if (sender is PSDataCollection<WarningRecord> warn)
-            {
-                BroadcastMessage(warn[e.Index].ToString());
-            }
+            if (scriptLatestBuilded.HasValue && scriptLatestBuilded >= scriptLatestChanged)
+                return script;
+
+            script = new NetScript.Script();
+
+            script.RegisterExecutableReference();
+
+            script.RegisterCoreReference("System.dll");
+            script.RegisterCoreReference("System.IO.dll");
+            script.RegisterCoreReference("System.Linq.dll");
+            script.RegisterCoreReference("System.Collections.dll");
+            script.RegisterCoreReference("System.Diagnostics.Process.dll");
+
+            script.RegistrationGlobalVariable(new NetScript.GlobalVariable("CurrentProject", typeof(ProjectInfo)));
+
+            CheckScriptsExists(script);
+
+            script.AddFolder(ScriptsDirPath, true);
+
+            script.Compile();
+
+            script.SetGlobalVariable("CurrentProject", this);
+
+            scriptLatestBuilded = DateTime.UtcNow;
+
+            return script;
         }
 
-        private void Process_OutputDataReceived(object sender, DataReceivedEventArgs e)
+        internal void CheckScripts()
         {
-            if (string.IsNullOrEmpty(e.Data))
-                return;
-
-            BroadcastMessage(e.Data);
+            getScript();
         }
+
+        private void runScript(string functionName, Dictionary<string, object> pms)
+        {
+            if(pms == null)
+                getScript().InvokeMethod("PublisherScript", functionName, null);
+            else
+                getScript().InvokeMethod("PublisherScript", functionName,null,pms);
+        }
+
+        private void runScriptOnStart() => runScript("OnStart", null);
+
+        private void runScriptOnEnd() => runScript("OnEnd",null);
+
+        private void runScriptOnFileStart(string fullPath) => runScript("OnFileStart", new Dictionary<string, object>() {
+            { "FilePath", fullPath }
+        });
+
+        private void runScriptOnFileEnd(string fullPath) => runScript("OnFileEnd", new Dictionary<string, object>() {
+            { "FilePath", fullPath }
+        });
+
+        internal void runScriptOnSuccessEnd(Dictionary<string, string> args) => runScript("OnSuccessEnd", args.ToDictionary(x=>x.Key, x=>(object)x.Value));
+
+
+        private void runScriptOnFailedEnd() => runScript("OnFailed", null);
+
+
+        //private void runScript(string fname, IEnumerable<KeyValuePair<string, object>> pms)
+        //{
+        //    if (!File.Exists(fname))
+        //        return;
+
+        //    PowerShell ps = PowerShell.Create();
+
+
+        //        ps.Streams.Error.DataAdded += Error_DataAdded;
+        //    ps.Streams.Debug.DataAdded += Error_DataAdded;
+        //    ps.Streams.Information.DataAdded += Error_DataAdded;
+        //    ps.Streams.Progress.DataAdded += Error_DataAdded;
+        //    ps.Streams.Verbose.DataAdded += Error_DataAdded;
+        //    ps.Streams.Warning.DataAdded += Error_DataAdded;
+
+
+        //    //ps.AddScript("Set-ExecutionPolicy AllSigned -Scope LocalMachine");
+        //    ps.AddCommand(fname, true);
+        //    foreach (var item in pms)
+        //    {
+        //        ps.AddParameter(item.Key, item.Value);
+        //    }
+
+
+        //    var result = ps.Invoke();
+        //}
+
+        //private void Error_DataAdded(object sender, DataAddedEventArgs e)
+        //{
+        //    if (sender is PSDataCollection<ProgressRecord> p)
+        //    {
+        //        BroadcastMessage($"Complete {p[e.Index].PercentComplete}%");
+        //    }
+        //    else if (sender is PSDataCollection<ErrorRecord> err)
+        //    {
+        //        BroadcastMessage(err[e.Index].ToString());
+        //    }
+        //    else if (sender is PSDataCollection<InformationRecord> info)
+        //    {
+        //        BroadcastMessage(info[e.Index].ToString());
+        //    }
+        //    else if (sender is PSDataCollection<VerboseRecord> verb)
+        //    {
+        //        BroadcastMessage(verb[e.Index].ToString());
+        //    }
+        //    else if (sender is PSDataCollection<WarningRecord> warn)
+        //    {
+        //        BroadcastMessage(warn[e.Index].ToString());
+        //    }
+        //}
+
+        //private void Process_OutputDataReceived(object sender, DataReceivedEventArgs e)
+        //{
+        //    if (string.IsNullOrEmpty(e.Data))
+        //        return;
+
+        //    BroadcastMessage(e.Data);
+        //}
 
         public void BroadcastMessage(string log)
         {
@@ -165,31 +339,31 @@ namespace Publisher.Server.Info
             return args2;
         }
 
-        private void runScriptOnStart() => runScript(OnStartScriptPath, new List<KeyValuePair<string, object>>() {
-          new KeyValuePair<string, object>("CurrentDir", ProjectDirPath)
-        });
+        //private void runScriptOnStart() => runScript(OnStartScriptPath, new List<KeyValuePair<string, object>>() {
+        //  new KeyValuePair<string, object>("CurrentDir", ProjectDirPath)
+        //});
 
-        private void runScriptOnEnd() => runScript(OnEndScriptPath, new List<KeyValuePair<string, object>>() {
-          new KeyValuePair<string, object>("CurrentDir", ProjectDirPath)
-        });
+        //private void runScriptOnEnd() => runScript(OnEndScriptPath, new List<KeyValuePair<string, object>>() {
+        //  new KeyValuePair<string, object>("CurrentDir", ProjectDirPath)
+        //});
 
-        private void runScriptOnFileStart(string fullPath) => runScript(OnFileStartScriptPath, new List<KeyValuePair<string, object>>() {
-          new KeyValuePair<string, object>("CurrentDir", ProjectDirPath),
-          new KeyValuePair<string, object>("FilePath", fullPath)
-        });
+        //private void runScriptOnFileStart(string fullPath) => runScript(OnFileStartScriptPath, new List<KeyValuePair<string, object>>() {
+        //  new KeyValuePair<string, object>("CurrentDir", ProjectDirPath),
+        //  new KeyValuePair<string, object>("FilePath", fullPath)
+        //});
 
-        private void runScriptOnFileEnd(string fullPath) => runScript(OnFileEndScriptPath, new List<KeyValuePair<string, object>>() {
-          new KeyValuePair<string, object>("CurrentDir", ProjectDirPath),
-          new KeyValuePair<string, object>("FilePath", fullPath)
-        });
+        //private void runScriptOnFileEnd(string fullPath) => runScript(OnFileEndScriptPath, new List<KeyValuePair<string, object>>() {
+        //  new KeyValuePair<string, object>("CurrentDir", ProjectDirPath),
+        //  new KeyValuePair<string, object>("FilePath", fullPath)
+        //});
 
-        internal void runScriptOnSuccessEnd(Dictionary<string, string> args) => runScript(OnSuccessEndScriptPath, GetAppendArgs(args, new List<KeyValuePair<string, object>>() {
-          new KeyValuePair<string, object>("CurrentDir", ProjectDirPath)
-        }));
+        //internal void runScriptOnSuccessEnd(Dictionary<string, string> args) => runScript(OnSuccessEndScriptPath, GetAppendArgs(args, new List<KeyValuePair<string, object>>() {
+        //  new KeyValuePair<string, object>("CurrentDir", ProjectDirPath)
+        //}));
 
-        private void runScriptOnFailedEnd() => runScript(OnFailedScriptPath, new List<KeyValuePair<string, object>>() {
-          new KeyValuePair<string, object>("CurrentDir", ProjectDirPath)
-        });
+        //private void runScriptOnFailedEnd() => runScript(OnFailedScriptPath, new List<KeyValuePair<string, object>>() {
+        //  new KeyValuePair<string, object>("CurrentDir", ProjectDirPath)
+        //});
 
         #endregion
 
@@ -207,6 +381,19 @@ namespace Publisher.Server.Info
             SettingsWatch.Changed += SettingsWatch_Changed;
             SettingsWatch.Deleted += SettingsWatch_Deleted;
             SettingsWatch.EnableRaisingEvents = true;
+
+            ScriptsWatch = new FileSystemWatcher(ScriptsDirPath, "*.cs");
+
+            ScriptsWatch.Created += ScriptsWatch_Changed;
+            ScriptsWatch.Changed += ScriptsWatch_Changed;
+            ScriptsWatch.Deleted += ScriptsWatch_Changed;
+            ScriptsWatch.EnableRaisingEvents = true;
+        }
+
+        private async void ScriptsWatch_Changed(object sender, FileSystemEventArgs e)
+        {
+            await Task.Delay(1_500);
+            scriptLatestChanged = DateTime.UtcNow;
         }
 
         private void SettingsWatch_Deleted(object sender, FileSystemEventArgs e)
@@ -578,7 +765,7 @@ namespace Publisher.Server.Info
 
                 byte[] buf = null;
 
-                packet.WriteCollection(Directory.GetFiles(ScriptsDirPath, "*.ps1"), (p, d)=> 
+                packet.WriteCollection(Directory.GetFiles(ScriptsDirPath, "*.cs"), (p, d)=> 
                 { 
                     buf = File.ReadAllBytes(d); 
                     p.WritePath(Path.GetRelativePath(ProjectDirPath, d)); 
@@ -885,6 +1072,8 @@ namespace Publisher.Server.Info
         public FileSystemWatcher UsersWatch;
 
         public FileSystemWatcher SettingsWatch;
+
+        public FileSystemWatcher ScriptsWatch;
 
         private void CreateDefault()
         {

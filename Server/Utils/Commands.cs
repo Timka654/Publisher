@@ -22,11 +22,33 @@ namespace Publisher.Server.Tools
                 { "create_project", CreateProject },
                 { "create_user", CreateUser },
                 { "add_user", AddUser },
-                { "clone_identity", CloneIdentity }
+                { "clone_identity", CloneIdentity },
+                { "check_scripts", CheckScripts }
             };
         }
 
-        protected void CreateProject(CommandLineArgs args)
+
+        protected void CheckScripts(CommandLineArgs args)
+        {
+            StaticInstances.ServerLogger.AppendInfo("Check Scripts");
+
+            if (args.ContainsKey("project_id") == false || !Guid.TryParse(args["project_id"], out var pid))
+            {
+                StaticInstances.ServerLogger.AppendError($"check project scripts \"project_id\" parameter must have GUID format");
+                return;
+            }
+            var pi = StaticInstances.ProjectsManager.GetProject(args["project_id"]);
+
+            if (pi == null)
+            {
+                StaticInstances.ServerLogger.AppendError($"check project scripts \"{args["project_id"]}\" not found");
+                return;
+            }
+
+            pi.CheckScripts();
+        }
+
+            protected void CreateProject(CommandLineArgs args)
         {
             StaticInstances.ServerLogger.AppendInfo("Create project");
 
