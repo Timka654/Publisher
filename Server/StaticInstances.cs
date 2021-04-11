@@ -3,6 +3,8 @@ using Publisher.Server.Configuration;
 using Publisher.Server.Managers;
 using Publisher.Server.Network;
 using Publisher.Server._.Managers;
+using System.IO;
+using System;
 
 namespace Publisher.Server
 {
@@ -10,7 +12,12 @@ namespace Publisher.Server
     {
         public static ServerConfigurationManager ServerConfiguration => ServerConfigurationManager.Instance;
 
+#if RELEASE
+        public static FileLogger ServerLogger { get; } = FileLogger.Initialize(Path.Combine(Environment.CurrentDirectory, "logs/server"));
+#else
         public static FileLogger ServerLogger { get; } = FileLogger.Initialize("logs/server");
+#endif
+
 
         public static PublisherNetworkServer Server => PublisherNetworkServer.Instance;
 

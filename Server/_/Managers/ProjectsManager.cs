@@ -58,7 +58,7 @@ namespace Publisher.Server.Managers
                 return;
             }
 
-            if (user.CurrentNetwork != null && user.CurrentNetwork.AliveState)
+            if (user.CurrentNetwork != null && user.CurrentNetwork.AliveState && user.CurrentNetwork.Network.GetState())
             {
                 Network.Packets.Project.SignInPacket.Send(client, Basic.SignStateEnum.AlreadyConnected);
                 return;
@@ -175,9 +175,9 @@ namespace Publisher.Server.Managers
 
                 StaticInstances.ServerLogger.AppendInfo($"Project {proj.Info.Id} - {proj.Info.Name} loaded");
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    StaticInstances.ServerLogger.AppendError($"Cannot load project {item}");
+                    StaticInstances.ServerLogger.AppendError($"Cannot load project {item} {ex}");
                 }
             }
         }

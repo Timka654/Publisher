@@ -1,7 +1,6 @@
 ﻿using Publisher.Client;
 using Publisher.Client.Tools;
 using System;
-using System.Threading;
 
 namespace Client
 {

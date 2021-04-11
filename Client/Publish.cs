@@ -13,7 +13,7 @@ namespace Publisher.Client
 {
     public class Publish
     {
-        private readonly int bufLen = 40960;
+        private int bufLen = 40960;
 
         public static Publish Instance { get; set; }
 
@@ -41,43 +41,41 @@ namespace Publisher.Client
         {
             StaticInstances.ServerLogger.AppendInfo("run");
 
-            if (!args.ContainsKey("project_id"))
+            if (!args.TryGetValue("project_id", out projectId))
             {
                 StaticInstances.ServerLogger.AppendError($"Run command must have \"project_id\" parameter");
                 Environment.Exit(0);
             }
 
-            if (!args.ContainsKey("directory"))
+            if (!args.TryGetValue("directory",out publishDirectory))
             {
                 StaticInstances.ServerLogger.AppendError($"Run command must have \"directory\" parameter");
                 Environment.Exit(0);
             }
 
-            if (!args.ContainsKey("ip"))
+            if (!args.TryGetValue("ip", out string ip))
             {
                 StaticInstances.ServerLogger.AppendError($"Run command must have \"ip\" parameter");
                 Environment.Exit(0);
             }
 
-            if (!args.ContainsKey("auth_key_path"))
+            if (!args.TryGetValue("auth_key_path", out string authKeyPath))
             {
                 StaticInstances.ServerLogger.AppendError($"Run command must have \"auth_key_path\" parameter");
                 Environment.Exit(0);
             }
 
-            if (!args.ContainsKey("cipher_out_key"))
+            if (!args.TryGetValue("cipher_out_key" , out string inputKey))
             {
                 StaticInstances.ServerLogger.AppendError($"Run command must have \"cipher.out.key\" parameter");
                 Environment.Exit(0);
             }
 
-            if (!args.ContainsKey("cipher_in_key"))
+            if (!args.TryGetValue("cipher_in_key", out string outputKey))
             {
                 StaticInstances.ServerLogger.AppendError($"Run command must have \"cipher.in.key\" parameter");
                 Environment.Exit(0);
             }
-
-            publishDirectory = args["directory"];
 
             if (!Directory.Exists(publishDirectory))
             {
@@ -91,10 +89,12 @@ namespace Publisher.Client
                 successArgs = new CommandLineArgs(new string[] { });
 
 
-            var ip = args["ip"];
-            var port = args.ContainsKey("port") ? Convert.ToInt32(args["port"]) : 6583;
+            if(!args.TryGetValue("port", out int port))
+                port = 6583;
 
-            var authKeyPath = args["auth_key_path"];
+            if (args.TryGetValue("buffer_len", out bufLen) == false)
+                bufLen = 40960;
+
 
             if (!File.Exists(authKeyPath))
             {
@@ -107,9 +107,6 @@ namespace Publisher.Client
                     Environment.Exit(0);
                 }
             }
-
-            var inputKey = args["cipher_out_key"];
-            var outputKey = args["cipher_in_key"];
 
             projectId = args["project_id"];
 
@@ -156,6 +153,10 @@ namespace Publisher.Client
 
         private void ProjectPublishStart_OnReceiveEvent(List<string> value)
         {
+            for (int i = 0; i < value.Count; i++)
+            {
+                value[i] = value[i].Replace("**", "[\\s|\\S]");
+            }
             ignorePatternList = value;
             StepLocker.Set();
         }

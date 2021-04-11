@@ -42,6 +42,20 @@ namespace Publisher.Basic
             return _args.ContainsKey(key);
         }
 
+        public bool TryGetValue<T>(string key, out T result )
+        {
+            if (_args.TryGetValue(key, out var text))
+            {
+
+                result = (T)Convert.ChangeType(text, typeof(T));
+                return true;
+            }
+
+            result = default;
+
+            return false;
+        }
+
         private void BuildArgDictionary()
         {
             Parse(Environment.GetCommandLineArgs());

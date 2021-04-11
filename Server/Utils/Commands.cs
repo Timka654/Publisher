@@ -6,7 +6,6 @@ using SocketServer;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Management.Automation.Remoting;
 using System.Reflection;
 
 namespace Publisher.Server.Tools
@@ -22,6 +21,7 @@ namespace Publisher.Server.Tools
                 { "create_project", CreateProject },
                 { "create_user", CreateUser },
                 { "add_user", AddUser },
+                { "add_patch_connection", AddPatchConnection },
                 { "clone_identity", CloneIdentity },
                 { "check_scripts", CheckScripts }
             };
@@ -165,6 +165,59 @@ namespace Publisher.Server.Tools
             File.Copy(args["path"], dest);
 
             StaticInstances.ServerLogger.AppendError($"{f.FullName} private key copied to {pi.Info.Name} project ({dest})");
+        }
+
+        protected void AddPatchConnection(CommandLineArgs args)
+        {
+            StaticInstances.ServerLogger.AppendInfo("Add Patch Connection");
+            if (!args.TryGetValue("project_id", out string project_id))
+            {
+                StaticInstances.ServerLogger.AppendError($"Add Patch Connection must have \"project_id\" parameter");
+                return;
+            }
+
+            if (!args.TryGetValue("ip_address", out string ip_address))
+            {
+                StaticInstances.ServerLogger.AppendError($"Add Patch Connection must have \"ip_address\" parameter");
+                return;
+            }
+
+            if (!args.TryGetValue("port", out ushort port))
+            {
+                StaticInstances.ServerLogger.AppendError($"Add Patch Connection must have \"port\" parameter");
+                return;
+            }
+
+            if (!args.TryGetValue("input_cipher_key", out string input_cipher_key))
+            {
+                StaticInstances.ServerLogger.AppendError($"Add Patch Connection must have \"input_cipher_key\" parameter");
+                return;
+            }
+
+            if (!args.TryGetValue("output_cipher_key", out string output_cipher_key))
+            {
+                StaticInstances.ServerLogger.AppendError($"Add Patch Connection must have \"output_cipher_key\" parameter");
+                return;
+            }
+
+            if (!args.TryGetValue("identity_name", out string identity_name))
+            {
+                StaticInstances.ServerLogger.AppendError($"Add Patch Connection must have \"identity_name\" parameter");
+                return;
+            }
+
+            ProjectInfo pi = StaticInstances.ProjectsManager.GetProject(project_id);
+
+            if (pi == null)
+            {
+                StaticInstances.ServerLogger.AppendError($"project by project_id = {project_id} not found");
+                return;
+            }
+
+            pi.UpdatePatchInfo(new ProjectPatchInfo() { IpAddress = ip_address, Port = (int)port, InputCipherKey = input_cipher_key, OutputCipherKey = output_cipher_key, SignName = identity_name });
+
+
+            StaticInstances.ServerLogger.AppendInfo($"Patch connection info changed in {pi.Info.Name}({pi.Info.Id}) project");
         }
 
         protected void CloneIdentity(CommandLineArgs args)

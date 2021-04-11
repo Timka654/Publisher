@@ -6,29 +6,25 @@ using SocketCore.Utils.Buffer;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Management.Automation;
 using System.Threading;
 using Publisher.Basic;
 using Publisher.Server.Managers;
 using Publisher.Server._.Network;
 using System.Threading.Tasks;
 using SCL;
-using Cipher.RC.RC4;
 using Publisher.Server._.Network.ClientPatchPackets;
-using System.Security.Policy;
-using ServerOptions.Extensions.Packet;
 using Publisher.Server._.Info;
 using Cipher.RSA;
 using System.Text;
-using Publisher.Server.Network.Packets.Project;
-using Publisher.Server._.Network.Packets.PathServer;
 using System.Text.RegularExpressions;
-using System.Management.Automation.Runspaces;
-using System.Management.Automation.Host;
-using Microsoft.PowerShell.Commands;
+using Publisher.Server._.Info.PacketInfo;
+using Newtonsoft.Json.Serialization;
+using System.Diagnostics;
+using SocketServer.Utils;
+using SocketCore.Utils;
+using System.Reflection;
 
 namespace Publisher.Server.Info
 {
@@ -195,7 +191,19 @@ namespace Publisher.Server.Info
         NetScript.Script script;
 
         DateTime? scriptLatestBuilded;
-        DateTime? scriptLatestChanged;
+        DateTime scriptLatestChanged = DateTime.UtcNow;
+
+        private MethodInfo OnStartMethod;
+
+        private MethodInfo OnEndMethod;
+
+        private MethodInfo OnFileStartMethod;
+
+        private MethodInfo OnFileEndMethod;
+
+        private MethodInfo OnSuccessEndMethod;
+
+        private MethodInfo OnFailedMethod;
 
         private NetScript.Script getScript()
         {
@@ -210,6 +218,7 @@ namespace Publisher.Server.Info
             script.RegisterCoreReference("System.IO.dll");
             script.RegisterCoreReference("System.Linq.dll");
             script.RegisterCoreReference("System.Collections.dll");
+            script.RegisterCoreReference("System.ComponentModel.Primitives.dll");
             script.RegisterCoreReference("System.Diagnostics.Process.dll");
 
             script.RegistrationGlobalVariable(new NetScript.GlobalVariable("CurrentProject", typeof(ProjectInfo)));
@@ -224,6 +233,18 @@ namespace Publisher.Server.Info
 
             scriptLatestBuilded = DateTime.UtcNow;
 
+            OnStartMethod = script.GetMethod("PublisherScript", "OnStart");
+
+            OnEndMethod = script.GetMethod("PublisherScript", "OnEnd");
+            
+            OnFileStartMethod = script.GetMethod("PublisherScript", "OnFileStart");
+            
+            OnFileEndMethod = script.GetMethod("PublisherScript", "OnFileEnd");
+            
+            OnSuccessEndMethod = script.GetMethod("PublisherScript", "OnSuccessEnd");
+            
+            OnFailedMethod = script.GetMethod("PublisherScript", "OnFailed");
+
             return script;
         }
 
@@ -232,90 +253,30 @@ namespace Publisher.Server.Info
             getScript();
         }
 
-        private void runScript(string functionName, Dictionary<string, object> pms)
+        private void runScript(Func<MethodInfo> function, Dictionary<string, object> pms)
         {
-            if(pms == null)
-                getScript().InvokeMethod("PublisherScript", functionName, null);
+            if (pms == null)
+                getScript().InvokeMethod<object>(method:function(), _obj: null, args: null);
             else
-                getScript().InvokeMethod("PublisherScript", functionName,null,pms);
+                getScript().InvokeMethod<object>(method: function(), _obj: null, args: pms);
+            //getScript().InvokeMethod("PublisherScript", functionName, null, pms);
         }
 
-        private void runScriptOnStart() => runScript("OnStart", null);
+        private void runScriptOnStart() => runScript(()=>OnStartMethod, null);
 
-        private void runScriptOnEnd() => runScript("OnEnd",null);
+        private void runScriptOnEnd() => runScript(()=>OnEndMethod, null);
 
-        private void runScriptOnFileStart(string fullPath) => runScript("OnFileStart", new Dictionary<string, object>() {
+        private void runScriptOnFileStart(string fullPath) => runScript(()=>OnFileStartMethod, new Dictionary<string, object>() {
             { "FilePath", fullPath }
         });
 
-        private void runScriptOnFileEnd(string fullPath) => runScript("OnFileEnd", new Dictionary<string, object>() {
+        private void runScriptOnFileEnd(string fullPath) => runScript(()=>OnFileEndMethod, new Dictionary<string, object>() {
             { "FilePath", fullPath }
         });
 
-        internal void runScriptOnSuccessEnd(Dictionary<string, string> args) => runScript("OnSuccessEnd", args.ToDictionary(x=>x.Key, x=>(object)x.Value));
+        internal void runScriptOnSuccessEnd(Dictionary<string, string> args) => runScript(()=>OnSuccessEndMethod, args.ToDictionary(x => x.Key, x => (object)x.Value));
 
-
-        private void runScriptOnFailedEnd() => runScript("OnFailed", null);
-
-
-        //private void runScript(string fname, IEnumerable<KeyValuePair<string, object>> pms)
-        //{
-        //    if (!File.Exists(fname))
-        //        return;
-
-        //    PowerShell ps = PowerShell.Create();
-
-
-        //        ps.Streams.Error.DataAdded += Error_DataAdded;
-        //    ps.Streams.Debug.DataAdded += Error_DataAdded;
-        //    ps.Streams.Information.DataAdded += Error_DataAdded;
-        //    ps.Streams.Progress.DataAdded += Error_DataAdded;
-        //    ps.Streams.Verbose.DataAdded += Error_DataAdded;
-        //    ps.Streams.Warning.DataAdded += Error_DataAdded;
-
-
-        //    //ps.AddScript("Set-ExecutionPolicy AllSigned -Scope LocalMachine");
-        //    ps.AddCommand(fname, true);
-        //    foreach (var item in pms)
-        //    {
-        //        ps.AddParameter(item.Key, item.Value);
-        //    }
-
-
-        //    var result = ps.Invoke();
-        //}
-
-        //private void Error_DataAdded(object sender, DataAddedEventArgs e)
-        //{
-        //    if (sender is PSDataCollection<ProgressRecord> p)
-        //    {
-        //        BroadcastMessage($"Complete {p[e.Index].PercentComplete}%");
-        //    }
-        //    else if (sender is PSDataCollection<ErrorRecord> err)
-        //    {
-        //        BroadcastMessage(err[e.Index].ToString());
-        //    }
-        //    else if (sender is PSDataCollection<InformationRecord> info)
-        //    {
-        //        BroadcastMessage(info[e.Index].ToString());
-        //    }
-        //    else if (sender is PSDataCollection<VerboseRecord> verb)
-        //    {
-        //        BroadcastMessage(verb[e.Index].ToString());
-        //    }
-        //    else if (sender is PSDataCollection<WarningRecord> warn)
-        //    {
-        //        BroadcastMessage(warn[e.Index].ToString());
-        //    }
-        //}
-
-        //private void Process_OutputDataReceived(object sender, DataReceivedEventArgs e)
-        //{
-        //    if (string.IsNullOrEmpty(e.Data))
-        //        return;
-
-        //    BroadcastMessage(e.Data);
-        //}
+        private void runScriptOnFailedEnd() => runScript(()=>OnFailedMethod, null);
 
         public void BroadcastMessage(string log)
         {
@@ -328,42 +289,6 @@ namespace Publisher.Server.Info
                 item.CurrentNetwork?.Send(packet);
             }
         }
-
-        private List<KeyValuePair<string, object>> GetAppendArgs(Dictionary<string, string> args, List<KeyValuePair<string, object>> args2)
-        {
-            foreach (var item in args)
-            {
-                args2.Add(new KeyValuePair<string, object>(item.Key, item.Value));
-            }
-
-            return args2;
-        }
-
-        //private void runScriptOnStart() => runScript(OnStartScriptPath, new List<KeyValuePair<string, object>>() {
-        //  new KeyValuePair<string, object>("CurrentDir", ProjectDirPath)
-        //});
-
-        //private void runScriptOnEnd() => runScript(OnEndScriptPath, new List<KeyValuePair<string, object>>() {
-        //  new KeyValuePair<string, object>("CurrentDir", ProjectDirPath)
-        //});
-
-        //private void runScriptOnFileStart(string fullPath) => runScript(OnFileStartScriptPath, new List<KeyValuePair<string, object>>() {
-        //  new KeyValuePair<string, object>("CurrentDir", ProjectDirPath),
-        //  new KeyValuePair<string, object>("FilePath", fullPath)
-        //});
-
-        //private void runScriptOnFileEnd(string fullPath) => runScript(OnFileEndScriptPath, new List<KeyValuePair<string, object>>() {
-        //  new KeyValuePair<string, object>("CurrentDir", ProjectDirPath),
-        //  new KeyValuePair<string, object>("FilePath", fullPath)
-        //});
-
-        //internal void runScriptOnSuccessEnd(Dictionary<string, string> args) => runScript(OnSuccessEndScriptPath, GetAppendArgs(args, new List<KeyValuePair<string, object>>() {
-        //  new KeyValuePair<string, object>("CurrentDir", ProjectDirPath)
-        //}));
-
-        //private void runScriptOnFailedEnd() => runScript(OnFailedScriptPath, new List<KeyValuePair<string, object>>() {
-        //  new KeyValuePair<string, object>("CurrentDir", ProjectDirPath)
-        //});
 
         #endregion
 
@@ -487,8 +412,17 @@ namespace Publisher.Server.Info
         {
             if (Info.Backup == false)
                 return false;
+            var dir = new DirectoryInfo(currentBackupDirPath);
 
-            Directory.Move(currentBackupDirPath, ProjectDirPath);
+            if (dir.Exists == false)
+                return true;
+
+            foreach (var item in dir.GetFiles("*", SearchOption.AllDirectories))
+            {
+                item.CopyTo(Path.Combine(ProjectDirPath, Path.GetRelativePath(dir.FullName, item.FullName)), true);
+            }
+
+            dir.Delete(true);
 
             return true;
         }
@@ -508,13 +442,13 @@ namespace Publisher.Server.Info
                 if (!WaitQueue.Contains(user))
                     WaitQueue.Enqueue(user);
 
-                if (ProcessUser.CurrentNetwork?.AliveState == true)
+                if (ProcessUser.CurrentNetwork?.AliveState == true && ProcessUser.CurrentNetwork?.Network?.GetState() == true)
                 {
                     return false;
                 }
                 else
                 {
-                    if(StopProcess(user.CurrentNetwork, false))
+                    if (StopProcess(user.CurrentNetwork, false))
                         patchLocker.WaitOne();
                 }
             }
@@ -578,7 +512,7 @@ namespace Publisher.Server.Info
 
                 while (WaitQueue.TryDequeue(out var newUser))
                 {
-                    if (newUser.CurrentNetwork?.AliveState == true)
+                    if (newUser.CurrentNetwork?.AliveState == true && newUser.CurrentNetwork?.Network?.GetState() == true)
                     {
                         StartProcess(newUser);
                         break;
@@ -606,7 +540,7 @@ namespace Publisher.Server.Info
             {
                 client.CurrentFile = new ProjectFileInfo(ProjectDirPath, new FileInfo(Path.Combine(ProjectDirPath, relativePath)), this);
             }
-            else if(client.CurrentFile.FileInfo.Exists)
+            else if (client.CurrentFile.FileInfo.Exists)
                 addBackupFile(client.CurrentFile);
 
 
@@ -690,7 +624,7 @@ namespace Publisher.Server.Info
                 return SignStateEnum.UserNotFound;
             }
 
-           patchClients.Add(client);
+            patchClients.Add(client);
 
             client.PatchProjectMap.Add(Info.Id, this);
 
@@ -708,7 +642,7 @@ namespace Publisher.Server.Info
         {
             patchClients = new ConcurrentBag<PublisherNetworkClient>(patchClients.Where(x => x != client));
 
-            EndDownload(client,true);
+            EndDownload(client, true);
         }
 
         public void StartDownload(PublisherNetworkClient client)
@@ -742,7 +676,8 @@ namespace Publisher.Server.Info
                 client.CurrentFile.OpenRead();
         }
 
-        public void EndDownload(PublisherNetworkClient client, bool success = false)
+        internal void EndDownload<T>(T client, bool success = false)
+            where T : INetworkClient, IProcessFileContainer
         {
             if (client != currentDownloader)
                 return;
@@ -753,7 +688,8 @@ namespace Publisher.Server.Info
                 client.CurrentFile = null;
             }
             currentDownloader = null;
-            client.PatchDownloadProject = null;
+            if (client is PublisherNetworkClient c)
+                c.PatchDownloadProject = null;
 
             patchLocker.Set();
 
@@ -765,15 +701,15 @@ namespace Publisher.Server.Info
 
                 byte[] buf = null;
 
-                packet.WriteCollection(Directory.GetFiles(ScriptsDirPath, "*.cs"), (p, d)=> 
-                { 
-                    buf = File.ReadAllBytes(d); 
-                    p.WritePath(Path.GetRelativePath(ProjectDirPath, d)); 
-                    p.WriteInt32(buf.Length); 
-                    p.Write(buf); 
+                packet.WriteCollection(Directory.GetFiles(ScriptsDirPath, "*.cs"), (p, d) =>
+                {
+                    buf = File.ReadAllBytes(d);
+                    p.WritePath(Path.GetRelativePath(ProjectDirPath, d));
+                    p.WriteInt32(buf.Length);
+                    p.Write(buf);
                 });
 
-                client.Send(packet);
+                client.Network?.Send(packet);
             }
         }
 
@@ -845,9 +781,13 @@ namespace Publisher.Server.Info
             if (Info.LatestUpdate.HasValue != false)
                 fileList = fileList.Where(x => x.LastChanged > Info.LatestUpdate.Value);
 
-            fileList = fileList.Where(x=>!Info.IgnoreFilePaths.Any(ig => Regex.IsMatch(x.RelativePath, ig))).ToList();
+            fileList = fileList.Where(x => !Info.IgnoreFilePaths.Any(ig => Regex.IsMatch(x.RelativePath, ig))).Reverse().ToList();
 
-            (byte[] buffer, bool eof) downloadProc;
+            runScriptOnStart();
+
+            bool EOF = false;
+
+            byte q = byte.MinValue;
 
             foreach (var file in fileList)
             {
@@ -856,7 +796,8 @@ namespace Publisher.Server.Info
 
                 do
                 {
-                    downloadProc = await PatchClient.Download();
+                    await Task.Delay(50);
+                    DownloadPacketData downloadProc = await PatchClient.Download();
 
                     if (downloadProc == default)
                     {
@@ -866,11 +807,28 @@ namespace Publisher.Server.Info
                         return;
                     }
 
-                    PatchClient.Options.ClientData.CurrentFile.IO.Write(downloadProc.buffer);
-                }
-                while (downloadProc.eof != true);
+                    EOF = downloadProc.EOF;
 
+                    PatchClient.Options.ClientData.CurrentFile.IO.Write(downloadProc.Buff,0, downloadProc.Buff.Length);
+                    if (q % 10 == 0) PatchClient.Options.ClientData.CurrentFile.IO.Flush(true);
+
+                    downloadProc.Dispose();
+                    GC.Collect(GC.GetGeneration(downloadProc));
+                    downloadProc = null;
+
+
+                    if (q++ == byte.MaxValue / 10)
+                    {
+                        //GC.Collect(GC.GetGeneration(downloadProc));
+                        GC.GetTotalMemory(true);
+                        GC.WaitForFullGCComplete();
+                        q = byte.MinValue;
+                    }
+                }
+                while (EOF == false);
+                //PatchClient.Options.ClientData.CurrentFile.CloseRead();
                 EndFile(PatchClient.Options.ClientData);
+                await Task.Delay(125);
 
             }
 
@@ -889,6 +847,8 @@ namespace Publisher.Server.Info
             }
 
             Info.LatestUpdate = latestChangeTime;
+
+            EndDownload(PatchClient.Options.ClientData, true);
 
             DumpFileList();
             SaveProjectInfo();
@@ -932,6 +892,8 @@ namespace Publisher.Server.Info
                 }
 
                 FileInfoList.RemoveAll(x => removed.Contains(x));
+
+                GC.Collect();
             }
         }
 
@@ -1031,8 +993,9 @@ namespace Publisher.Server.Info
                 FileInfoList.Remove(file);
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
+                StaticInstances.ServerLogger.AppendError(ex.ToString());
             }
 
             return false;
@@ -1050,9 +1013,11 @@ namespace Publisher.Server.Info
             if (info.IgnoreFilePaths == null)
                 info.IgnoreFilePaths = new List<string>();
 
+            if (!info.IgnoreFilePaths.Contains(Path.Combine("Publisher", "[\\s|\\S]")))
+                info.IgnoreFilePaths.Add(Path.Combine("Publisher", "[\\s|\\S]"));
 
-            if (!info.IgnoreFilePaths.Contains(Path.Combine("Publisher", "**")))
-                info.IgnoreFilePaths.Add(Path.Combine("Publisher", "**"));
+            if (info.IgnoreFilePaths.RemoveAll(x => x.Contains("**")) > 0)
+                SaveProjectInfo();
 
             ProcessFolder();
         }
@@ -1140,7 +1105,7 @@ namespace Publisher.Server.Info
                 Name = args["name"],
                 FullReplace = args.ContainsKey("full_replace") && Convert.ToBoolean(args["full_replace"]),
                 Backup = args.ContainsKey("backup") && Convert.ToBoolean(args["backup"]),
-                IgnoreFilePaths = new List<string>() { Path.Combine("Publisher", "*") }
+                IgnoreFilePaths = new List<string>() { Path.Combine("Publisher", "[\\s|\\S]") }
             };
 
             ProjectDirPath = args["directory"];

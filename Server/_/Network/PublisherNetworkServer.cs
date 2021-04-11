@@ -7,7 +7,6 @@ using ServerOptions.Extensions.Manager;
 using ServerOptions.Extensions.Packet;
 using SocketServer;
 using System;
-using System.Reflection;
 using Utils.Helper.Network;
 
 namespace Publisher.Server.Network
@@ -25,6 +24,8 @@ namespace Publisher.Server.Network
             options.inputCipher = new XRC4Cipher(StaticInstances.ServerConfiguration.GetValue("server.io.input.key"));
             options.outputCipher = new XRC4Cipher(StaticInstances.ServerConfiguration.GetValue("server.io.output.key"));
 
+            options.ReceiveBufferSize = 160_000;
+
             return options;
         }
 
@@ -37,6 +38,7 @@ namespace Publisher.Server.Network
         {
             Options.LoadPackets(typeof(ServerPacketAttribute));
         }
+#if _DEBUG
 
         protected override void Listener_OnReceivePacket(ServerClient<PublisherNetworkClient> client, ushort pid, int len)
         {
@@ -54,7 +56,7 @@ namespace Publisher.Server.Network
             if (Utils.PacketEnumExtensions.IsDefined<PatchClientPackets>(pid))
                 StaticInstances.ServerLogger.AppendDebug($"{ServerName} send patch packet pid:{Enum.GetName((PatchClientPackets)pid)} to {client.GetRemovePoint()} (source:{memberName}[{sourceFilePath}:{sourceLineNumber}])");
         }
-
+#endif
         protected override void SocketOptions_OnClientDisconnectEvent(PublisherNetworkClient client)
         {
             base.SocketOptions_OnClientDisconnectEvent(client);
@@ -63,95 +65,4 @@ namespace Publisher.Server.Network
                 StaticInstances.SessionManager.DisconnectClient(client);
         }
     }
-
-
-//        public class NetworkEntry : NetworkServer<NetworkClient, NetworkEntry>
-//    {
-//        private ServerOptions<NetworkClient> options;
-
-//        private ServerListener<NetworkClient> server;
-
-//        public static void Start()
-//        {
-//            if (Instance == null)
-//            {
-//                StaticInstances.ServerLogger.AppendInfo("Loading server network");
-//                Instance = new NetworkServer();
-//                Instance.Load();
-//            }
-//            Instance.startNetwork();
-//        }
-
-//        public static void Stop()
-//        {
-//            if (Instance != null)
-//            {
-//                Instance.stopNetwork();
-//            }
-//        }
-
-//        private void Load()
-//        {
-//            options = StaticInstances.ServerConfiguration.LoadConfigurationServerOptions<NetworkClient>("server");
-//            options.HelperLogger = StaticInstances.ServerLogger;
-
-//            options.LoadManagers<NetworkClient>(Assembly.GetExecutingAssembly(), typeof(ManagerLoadAttribute));
-//            options.LoadPackets(Assembly.GetExecutingAssembly(), typeof(ServerPacketAttribute));
-
-//            options.OnClientConnectEvent += Options_OnClientConnectEvent;
-//            options.OnClientDisconnectEvent += Options_OnClientDisconnectEvent;
-//            options.OnExceptionEvent += Options_OnExceptionEvent;
-
-
-//            options.inputCipher = new XRC4Cipher(StaticInstances.ServerConfiguration.GetValue("server.io.input.key"));
-//            options.outputCipher = new XRC4Cipher(StaticInstances.ServerConfiguration.GetValue("server.io.output.key"));
-
-//            server = new ServerListener<NetworkClient>(options);
-//#if DEBUG
-//            server.OnReceivePacket += Server_OnReceivePacket;
-//            server.OnSendPacket += Server_OnSendPacket;
-//#endif
-
-//        }
-
-//        private void startNetwork()
-//        {
-//            server.Run();
-//            StaticInstances.ServerLogger.AppendInfo($"Start binding on {options.IpAddress}:{options.Port}");
-//        }
-
-//        private void stopNetwork()
-//        {
-//            server.Stop();
-//            StaticInstances.ServerLogger.AppendInfo($"Stop binding on {options.IpAddress}:{options.Port}");
-//        }
-
-//        private void Options_OnExceptionEvent(Exception ex, NetworkClient client)
-//        {
-//            StaticInstances.ServerLogger.AppendInfo($"client error {client?.Network?.GetRemovePoint()} - {ex}");
-//        }
-
-//        private void Options_OnClientDisconnectEvent(NetworkClient client)
-//        {
-//            StaticInstances.ServerLogger.AppendInfo($"client disconnected {client?.Network?.GetRemovePoint()}");
-
-//            if (client != null)
-//                StaticInstances.SessionManager.DisconnectClient(client);
-//        }
-
-//        private void Options_OnClientConnectEvent(NetworkClient client)
-//        {
-//            StaticInstances.ServerLogger.AppendInfo($"client connected {client?.Network?.GetRemovePoint()}");
-//        }
-
-//        private void Server_OnSendPacket(ServerClient<NetworkClient> client, ushort pid, int len, string memberName, string sourceFilePath, int sourceLineNumber)
-//        {
-//            StaticInstances.ServerLogger.AppendDebug($"send packet pid:{(ClientPackets)pid} to {client.GetRemovePoint()} (source:{memberName}[{sourceFilePath}:{sourceLineNumber}])");
-//        }
-
-//        private void Server_OnReceivePacket(ServerClient<NetworkClient> client, ushort pid, int len)
-//        {
-//            StaticInstances.ServerLogger.AppendDebug($"receive packet pid:{(ClientPackets)pid} from {client.GetRemovePoint()}");
-//        }
-//    }
 }

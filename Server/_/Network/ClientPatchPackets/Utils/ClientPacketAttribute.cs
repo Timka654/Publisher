@@ -1,5 +1,4 @@
-﻿using Publisher.Basic;
-using ServerOptions.Extensions.Packet;
+﻿using ServerOptions.Extensions.Packet;
 
 namespace Publisher.Server._.Network.ClientPatchPackets
 {

@@ -1,13 +1,5 @@
 ﻿using Publisher.Basic;
-using SCL;
-using SCL.Utils;
 using SocketCore.Utils.Buffer;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Publisher.Server._.Network.ClientPatchPackets
 {

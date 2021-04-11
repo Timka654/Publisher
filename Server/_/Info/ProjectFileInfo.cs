@@ -23,7 +23,7 @@ namespace Publisher.Server.Info
         {
             if (!FileInfo.Directory.Exists)
                 FileInfo.Directory.Create();
-            IO = FileInfo.Create();
+            IO = FileInfo.Open(FileMode.OpenOrCreate);
             Project.BroadcastMessage($"starting -> {RelativePath}");
         }
 

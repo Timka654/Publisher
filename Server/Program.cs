@@ -14,6 +14,7 @@ namespace Publisher.Server
         {
             ServerConfigurationManager.Initialize();
 
+            StaticInstances.ServerLogger.SetUnhandledExCatch(true);
 
             if ((new Commands()).Process())
                 return;

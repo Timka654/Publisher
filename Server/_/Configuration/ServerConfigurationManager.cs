@@ -3,7 +3,9 @@ using ConfigurationEngine.Info;
 using ConfigurationEngine.Providers.Json;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 
 namespace Publisher.Server.Configuration
 {
@@ -16,7 +18,7 @@ namespace Publisher.Server.Configuration
             new ConfigurationInfo("server.io.backlog","5",""),
             new ConfigurationInfo("server.io.ipv","4",""),
             new ConfigurationInfo("server.io.protocol","tcp",""),
-            new ConfigurationInfo("server.io.buffer.size","20480",""),
+            new ConfigurationInfo("server.io.buffer.size","61440",""),
             new ConfigurationInfo("server.io.input.key","!{b1HX11R**",""),
             new ConfigurationInfo("server.io.output.key","!{b1HX11R**",""),
             new ConfigurationInfo("paths.projects_library","proj_lib.json",""),
@@ -32,11 +34,21 @@ namespace Publisher.Server.Configuration
         public static void Initialize()
         {
             StaticInstances.ServerLogger.AppendInfo("Loading server configuration");
+            string dir = "";
 #if RELEASE
-            Instance = new ServerConfigurationManager(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ServerSettings.json"));
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                dir = Environment.CurrentDirectory;
+            }
+            else
+            {
+            dir = AppDomain.CurrentDomain.BaseDirectory;
+            }
 #else
-            Instance = new ServerConfigurationManager(Path.Combine(Directory.GetCurrentDirectory(), "ServerSettings.json"));
+            dir = Directory.GetCurrentDirectory();
 #endif
+
+            Instance = new ServerConfigurationManager(Path.Combine(dir, "ServerSettings.json"));
             Instance.OnLog += StaticInstances.ServerLogger.Append;
             Instance.SetDefaults(DefaultValues, true);
         }

@@ -1,16 +1,14 @@
-﻿using SCL;
+﻿using Publisher.Server._.Info.PacketInfo;
+using SCL;
 using SCL.Utils;
 using SocketCore.Utils.Buffer;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Publisher.Server._.Network.ClientPatchPackets
 {
     [PathServer_ServerPacket(Basic.PatchClientPackets.DownloadBytesResult)]
-    internal class DownloadBytesPacket : IPacketReceive<NetworkPatchClient, (byte[] buff,  bool eof)>
+    internal class DownloadBytesPacket : IPacketReceive<NetworkPatchClient, DownloadPacketData>
     {
         public DownloadBytesPacket(ClientOptions<NetworkPatchClient> options) : base(options)
         {
@@ -18,18 +16,29 @@ namespace Publisher.Server._.Network.ClientPatchPackets
 
         protected override void Receive(InputPacketBuffer data)
         {
-            Data = (data.Read(data.ReadInt32()),data.ReadBool());
+            Data = new DownloadPacketData(data);
+            //Data = new DownloadPacketData { Buff = new byte[0], EOF = false };
+
         }
 
-        public async Task<(byte[] buff, bool eof)> Send(int buff = 81_920)
+        public async Task<DownloadPacketData> Send(int? buff = null)
         {
+            if (buff == null)
+                buff = StaticInstances.ServerConfiguration.GetValue<int>("patch.io.buffer.size") - sizeof(int) - sizeof(bool);
+
             var packet = new OutputPacketBuffer();
 
             packet.SetPacketId(Basic.PatchServerPackets.DownloadBytes);
 
-            packet.WriteInt32(buff);
+            packet.WriteInt32(buff.Value);
 
-            return await SendWaitAsync(packet);
+            var result =  await SendWaitAsync(packet);
+
+            GC.Collect(GC.GetGeneration(base.Data));
+
+            base.Data = null;
+
+            return result;
         }
     }
 }

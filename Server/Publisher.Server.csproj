@@ -4,25 +4,31 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net5.0</TargetFramework>
   </PropertyGroup>
-
+  
+  <PropertyGroup>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+  </PropertyGroup>
+  
   <ItemGroup>
-    <PackageReference Include="ConfigurationEngine.Providers.Json" Version="2021.3.25.1111" />
-    <PackageReference Include="Microsoft.PowerShell.Commands.Diagnostics" Version="7.1.0-preview.3" />
-    <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.1.0-preview.3" />
-    <PackageReference Include="NetScript" Version="2021.3.25.354" />
-    <PackageReference Include="Network.Extensions" Version="2021.3.25.1111" />
-    <PackageReference Include="SCLogger" Version="2021.3.25.1111" />
-    <PackageReference Include="ServerOptions.Extensions.ConfigurationEngine" Version="2021.3.25.1111" />
-    <PackageReference Include="SocketCore.Extensions.Manager" Version="2021.3.25.1111" />
-    <PackageReference Include="SocketCore.Extensions.Packet" Version="2021.3.25.1111" />
-    <PackageReference Include="SocketServer" Version="2021.3.25.1111" />
-    <PackageReference Include="System.Management.Automation" Version="7.1.0-preview.3" />
-    <PackageReference Include="Utils" Version="2021.3.25.1111" />
+    <PackageReference Include="ConfigurationEngine.Providers.Json" Version="2021.4.11.1415" />
+    <PackageReference Include="Microsoft.Windows.Compatibility" Version="5.0.2" />
+    <PackageReference Include="NetScript" Version="2021.4.11.1415" />
+    <PackageReference Include="Network.Extensions" Version="2021.4.11.1415" />
+    <PackageReference Include="SCLogger" Version="2021.4.11.1415" />
+    <PackageReference Include="ServerOptions.Extensions.ConfigurationEngine" Version="2021.4.11.1415" />
+    <PackageReference Include="SocketCore.Extensions.Manager" Version="2021.4.11.1415" />
+    <PackageReference Include="SocketCore.Extensions.Packet" Version="2021.4.11.1415" />
+    <PackageReference Include="SocketServer" Version="2021.4.11.1415" />
+    <PackageReference Include="Utils" Version="2021.4.11.1415" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Publisher.Basic\Publisher.Basic.csproj" />
   </ItemGroup>
+  
+  <!--<PropertyGroup>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+  </PropertyGroup>-->
 
   <ItemGroup>
     <None Update="create_project.ps1">
@@ -35,6 +41,9 @@
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
     <None Update="setup.ps1">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="tools\add_patch_connection.ps1">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="tools\check_scripts.ps1">
