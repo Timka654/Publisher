@@ -6,6 +6,7 @@ using System.Reflection;
 using ServerOptions.Extensions.Packet;
 using Publisher.Client.Packets.Project;
 using Publisher.Basic;
+using System;
 
 namespace Publisher.Client
 {
@@ -26,7 +27,7 @@ namespace Publisher.Client
             remove => ServerLogPacket.Instance.OnReceiveEvent -= value;
         }
 
-        public Network(string ip, int port, string inputKey, string outputKey, int bufferSize = 8196)
+        public Network(string ip, int port, string inputKey, string outputKey, Action<NetworkClient> disconnectedEvent, int bufferSize = 8196)
         {
             options = new ClientOptions<NetworkClient>();
             options.AddressFamily = System.Net.Sockets.AddressFamily.InterNetwork;
@@ -36,6 +37,7 @@ namespace Publisher.Client
             options.ReceiveBufferSize = bufferSize;
             options.inputCipher = new XRC4Cipher(inputKey);
             options.outputCipher = new XRC4Cipher(outputKey);
+            options.OnClientDisconnectEvent +=(e) => disconnectedEvent(e);
 
             options.LoadPackets(Assembly.GetExecutingAssembly(), typeof(ClientPacketAttribute));
 

@@ -2,7 +2,7 @@
   "profiles": {
     "Publisher.Client": {
       "commandName": "Project",
-      "commandLineArgs": "/action:publish /project_id:3b2552b8-81b4-427b-a6bb-f296b1232d9f /directory:Release\\WebTask /auth_key_path:release_task_service_37397dd3-26ca-4fdd-ab11-c0c55b086064.pubuk /ip:3.64.82.247 /port:6583 /cipher_out_key:\"!{b1HX11R**\" /cipher_in_key:\"!{b1HX11R**\"",
+      "commandLineArgs": "/action:publish /project_id:ab5b9575-b7eb-44dd-8a15-31b19bb0492a /directory:Release\\WebTask /auth_key_path:AT_TSU_f44472dd-050c-46f3-9c88-4bc0470683e4.pubuk /ip:3.66.192.33 /port:6583 /cipher_out_key:\"!{b1HX11R**\" /cipher_in_key:\"!{b1HX11R**\"",
       "workingDirectory": "D:\\Projects\\AppFox\\CRM\\AppFoxCMS\\AppTask"
     }
   }

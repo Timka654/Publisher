@@ -17,12 +17,12 @@ namespace Publisher.Client.Tools
 
             if (args["action"] == default)
             {
-                StaticInstances.ServerLogger.AppendInfo("Commands is empty");
+                Console.WriteLine("Commands is empty");
                 return false;
             }
             if (!commands.TryGetValue(args["action"], out var action))
             {
-                StaticInstances.ServerLogger.AppendInfo($"Command not found {args["action"]}");
+                Console.WriteLine($"Command not found {args["action"]}");
                 return true;
             }
 

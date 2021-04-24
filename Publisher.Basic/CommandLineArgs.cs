@@ -42,7 +42,7 @@ namespace Publisher.Basic
             return _args.ContainsKey(key);
         }
 
-        public bool TryGetValue<T>(string key, out T result )
+        public bool TryGetValue<T>(string key, ref T result )
         {
             if (_args.TryGetValue(key, out var text))
             {
@@ -50,8 +50,6 @@ namespace Publisher.Basic
                 result = (T)Convert.ChangeType(text, typeof(T));
                 return true;
             }
-
-            result = default;
 
             return false;
         }

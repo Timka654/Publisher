@@ -170,37 +170,47 @@ namespace Publisher.Server.Tools
         protected void AddPatchConnection(CommandLineArgs args)
         {
             StaticInstances.ServerLogger.AppendInfo("Add Patch Connection");
-            if (!args.TryGetValue("project_id", out string project_id))
+            string project_id = default;
+            string ip_address = default;
+            ushort port = default;
+
+            string input_cipher_key = default;
+
+            string output_cipher_key = default;
+
+            string identity_name = default;
+
+            if (!args.TryGetValue("project_id", ref project_id))
             {
                 StaticInstances.ServerLogger.AppendError($"Add Patch Connection must have \"project_id\" parameter");
                 return;
             }
 
-            if (!args.TryGetValue("ip_address", out string ip_address))
+            if (!args.TryGetValue("ip_address", ref ip_address))
             {
                 StaticInstances.ServerLogger.AppendError($"Add Patch Connection must have \"ip_address\" parameter");
                 return;
             }
 
-            if (!args.TryGetValue("port", out ushort port))
+            if (!args.TryGetValue("port", ref port))
             {
                 StaticInstances.ServerLogger.AppendError($"Add Patch Connection must have \"port\" parameter");
                 return;
             }
 
-            if (!args.TryGetValue("input_cipher_key", out string input_cipher_key))
+            if (!args.TryGetValue("input_cipher_key", ref input_cipher_key))
             {
                 StaticInstances.ServerLogger.AppendError($"Add Patch Connection must have \"input_cipher_key\" parameter");
                 return;
             }
 
-            if (!args.TryGetValue("output_cipher_key", out string output_cipher_key))
+            if (!args.TryGetValue("output_cipher_key", ref output_cipher_key))
             {
                 StaticInstances.ServerLogger.AppendError($"Add Patch Connection must have \"output_cipher_key\" parameter");
                 return;
             }
 
-            if (!args.TryGetValue("identity_name", out string identity_name))
+            if (!args.TryGetValue("identity_name", ref identity_name))
             {
                 StaticInstances.ServerLogger.AppendError($"Add Patch Connection must have \"identity_name\" parameter");
                 return;
