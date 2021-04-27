@@ -200,9 +200,9 @@ namespace Publisher.Server.Info
 
         private MethodInfo OnFailedMethod;
 
-        private NetScript.Script getScript()
+        private NetScript.Script getScript(bool force = false)
         {
-            if (scriptLatestBuilded.HasValue && scriptLatestBuilded >= scriptLatestChanged)
+            if (scriptLatestBuilded.HasValue && scriptLatestBuilded >= scriptLatestChanged && force == false)
                 return script;
 
             //if (script != null)
@@ -346,7 +346,7 @@ namespace Publisher.Server.Info
             }
             catch { return; }
 
-            StaticInstances.ServerLogger.AppendInfo($"{ProjectFilePath} changed \r\nold {JsonConvert.SerializeObject(oldInfo)}\r\new {JsonConvert.SerializeObject(Info)}");
+            StaticInstances.ServerLogger.AppendInfo($"{ProjectFilePath} changed \r\nold {JsonConvert.SerializeObject(oldInfo)}\r\nnew {JsonConvert.SerializeObject(Info)}");
 
 
             if (oldInfo.PatchInfo == null && Info.PatchInfo != null)
@@ -865,6 +865,8 @@ namespace Publisher.Server.Info
             }
 
             Info.LatestUpdate = latestChangeTime;
+
+            getScript(true);
 
             EndPatchReceive(true);
         }

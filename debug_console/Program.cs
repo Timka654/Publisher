@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 
 namespace debug_console
 {
@@ -7,7 +8,8 @@ namespace debug_console
     {
         static void Main(string[] args)
         {
-
+            Process p = Process.Start("/bin/bash", $"-c \"chmod +x '{Path.Combine(ScriptCore.Instance.GlobalData.CurrentProject.ProjectDirPath, "CRM.Service.TaskService")}'\"");
+            p.WaitForExit();
             Process p = Process.Start("/bin/bash", $"-c \"systemctl start publisher.service\"");
             p.WaitForExit();
 
