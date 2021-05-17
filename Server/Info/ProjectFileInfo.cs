@@ -1,6 +1,7 @@
 ﻿using Publisher.Basic;
 using System;
 using System.IO;
+using Utils;
 
 namespace Publisher.Server.Info
 {
@@ -21,9 +22,12 @@ namespace Publisher.Server.Info
 
         public void StartFile()
         {
-            if (!FileInfo.Directory.Exists)
-                FileInfo.Directory.Create();
-            IO = FileInfo.Create();
+            var fi = new FileInfo(System.IO.Path.Combine(Project.TempDirPath, RelativePath));
+
+            if (fi.Directory.Exists == false)
+                fi.Directory.Create();
+
+            IO = fi.Create();
             Project.BroadcastMessage($"starting -> {RelativePath}");
         }
 
@@ -35,9 +39,29 @@ namespace Publisher.Server.Info
             IO.Dispose();
             IO = null;
             Project.BroadcastMessage($"uploaded -> {RelativePath}");
+
+            return true;
+        }
+
+        public bool TempRelease() 
+        {
+            var fi = new FileInfo(System.IO.Path.Combine(Project.TempDirPath, RelativePath));
+
+            if (fi.Exists == false)
+            {
+                Project.BroadcastMessage($"Error!! {fi.FullName} not exists!!");
+                return false;
+            }
+
+            if (FileInfo.Directory.Exists == false)
+                FileInfo.Directory.Create();
+
+            fi.MoveTo(FileInfo.FullName, true);
+
             CalculateHash();
 
-            Project.BroadcastMessage($"new hash -> {Hash}");
+            Project.BroadcastMessage($"{FileInfo.Name} new hash -> {Hash}");
+
             return true;
         }
 
@@ -45,9 +69,10 @@ namespace Publisher.Server.Info
         {
             IO = FileInfo.OpenRead();
         }
+
         public void CloseRead()
         {
-            IO.Dispose();
+            IO?.Dispose();
             IO = null;
         }
 

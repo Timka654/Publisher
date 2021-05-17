@@ -5,8 +5,6 @@ namespace Publisher.Server.Info.PacketInfo
 {
     class DownloadPacketData : IDisposable
     {
-        //private InputPacketBuffer data;
-
         public DownloadPacketData()
         {
 
@@ -14,7 +12,6 @@ namespace Publisher.Server.Info.PacketInfo
 
         public DownloadPacketData(InputPacketBuffer data)
         {
-            //Len = data.ReadInt32();
             Buff = data.Read(data.ReadInt32());
             EOF = data.ReadBool();
         }

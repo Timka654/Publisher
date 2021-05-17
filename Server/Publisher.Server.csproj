@@ -10,16 +10,16 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <PackageReference Include="ConfigurationEngine.Providers.Json" Version="2021.4.11.1415" />
+    <PackageReference Include="ConfigurationEngine.Providers.Json" Version="2021.5.16.2309" />
     <PackageReference Include="Microsoft.Windows.Compatibility" Version="5.0.2" />
-    <PackageReference Include="NetScript" Version="2021.4.11.1415" />
-    <PackageReference Include="Network.Extensions" Version="2021.4.11.1415" />
-    <PackageReference Include="SCLogger" Version="2021.4.11.1415" />
-    <PackageReference Include="ServerOptions.Extensions.ConfigurationEngine" Version="2021.4.11.1415" />
-    <PackageReference Include="SocketCore.Extensions.Manager" Version="2021.4.11.1415" />
-    <PackageReference Include="SocketCore.Extensions.Packet" Version="2021.4.11.1415" />
-    <PackageReference Include="SocketServer" Version="2021.4.11.1415" />
-    <PackageReference Include="Utils" Version="2021.4.11.1415" />
+    <PackageReference Include="NetScript" Version="2021.5.16.2309" />
+    <PackageReference Include="Network.Extensions" Version="2021.5.16.2309" />
+    <PackageReference Include="SCLogger" Version="2021.5.16.2309" />
+    <PackageReference Include="ServerOptions.Extensions.ConfigurationEngine" Version="2021.5.16.2309" />
+    <PackageReference Include="SocketCore.Extensions.Manager" Version="2021.5.16.2309" />
+    <PackageReference Include="SocketCore.Extensions.Packet" Version="2021.5.16.2309" />
+    <PackageReference Include="SocketServer" Version="2021.5.16.2309" />
+    <PackageReference Include="Utils" Version="2021.5.16.2309" />
   </ItemGroup>
 
   <ItemGroup>
