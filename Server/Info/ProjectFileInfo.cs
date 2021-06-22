@@ -13,9 +13,9 @@ namespace Publisher.Server.Info
 
         public FileStream IO { get; set; }
 
-        public ProjectInfo Project { get; set; }
+        public ServerProjectInfo Project { get; set; }
 
-        public ProjectFileInfo(string dir, System.IO.FileInfo finfo, ProjectInfo project) : base(dir,finfo)
+        public ProjectFileInfo(string dir, System.IO.FileInfo finfo, ServerProjectInfo project) : base(dir,finfo)
         {
             Project = project;
         }
@@ -57,6 +57,9 @@ namespace Publisher.Server.Info
                 FileInfo.Directory.Create();
 
             fi.MoveTo(FileInfo.FullName, true);
+
+            if (!FileInfo.Exists)
+                FileInfo = new FileInfo(FileInfo.FullName);
 
             CalculateHash();
 

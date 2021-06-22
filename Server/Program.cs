@@ -2,6 +2,7 @@
 using Publisher.Server.Network;
 using Publisher.Server.Tools;
 using System;
+using System.IO;
 using System.Linq;
 using System.ServiceProcess;
 using System.Threading;
@@ -12,6 +13,8 @@ namespace Publisher.Server
     {
         static void Main(string[] args)
         {
+            Directory.SetCurrentDirectory(AppDomain.CurrentDomain.BaseDirectory);
+
             ServerConfigurationManager.Initialize();
 
             StaticInstances.ServerLogger.SetUnhandledExCatch(true);

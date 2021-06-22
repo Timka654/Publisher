@@ -24,6 +24,12 @@ namespace Publisher.Basic
 
         public void CalculateHash()
         {
+            if (FileInfo.Exists == false)
+            {
+                Hash = "";
+                return;
+            }
+
             using MD5 md5 = MD5.Create();
 
             Hash = string.Join("", md5.ComputeHash(File.ReadAllBytes(FileInfo.FullName)).Select(x => x.ToString("X2")));

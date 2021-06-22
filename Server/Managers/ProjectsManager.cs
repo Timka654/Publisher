@@ -131,7 +131,7 @@ namespace Publisher.Server.Managers
 
                 if (exist == null)
                 {
-                    exist = new ProjectInfo(item);
+                    exist = new ServerProjectInfo(item);
                     AddProject(exist);
                     StaticInstances.ServerLogger.AppendInfo($"Project {exist.Info.Name}({exist.Info.Id}) appended");
                 }
@@ -169,7 +169,7 @@ namespace Publisher.Server.Managers
                 try
                 {
 
-                var proj = new ProjectInfo(item);
+                var proj = new ServerProjectInfo(item);
 
                 AddProject(proj);
 

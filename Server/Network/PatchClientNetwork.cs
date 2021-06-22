@@ -36,6 +36,8 @@ namespace Publisher.Server.Network
 
         //public SignInPacket GetSignInPacket() => ((SignInPacket)Options.Packets[(ushort)PatchClientPackets.SignInResult]);
 
+        private AutoResetEvent ClientLocked = new AutoResetEvent(true);
+
         public PatchClientNetwork(ClientOptions<NetworkPatchClient> options) : base(options)
         {
             options.OnClientConnectEvent += Options_OnClientConnectEvent;
@@ -43,6 +45,8 @@ namespace Publisher.Server.Network
             options.OnReconnectEvent += Options_OnReconnectEvent;
 
             options.OnExceptionEvent += Options_OnExceptionEvent;
+
+            options.HelperLogger = StaticInstances.ServerLogger;
 
             GetChangeLatestUpdateHandlePacket().OnReceiveEvent += PatchClientNetwork_OnReceiveEvent;
         }
@@ -85,6 +89,8 @@ namespace Publisher.Server.Network
         {
             StaticInstances.ServerLogger.AppendInfo($"Success connected to PatchServer({Options.IpAddress}:{Options.Port})");
 
+            SetFailed();
+
             foreach (var item in ProjectMap.Values.ToArray())
             {
                 await SignProject(item);
@@ -108,7 +114,7 @@ namespace Publisher.Server.Network
             await proj.Download(value.updateTime);
         }
 
-        public async Task<SignStateEnum> SignProject(ProjectInfo item)
+        public async Task<SignStateEnum> SignProject(ServerProjectInfo item)
         {
 
             var userInfo = JsonSerializer.Deserialize<BasicUserInfo>(item.GetPatchSignData(), options: new JsonSerializerOptions() { IgnoreNullValues = true, IgnoreReadOnlyProperties = true, });
@@ -135,16 +141,16 @@ namespace Publisher.Server.Network
             return result;
         }
 
-        public void SignOutProject(ProjectInfo item)
+        public void SignOutProject(ServerProjectInfo item)
         {
             SignOutPacket.Send(this.Options.ClientData, item.Info.Id);
         }
 
         private AutoResetEvent downloadQueueLocker = new AutoResetEvent(true);
 
-        internal ProjectInfo ProcessingProject = null;
+        internal ServerProjectInfo ProcessingProject = null;
 
-        public async Task<bool> InitializeDownload(ProjectInfo item)
+        public async Task<bool> InitializeDownload(ServerProjectInfo item)
         {
             downloadQueueLocker.WaitOne();
 
@@ -163,7 +169,7 @@ namespace Publisher.Server.Network
             return result.result;
         }
 
-        public async Task<List<BasicFileInfo>> GetFileList(ProjectInfo project)
+        public async Task<List<BasicFileInfo>> GetFileList(ServerProjectInfo project)
         {
             if (ProcessingProject != project)
                 throw new Exception($"{ProcessingProject} != {project}");
@@ -171,7 +177,7 @@ namespace Publisher.Server.Network
             return await GetFileListPacket().Send();
         }
 
-        public async Task<(string fileName, byte[] data)[]> FinishDownload(ProjectInfo item)
+        public async Task<(string fileName, byte[] data)[]> FinishDownload(ServerProjectInfo item)
         {
             if (item != ProcessingProject)
                 throw new Exception($"{item} != {ProcessingProject}");
@@ -229,6 +235,6 @@ namespace Publisher.Server.Network
             downloadQueueLocker.Set();
         }
 
-        public ConcurrentDictionary<string, ProjectInfo> ProjectMap = new ConcurrentDictionary<string, ProjectInfo>();
+        public ConcurrentDictionary<string, ServerProjectInfo> ProjectMap = new ConcurrentDictionary<string, ServerProjectInfo>();
     }
 }

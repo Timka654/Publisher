@@ -23,7 +23,8 @@ namespace Publisher.Server.Tools
                 { "add_user", AddUser },
                 { "add_patch_connection", AddPatchConnection },
                 { "clone_identity", CloneIdentity },
-                { "check_scripts", CheckScripts }
+                { "check_scripts", CheckScripts },
+                { "reindexing", ReIndexing }
             };
         }
 
@@ -47,8 +48,27 @@ namespace Publisher.Server.Tools
 
             pi.CheckScripts();
         }
+        protected void ReIndexing(CommandLineArgs args)
+        {
+            StaticInstances.ServerLogger.AppendInfo("Try reindexing");
 
-            protected void CreateProject(CommandLineArgs args)
+            if (args.ContainsKey("project_id") == false || !Guid.TryParse(args["project_id"], out var pid))
+            {
+                StaticInstances.ServerLogger.AppendError($"check project scripts \"project_id\" parameter must have GUID format");
+                return;
+            }
+            var pi = StaticInstances.ProjectsManager.GetProject(args["project_id"]);
+
+            if (pi == null)
+            {
+                StaticInstances.ServerLogger.AppendError($"check project scripts \"{args["project_id"]}\" not found");
+                return;
+            }
+
+            pi.ReIndexing();
+        }
+
+        protected void CreateProject(CommandLineArgs args)
         {
             StaticInstances.ServerLogger.AppendInfo("Create project");
 
@@ -74,7 +94,7 @@ namespace Publisher.Server.Tools
                 return;
             }
 
-            var proj = new ProjectInfo(args);
+            var proj = new ServerProjectInfo(args);
 
             StaticInstances.ProjectsManager.AddProject(proj);
 
@@ -94,7 +114,7 @@ namespace Publisher.Server.Tools
                 return;
             }
 
-            ProjectInfo pi = null;
+            ServerProjectInfo pi = null;
 
             if (args.ContainsKey("project_id"))
                 pi = StaticInstances.ProjectsManager.GetProject(args["project_id"]);
@@ -144,7 +164,7 @@ namespace Publisher.Server.Tools
                 return;
             }
 
-            ProjectInfo pi = StaticInstances.ProjectsManager.GetProject(args["project_id"]);
+            ServerProjectInfo pi = StaticInstances.ProjectsManager.GetProject(args["project_id"]);
 
             if (pi == null)
             {
@@ -216,7 +236,7 @@ namespace Publisher.Server.Tools
                 return;
             }
 
-            ProjectInfo pi = StaticInstances.ProjectsManager.GetProject(project_id);
+            ServerProjectInfo pi = StaticInstances.ProjectsManager.GetProject(project_id);
 
             if (pi == null)
             {
@@ -246,8 +266,8 @@ namespace Publisher.Server.Tools
                 return;
             }
 
-            ProjectInfo pisrc = StaticInstances.ProjectsManager.GetProject(args["source_project_id"]);
-            ProjectInfo pidest = StaticInstances.ProjectsManager.GetProject(args["destination_project_id"]);
+            ServerProjectInfo pisrc = StaticInstances.ProjectsManager.GetProject(args["source_project_id"]);
+            ServerProjectInfo pidest = StaticInstances.ProjectsManager.GetProject(args["destination_project_id"]);
 
             if (pisrc == null || pidest == null)
             {

@@ -23,7 +23,7 @@ using System.Reflection;
 
 namespace Publisher.Server.Info
 {
-    public class ProjectInfo
+    public partial class ServerProjectInfo
     {
         #region Path
 
@@ -45,25 +45,6 @@ namespace Publisher.Server.Info
 
         public string LogsDirPath => Path.Combine(PublisherDirPath, "logs");
 
-        public FileLogger CurrentLogger { get; set; } = null;
-
-        private void initializeLogger()
-        {
-            closeLogger();
-
-            var uid = ProcessUser?.Id ?? currentDownloader?.UserInfo?.Id ?? "Unknown";
-
-            CurrentLogger = FileLogger.Initialize(LogsDirPath, $"upload {DateTime.Now:yyyy-MM-dd_HH:mm:ss} - {uid}");
-        }
-
-        private void closeLogger()
-        {
-            if (CurrentLogger != null)
-            {
-                CurrentLogger.Flush();
-                CurrentLogger.Dispose();
-            }
-        }
 
         #region Scripts
 
@@ -204,6 +185,7 @@ namespace Publisher.Server.Info
         NetScript.Script script;
 
         DateTime? scriptLatestBuilded;
+
         DateTime scriptLatestChanged = DateTime.UtcNow;
 
         private MethodInfo OnStartMethod;
@@ -240,7 +222,7 @@ namespace Publisher.Server.Info
             script.RegisterCoreReference("System.ComponentModel.Primitives.dll");
             script.RegisterCoreReference("System.Diagnostics.Process.dll");
 
-            script.RegistrationGlobalVariable(new NetScript.GlobalVariable("CurrentProject", typeof(ProjectInfo)));
+            script.RegistrationGlobalVariable(new NetScript.GlobalVariable("CurrentProject", typeof(ServerProjectInfo)));
 
             CheckScriptsExists(script);
 
@@ -421,10 +403,13 @@ namespace Publisher.Server.Info
 
             if (di.Exists)
                 di.Delete(true);
+
+            di.Create();
         }
 
         private bool processTemp()
         {
+            initializeBackup();
             foreach (var item in processFileList)
             {
                 addBackupFile(item);
@@ -439,8 +424,6 @@ namespace Publisher.Server.Info
 
                 runScriptOnFileEnd(item.Path);
             }
-
-            processFileList.Clear();
 
             return true;
         }
@@ -462,6 +445,9 @@ namespace Publisher.Server.Info
         private void addBackupFile(ProjectFileInfo file)
         {
             if (Info.Backup == false)
+                return;
+
+            if (file.FileInfo.Exists == false)
                 return;
 
             var fi = new FileInfo(Path.Combine(currentBackupDirPath, file.RelativePath));
@@ -495,6 +481,30 @@ namespace Publisher.Server.Info
 
         #endregion
 
+        #region Logger
+
+        public FileLogger CurrentLogger { get; set; } = null;
+
+        private void initializeLogger()
+        {
+            closeLogger();
+
+            var uid = ProcessUser?.Id ?? currentDownloader?.UserInfo?.Id ?? "Unknown";
+
+            CurrentLogger = FileLogger.Initialize(LogsDirPath, $"upload {DateTime.Now:yyyy-MM-dd_HH:mm:ss} - {uid}");
+        }
+
+        private void closeLogger()
+        {
+            if (CurrentLogger != null)
+            {
+                CurrentLogger.Flush();
+                CurrentLogger.Dispose();
+            }
+        }
+
+        #endregion
+
         #region Publish
 
         public bool StartProcess(UserInfo user)
@@ -522,10 +532,10 @@ namespace Publisher.Server.Info
             ProcessUser = user;
 
             initializeLogger();
-            initializeBackup();
             initializeTemp();
 
             var packet = new OutputPacketBuffer();
+
             packet.SetPacketId(Basic.PublisherClientPackets.ProjectPublishStart);
 
             packet.WriteInt32(Info.IgnoreFilePaths.Count);
@@ -536,14 +546,6 @@ namespace Publisher.Server.Info
             }
 
             user.CurrentNetwork.Send(packet);
-
-            if (CurrentLogger != null)
-            {
-                CurrentLogger.Flush();
-                CurrentLogger = null;
-            }
-
-            CurrentLogger = FileLogger.Initialize(LogsDirPath, user.Name);
 
             return true;
         }
@@ -559,15 +561,32 @@ namespace Publisher.Server.Info
 
                 if (success)
                 {
-                    try { runScriptOnStart(); } catch (Exception ex) { BroadcastMessage(ex.ToString()); }
+                    try { runScriptOnStart(); } catch (Exception ex) { BroadcastMessage(ex.ToString()); success = false; }
 
-                    success = processTemp();
+                    if (success)
+                    {
+                        try
+                        {
+                            success = processTemp();
+                        }
+                        catch (Exception ex)
+                        {
+                            success = false;
+                            BroadcastMessage(ex.ToString());
+                        }
 
-                    if (!success)
-                        recoveryBackup();
+                        if (!success)
+                        {
+                            recoveryBackup();
+                            ProcessFolder();
+                        }
+                    }
 
                     try { runScriptOnEnd(); } catch (Exception ex) { BroadcastMessage(ex.ToString()); }
+
                 }
+
+                processFileList.Clear();
 
                 if (success)
                 {
@@ -575,8 +594,9 @@ namespace Publisher.Server.Info
 
                     try { runScriptOnSuccessEnd(args ?? new Dictionary<string, string>()); } catch (Exception ex) { BroadcastMessage(ex.ToString()); }
 
-                    Info.LatestUpdate = DateTime.UtcNow;
                     SaveProjectInfo();
+
+                    Info.LatestUpdate = DateTime.UtcNow;
 
                     broadcastUpdateTime();
                 }
@@ -618,8 +638,8 @@ namespace Publisher.Server.Info
                 client.CurrentFile = new ProjectFileInfo(ProjectDirPath, new FileInfo(Path.Combine(ProjectDirPath, relativePath)), this);
             }
 
-            client.CurrentFile.StartFile();
             processFileList.Add(client.CurrentFile);
+            client.CurrentFile.StartFile();
         }
 
         internal void EndFile(IProcessFileContainer client)
@@ -637,332 +657,7 @@ namespace Publisher.Server.Info
 
         #endregion
 
-        #region Patch
-
-        private AutoResetEvent patchLocker = new AutoResetEvent(true);
-
-        #region Server
-
-        private ConcurrentBag<PublisherNetworkClient> patchClients = new ConcurrentBag<PublisherNetworkClient>();
-
-        private PublisherNetworkClient currentDownloader = null;
-
-        private void broadcastUpdateTime(PublisherNetworkClient client = null)
-        {
-            var packet = new OutputPacketBuffer();
-
-            packet.SetPacketId(PatchClientPackets.ChangeLatestUpdateHandle);
-
-            packet.WriteString16(Info.Id);
-            packet.WriteDateTime(Info.LatestUpdate.Value);
-
-            if (client == null)
-                foreach (var item in patchClients)
-                {
-                    try { item.Send(packet); } catch { }
-                }
-            else
-                client.Send(packet);
-        }
-
-        public SignStateEnum SignPatchClient(PublisherNetworkClient client, string userId, byte[] key, DateTime latestUpdate)
-        {
-            if (client.IsPatchClient == false)
-            {
-                client.IsPatchClient = true;
-                client.PatchProjectMap = new Dictionary<string, ProjectInfo>();
-            }
-
-            var user = users.FirstOrDefault(x => x.Id == userId);
-
-            if (user == null)
-            {
-                Network.Packets.PathServer.SignInPacket.Send(client, SignStateEnum.UserNotFound);
-                return SignStateEnum.UserNotFound;
-            }
-
-            if (user.Cipher == null)
-            {
-                user.Cipher = new RSACipher();
-
-                user.Cipher.LoadXml(user.PSAPrivateKey);
-            }
-
-            byte[] data = user.Cipher.Decode(key, 0, key.Length);
-
-            if (Encoding.ASCII.GetString(data) != userId)
-            {
-                Network.Packets.PathServer.SignInPacket.Send(client, SignStateEnum.UserNotFound);
-                return SignStateEnum.UserNotFound;
-            }
-
-            patchClients.Add(client);
-
-            client.PatchProjectMap.Add(Info.Id, this);
-
-            client.RunAliveChecker();
-
-            Network.Packets.PathServer.SignInPacket.Send(client, SignStateEnum.Ok);
-
-            if (Info.LatestUpdate.HasValue && Info.LatestUpdate.Value > latestUpdate)
-                broadcastUpdateTime(client);
-
-            return SignStateEnum.Ok;
-        }
-
-        public void SignOutPatchClient(PublisherNetworkClient client)
-        {
-            patchClients = new ConcurrentBag<PublisherNetworkClient>(patchClients.Where(x => x != client));
-
-            EndDownload(client, true);
-        }
-
-        public void StartDownload(PublisherNetworkClient client)
-        {
-            patchLocker.WaitOne();
-
-            currentDownloader = client;
-
-            initializeLogger();
-            client.PatchDownloadProject = this;
-
-            Network.Packets.PathServer.StartDownloadPacket.Send(client, true, Info.IgnoreFilePaths);
-        }
-
-        public void NextDownloadFile(PublisherNetworkClient client, string relativePath)
-        {
-            if (client != currentDownloader)
-                return;
-
-            if (currentDownloader.CurrentFile != null)
-                currentDownloader.CurrentFile.CloseRead();
-
-            client.CurrentFile = FileInfoList.FirstOrDefault(x => x.RelativePath == relativePath);
-
-            if (client.CurrentFile != null && !client.CurrentFile.FileInfo.Exists)
-            {
-                FileInfoList.Remove(client.CurrentFile);
-                client.CurrentFile = null;
-            }
-
-            if (client.CurrentFile != null)
-                client.CurrentFile.OpenRead();
-        }
-
-        internal void EndDownload<T>(T client, bool success = false)
-            where T : INetworkClient, IProcessFileContainer
-        {
-            if (client != currentDownloader)
-                return;
-
-            if (client.CurrentFile != null)
-            {
-                client.CurrentFile.CloseRead();
-                client.CurrentFile = null;
-            }
-            currentDownloader = null;
-            if (client is PublisherNetworkClient c)
-                c.PatchDownloadProject = null;
-
-            patchLocker.Set();
-
-            if (success)
-            {
-                var packet = new OutputPacketBuffer();
-
-                packet.SetPacketId(PatchClientPackets.FinishDownloadResult);
-
-                byte[] buf = null;
-
-                packet.WriteCollection(Directory.GetFiles(ScriptsDirPath, "*.cs"), (p, d) =>
-                {
-                    buf = File.ReadAllBytes(d);
-                    p.WritePath(Path.GetRelativePath(ProjectDirPath, d));
-                    p.WriteInt32(buf.Length);
-                    p.Write(buf);
-                });
-
-                client.Network?.Send(packet);
-            }
-        }
-
-        #endregion
-
-        private string PatchSignFilePath => Info.PatchInfo == null ? Guid.NewGuid().ToString() : Path.Combine(UsersPublicksDirPath, Info.PatchInfo.SignName + ".pubuk");
-
-        public byte[] GetPatchSignData()
-        {
-            if (File.Exists(PatchSignFilePath))
-                return File.ReadAllBytes(PatchSignFilePath);
-
-            return null;
-        }
-
-        internal PatchClientNetwork PatchClient { get; private set; }
-
-        internal ClientOptions<NetworkPatchClient> PatchClientOptions => PatchClient?.Options;
-
-        private async void LoadPatch()
-        {
-            await LoadPatchAsync();
-        }
-
-        private async Task<bool> LoadPatchAsync()
-        {
-            if (Info.PatchInfo == null || !File.Exists(PatchSignFilePath))
-                return false;
-
-            PatchClient = await StaticInstances.PatchManager.LoadProjectPatchClient(this);
-
-            if (PatchClient.GetState())
-                await PatchClient.SignProject(this);
-
-            return PatchClient != null;
-        }
-
-        public async void ClearPatchClient()
-        {
-            PatchClient = null;
-
-            await Task.Delay(120_000);
-
-            await LoadPatchAsync();
-        }
-
-        internal async Task Download(DateTime latestChangeTime)
-        {
-            patchLocker.WaitOne();
-
-            if (!await PatchClient.InitializeDownload(this))
-            {
-                patchLocker.Set();
-                DelayDownload(latestChangeTime);
-                return;
-            }
-
-            initializeBackup();
-            initializeTemp();
-
-            IEnumerable<BasicFileInfo> fileList = await PatchClient.GetFileList(this);
-
-            if (fileList == default)
-            {
-                patchLocker.Set();
-                DelayDownload(latestChangeTime);
-                return;
-            }
-
-            if (Info.LatestUpdate.HasValue != false)
-                fileList = fileList.Where(x => x.LastChanged > Info.LatestUpdate.Value);
-
-            fileList = fileList.Where(x => !Info.IgnoreFilePaths.Any(ig => Regex.IsMatch(x.RelativePath, ig))).Reverse().ToList();
-
-            bool EOF = false;
-
-            byte q = byte.MinValue;
-
-            foreach (var file in fileList)
-            {
-                PatchClient.NextDownloadFile(file);
-                StartFile(PatchClient.Options.ClientData, file.RelativePath);
-
-                do
-                {
-                    await Task.Delay(50);
-                    DownloadPacketData downloadProc = await PatchClient.Download();
-
-                    if (downloadProc == default)
-                    {
-                        EndFile(PatchClient.Options.ClientData);
-                        EndPatchReceive(false);
-                        DelayDownload(latestChangeTime);
-                        return;
-                    }
-
-                    EOF = downloadProc.EOF;
-
-                    PatchClient.Options.ClientData.CurrentFile.IO.Write(downloadProc.Buff, 0, downloadProc.Buff.Length);
-                    if (q % 10 == 0) PatchClient.Options.ClientData.CurrentFile.IO.Flush(true);
-
-                    downloadProc.Dispose();
-                    GC.Collect(GC.GetGeneration(downloadProc));
-                    downloadProc = null;
-
-
-                    if (q++ == byte.MaxValue / 10)
-                    {
-                        //GC.Collect(GC.GetGeneration(downloadProc));
-                        GC.GetTotalMemory(true);
-                        GC.WaitForFullGCComplete();
-                        q = byte.MinValue;
-                    }
-                }
-                while (EOF == false);
-                //PatchClient.Options.ClientData.CurrentFile.CloseRead();
-                EndFile(PatchClient.Options.ClientData);
-                await Task.Delay(125);
-
-            }
-
-            var result = await PatchClient.FinishDownload(this);
-
-            if (result == default)
-            {
-                EndPatchReceive(false);
-                DelayDownload(latestChangeTime);
-                return;
-            }
-
-            foreach (var item in result)
-            {
-                File.WriteAllBytes(Path.Combine(ProjectDirPath, item.fileName), item.data);
-            }
-
-            Info.LatestUpdate = latestChangeTime;
-
-            getScript(true);
-
-            EndPatchReceive(true);
-        }
-
-        private void EndPatchReceive(bool success)
-        {
-            if (success)
-            {
-                try { runScriptOnStart(); } catch (Exception ex) { BroadcastMessage(ex.ToString()); }
-
-                success = processTemp();
-
-                if (!success)
-                    recoveryBackup();
-                try { runScriptOnEnd(); } catch (Exception ex) { BroadcastMessage(ex.ToString()); }
-            }
-
-
-            if (success)
-            {
-                DumpFileList();
-
-                try { runScriptOnSuccessEnd(new Dictionary<string, string>()); } catch (Exception ex) { BroadcastMessage(ex.ToString()); }
-
-                Info.LatestUpdate = DateTime.UtcNow;
-                SaveProjectInfo();
-
-                broadcastUpdateTime();
-            }
-            else
-                try { runScriptOnFailedEnd(); } catch (Exception ex) { BroadcastMessage(ex.ToString()); }
-            patchLocker.Set();
-        }
-
-        private async void DelayDownload(DateTime latestChangeTime)
-        {
-            await Task.Delay(TimeSpan.FromSeconds(20));
-
-            await Download(latestChangeTime);
-        }
-
-        #endregion
+        #region Files
 
         private void ProcessFolder()
         {
@@ -980,6 +675,8 @@ namespace Publisher.Server.Info
                 else
                     FileInfoList = new List<ProjectFileInfo>();
 
+                StaticInstances.ServerLogger.AppendInfo($"Project {Info.Name}({Info.Id}) Loaded {FileInfoList.Count} files");
+
                 var removed = new List<ProjectFileInfo>();
 
                 foreach (var item in FileInfoList)
@@ -990,7 +687,7 @@ namespace Publisher.Server.Info
                         removed.Add(item);
                 }
 
-                FileInfoList.RemoveAll(x => removed.Contains(x));
+                StaticInstances.ServerLogger.AppendInfo($"Project {Info.Name}({Info.Id}) Removed {FileInfoList.RemoveAll(x => removed.Contains(x))} invalid files");
 
                 GC.Collect();
             }
@@ -1019,6 +716,86 @@ namespace Publisher.Server.Info
             }
         }
 
+        public void DumpFileList()
+        {
+            File.WriteAllText(CacheFilePath, System.Text.Json.JsonSerializer.Serialize(FileInfoList.Select(x => new { x.RelativePath, x.Hash })));
+        }
+
+        internal void ReIndexing()
+        {
+            StaticInstances.ServerLogger.AppendInfo($"Try reindexing project {Info.Name}({Info.Id})");
+
+            ProcessFolder();
+
+            string oldHash = default;
+            bool exists = false;
+
+            foreach (var item in FileInfoList)
+            {
+                oldHash = item.Hash;
+
+                item.CalculateHash();
+
+                if (oldHash != item.Hash)
+                {
+                    StaticInstances.ServerLogger.AppendInfo($"{item.RelativePath} invaliid hash ({oldHash} vs {item.Hash})");
+                    exists = true;
+                }
+            }
+
+            var di = new DirectoryInfo(ProjectDirPath);
+
+            string filePath = "";
+
+            foreach (var file in RecurciveFiles(di))
+            {
+                filePath = Path.GetRelativePath(ProjectDirPath, file.FullName);
+
+                if (Info.IgnoreFilePaths.Any(x => System.Text.RegularExpressions.Regex.IsMatch(filePath, x)))
+                    continue;
+
+                if (FileInfoList.Any(x => x.RelativePath == filePath))
+                    continue;
+
+                var pfi = new ProjectFileInfo(ProjectDirPath, file, this);
+
+                pfi.CalculateHash();
+
+                FileInfoList.Add(pfi);
+
+                StaticInstances.ServerLogger.AppendInfo($"{pfi.RelativePath} new file {pfi.Hash}");
+            }
+
+            if (exists)
+            {
+                DumpFileList();
+                Info.LatestUpdate = DateTime.UtcNow;
+                SaveProjectInfo();
+                StaticInstances.ServerLogger.AppendInfo($"Success reindexing project");
+            }
+
+        }
+
+        public bool RemoveFile(string path)
+        {
+            var file = FileInfoList.FirstOrDefault(x => x.RelativePath == path);
+
+            if (file == null)
+                return true;
+            try
+            {
+                File.Delete(file.Path);
+                FileInfoList.Remove(file);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                StaticInstances.ServerLogger.AppendError(ex.ToString());
+            }
+
+            return false;
+        }
+
         private IEnumerable<FileInfo> RecurciveFiles(DirectoryInfo di)
         {
             List<FileInfo> files = new List<FileInfo>();
@@ -1034,6 +811,10 @@ namespace Publisher.Server.Info
 
             return files;
         }
+
+        #endregion
+
+        #region Users
 
         internal UserInfo GetUser(string userId)
         {
@@ -1080,30 +861,7 @@ namespace Publisher.Server.Info
             }
         }
 
-        public bool RemoveFile(string path)
-        {
-            var file = FileInfoList.FirstOrDefault(x => x.RelativePath == path);
-
-            if (file == null)
-                return true;
-            try
-            {
-                File.Delete(file.Path);
-                FileInfoList.Remove(file);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                StaticInstances.ServerLogger.AppendError(ex.ToString());
-            }
-
-            return false;
-        }
-
-        public void DumpFileList()
-        {
-            File.WriteAllText(CacheFilePath, System.Text.Json.JsonSerializer.Serialize(FileInfoList.Select(x => new { x.RelativePath, x.Hash })));
-        }
+        #endregion
 
         internal void Reload(ProjectInfoData info)
         {
@@ -1120,7 +878,6 @@ namespace Publisher.Server.Info
 
             ProcessFolder();
         }
-
 
         public ProjectInfoData Info { get; private set; }
 
@@ -1177,7 +934,7 @@ namespace Publisher.Server.Info
             }
         }
 
-        public ProjectInfo(string projectPath)
+        public ServerProjectInfo(string projectPath)
         {
             ProjectDirPath = projectPath;
 
@@ -1192,12 +949,12 @@ namespace Publisher.Server.Info
             LoadPatch();
         }
 
-        public ProjectInfo(ProjectInfoData pid)
+        public ServerProjectInfo(ProjectInfoData pid)
         {
             Reload(pid);
         }
 
-        public ProjectInfo(CommandLineArgs args)
+        public ServerProjectInfo(CommandLineArgs args)
         {
             StaticInstances.ServerLogger.AppendInfo("project creating");
             Info = new ProjectInfoData()

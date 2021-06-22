@@ -7,6 +7,7 @@ using ServerOptions.Extensions.Manager;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Net;
 
 namespace Publisher.Server.Managers
 {
@@ -20,9 +21,10 @@ namespace Publisher.Server.Managers
             Instance = this;
         }
 
+
         internal void StartDownload(PublisherNetworkClient client, string projectId)
         {
-            ProjectInfo proj = null;
+            ServerProjectInfo proj = null;
 
             if (client.IsPatchClient == false || client.PatchProjectMap.TryGetValue(projectId, out proj) == false)
                 StartDownloadPacket.Send(client, false, new List<string>());
@@ -34,7 +36,7 @@ namespace Publisher.Server.Managers
             client.PatchDownloadProject?.EndDownload(client, true);
         }
 
-        public async Task<PatchClientNetwork> LoadProjectPatchClient(ProjectInfo project)
+        public async Task<PatchClientNetwork> LoadProjectPatchClient(ServerProjectInfo project)
         {
             var client = GetClient(project.Info.PatchInfo.IpAddress, project.Info.PatchInfo.Port);
 

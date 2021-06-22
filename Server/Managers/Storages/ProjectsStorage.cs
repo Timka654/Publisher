@@ -7,19 +7,19 @@ namespace Publisher.Server.Managers.Storages
 {
     public class ProjectsStorage
     {
-        protected ConcurrentDictionary<string, ProjectInfo> storage;
+        protected ConcurrentDictionary<string, ServerProjectInfo> storage;
 
         protected ProjectsStorage()
         {
-            storage = new ConcurrentDictionary<string, ProjectInfo>();
+            storage = new ConcurrentDictionary<string, ServerProjectInfo>();
         }
 
-        public bool AddProject(ProjectInfo project)
+        public bool AddProject(ServerProjectInfo project)
         {
             return storage.TryAdd(project.Info.Id, project);
         }
 
-        public bool RemoveProject(ProjectInfo project)
+        public bool RemoveProject(ServerProjectInfo project)
         {
             return RemoveProject(project.Info.Id);
         }
@@ -29,19 +29,19 @@ namespace Publisher.Server.Managers.Storages
             return storage.TryRemove(projectId, out var dummy);
         }
 
-        public ProjectInfo GetProject(ProjectInfo project)
+        public ServerProjectInfo GetProject(ServerProjectInfo project)
         {
             return GetProject(project.Info.Id);
         }
 
-        public ProjectInfo GetProject(string projectId)
+        public ServerProjectInfo GetProject(string projectId)
         {
             storage.TryGetValue(projectId, out var proj);
 
             return proj;
         }
 
-        public ProjectInfo GetProjectByName(string projectName)
+        public ServerProjectInfo GetProjectByName(string projectName)
         {
             var projList = storage.Values.Where(x => x.Info.Name == projectName);
             if (projList.Count() > 1)

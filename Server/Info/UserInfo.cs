@@ -13,7 +13,7 @@ namespace Publisher.Server.Info
 
         public RSACipher Cipher { get; set; }
 
-        public ProjectInfo CurrentProject { get; set; }
+        public ServerProjectInfo CurrentProject { get; set; }
 
         public PublisherNetworkClient CurrentNetwork { get; set; }
 
