@@ -5,9 +5,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="SCL" Version="2021.5.16.2309" />
-    <PackageReference Include="SCLogger" Version="2021.5.16.2309" />
-    <PackageReference Include="SocketCore.Extensions.Packet" Version="2021.5.16.2309" />
+    <PackageReference Include="SCL_Debug" Version="2021.10.15.1826" />
+    <PackageReference Include="Logger_Debug" Version="2021.10.15.1826" />
+    <PackageReference Include="SocketCore.Extensions.Packet_Debug" Version="2021.10.15.1826" />
   </ItemGroup>
 
   <ItemGroup>

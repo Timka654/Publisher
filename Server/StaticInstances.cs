@@ -2,6 +2,10 @@
 using Publisher.Server.Configuration;
 using Publisher.Server.Managers;
 using Publisher.Server.Network;
+#if RELEASE
+using System;
+using System.IO;
+#endif
 
 namespace Publisher.Server
 {
