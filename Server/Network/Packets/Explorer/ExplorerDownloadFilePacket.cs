@@ -1,5 +1,6 @@
 ﻿using Publisher.Basic;
 using Publisher.Server.Managers;
+using SocketCore.Extensions.Buffer;
 using SocketCore.Utils;
 using SocketCore.Utils.Buffer;
 
@@ -18,7 +19,7 @@ namespace Publisher.Server.Network.Packets.Explorer
 
         private static void Send(PublisherNetworkClient client, ExplorerActionResultEnum result)
         {
-            client.Network.Send((byte)PublisherClientPackets.ExplorerDownloadFileResult, (byte)result);
+            client.Network.Send(PublisherClientPackets.ExplorerDownloadFileResult, (byte)result);
         }
     }
 }

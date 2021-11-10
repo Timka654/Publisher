@@ -1,4 +1,5 @@
 ﻿using Publisher.Basic;
+using SocketCore.Extensions.Buffer;
 using SocketCore.Utils;
 using SocketCore.Utils.Buffer;
 
@@ -13,7 +14,7 @@ namespace Publisher.Server.Network.Packets.Explorer
 
         private static void Send(PublisherNetworkClient client, ExplorerActionResultEnum result)
         {
-            client.Network.Send((byte)PublisherClientPackets.ExplorerRemoveSignFileResult, (byte)result);
+            client.Network.Send(PublisherClientPackets.ExplorerRemoveSignFileResult, (byte)result);
         }
     }
 }
