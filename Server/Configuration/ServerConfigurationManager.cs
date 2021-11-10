@@ -1,8 +1,12 @@
 ﻿using ConfigurationEngine;
 using ConfigurationEngine.Info;
 using ConfigurationEngine.Providers.Json;
+using System;
 using System.Collections.Generic;
 using System.IO;
+#if RELEASE
+using System.Runtime.InteropServices;
+#endif
 
 namespace Publisher.Server.Configuration
 {

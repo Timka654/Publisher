@@ -63,6 +63,7 @@ namespace Publisher.Server.Network
             if (client != null)
                 StaticInstances.SessionManager.DisconnectClient(client);
         }
+
         protected override void SocketOptions_OnExtensionEvent(Exception ex, PublisherNetworkClient client)
         {
             base.SocketOptions_OnExtensionEvent(ex, client);

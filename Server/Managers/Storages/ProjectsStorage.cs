@@ -1,6 +1,8 @@
 ﻿using Publisher.Server.Info;
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Publisher.Server.Managers.Storages
@@ -27,6 +29,11 @@ namespace Publisher.Server.Managers.Storages
         public bool RemoveProject(string projectId)
         {
             return storage.TryRemove(projectId, out var dummy);
+        }
+
+        public IEnumerable<ServerProjectInfo> GetProjects()
+        {
+            return storage.Values.ToArray();
         }
 
         public ServerProjectInfo GetProject(ServerProjectInfo project)
