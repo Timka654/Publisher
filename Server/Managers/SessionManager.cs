@@ -1,5 +1,6 @@
 ﻿using Publisher.Server.Managers.Storages;
 using Publisher.Server.Network;
+using Publisher.Server.Network.PublisherClient;
 using ServerOptions.Extensions.Manager;
 
 namespace Publisher.Server.Managers
@@ -43,6 +44,7 @@ namespace Publisher.Server.Managers
 
             client.UserInfo = null;
             client.Network?.Disconnect();
+            client.Dispose();
         }
     }
 }

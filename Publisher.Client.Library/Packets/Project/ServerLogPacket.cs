@@ -14,9 +14,6 @@ namespace Publisher.Client.Packets.Project
             Instance = this;
         }
 
-        protected override void Receive(InputPacketBuffer data)
-        {
-            InvokeEvent(data.ReadString16());
-        }
+        protected override void Receive(InputPacketBuffer data) => InvokeEvent(data.ReadString16());
     }
 }

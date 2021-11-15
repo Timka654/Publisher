@@ -2,12 +2,13 @@
 using Newtonsoft.Json;
 using Publisher.Basic;
 using Publisher.Server.Network;
+using Publisher.Server.Network.PublisherClient;
 using System;
 using System.IO;
 
 namespace Publisher.Server.Info
 {
-    public class UserInfo : Publisher.Basic.BasicUserInfo
+    public class UserInfo : BasicUserInfo
     {
         public string FileName { get; private set; }
 
@@ -20,7 +21,7 @@ namespace Publisher.Server.Info
         public UserInfo(string fileName)
         {
             FileName = fileName;
-            Reload(JsonConvert.DeserializeObject<Publisher.Basic.BasicUserInfo>(File.ReadAllText(fileName)));
+            Reload(JsonConvert.DeserializeObject<BasicUserInfo>(File.ReadAllText(fileName)));
         }
 
         public UserInfo(CommandLineArgs args)
@@ -33,14 +34,14 @@ namespace Publisher.Server.Info
             Cipher = new RSACipher();
 
             RSAPublicKey = Cipher.GetPublicKey();
-            PSAPrivateKey = Cipher.GetPrivateKey();
+            RSAPrivateKey = Cipher.GetPrivateKey();
         }
-        internal void Reload(Publisher.Basic.BasicUserInfo userInfo)
+        internal void Reload(BasicUserInfo userInfo)
         {
             Id = userInfo.Id;
             Name = userInfo.Name;
             RSAPublicKey = userInfo.RSAPublicKey;
-            PSAPrivateKey = userInfo.PSAPrivateKey;
+            RSAPrivateKey = userInfo.RSAPrivateKey;
         }
     }
 }

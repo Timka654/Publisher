@@ -7,6 +7,8 @@ using ServerOptions.Extensions.Packet;
 using Publisher.Client.Packets.Project;
 using Publisher.Basic;
 using System;
+using SocketCore.Extensions.Packet;
+using Publisher.Client.Library.Packets;
 
 namespace Publisher.Client
 {
@@ -40,6 +42,8 @@ namespace Publisher.Client
             options.OnClientDisconnectEvent +=(e) => disconnectedEvent(e);
 
             options.LoadPackets(Assembly.GetExecutingAssembly(), typeof(ClientPacketAttribute));
+
+            options.Load<NetworkClient, PacketDelegateContainerAttribute, ClientPacketAttribute>();
 
             Client = new SocketClient<NetworkClient, ClientOptions<NetworkClient>>(options);
         }

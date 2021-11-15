@@ -3,11 +3,12 @@ using SCL;
 using SCL.Utils;
 using SocketCore.Utils.Buffer;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Publisher.Client.Packets.Project
 {
     [ClientPacket(Basic.PublisherClientPackets.ProjectPublishStart)]
-    internal class ProjectPublishStartPacket : IPacketMessage<NetworkClient,List<string>>
+    internal class ProjectPublishStartPacket : IPacketMessage<NetworkClient, List<string>>
     {
         public static ProjectPublishStartPacket Instance { get; private set; }
 
@@ -16,18 +17,7 @@ namespace Publisher.Client.Packets.Project
             Instance = this;
         }
 
-        protected override void Receive(InputPacketBuffer data)
-        {
-            List<string> result = new List<string>();
-
-            int count = data.ReadInt32();
-
-            for (int i = 0; i < count; i++)
-            {
-                result.Add(data.ReadString16());
-            }
-
-            InvokeEvent(result);
-        }
+        protected override void Receive(InputPacketBuffer data) =>
+            InvokeEvent(data.ReadCollection(data => data.ReadString16()).ToList());
     }
 }

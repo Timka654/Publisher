@@ -15,12 +15,12 @@ namespace Publisher.Server.Info
 
         public ServerProjectInfo Project { get; set; }
 
-        public ProjectFileInfo(string dir, System.IO.FileInfo finfo, ServerProjectInfo project) : base(dir,finfo)
+        public ProjectFileInfo(string dir, FileInfo finfo, ServerProjectInfo project) : base(dir, finfo)
         {
             Project = project;
         }
 
-        public void StartFile()
+        public void StartFile(DateTime createTime, DateTime updateTime)
         {
             var fi = new FileInfo(System.IO.Path.Combine(Project.TempDirPath, RelativePath));
 
@@ -28,6 +28,10 @@ namespace Publisher.Server.Info
                 fi.Directory.Create();
 
             IO = fi.Create();
+
+            try { fi.CreationTimeUtc = createTime; } catch (Exception ex) { Project.BroadcastMessage($"starting error -> {ex}"); }
+            try { fi.LastWriteTimeUtc = updateTime; } catch (Exception ex) { Project.BroadcastMessage($"starting error -> {ex}"); }
+
             Project.BroadcastMessage($"starting -> {RelativePath}");
         }
 
@@ -43,7 +47,7 @@ namespace Publisher.Server.Info
             return true;
         }
 
-        public bool TempRelease() 
+        public bool TempRelease()
         {
             var fi = new FileInfo(System.IO.Path.Combine(Project.TempDirPath, RelativePath));
 
@@ -80,8 +84,8 @@ namespace Publisher.Server.Info
         }
 
         public ProjectFileInfo()
-        { 
-        
+        {
+
         }
     }
 }

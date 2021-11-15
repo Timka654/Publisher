@@ -1,4 +1,5 @@
 ﻿using Publisher.Server.Network;
+using Publisher.Server.Network.PublisherClient;
 using System.ServiceProcess;
 
 namespace Publisher.Server

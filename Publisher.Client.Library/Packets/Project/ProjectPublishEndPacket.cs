@@ -17,10 +17,7 @@ namespace Publisher.Client.Packets.Project
             Instance = this;
         }
 
-        protected override void Receive(InputPacketBuffer data)
-        {
-            Data = data.ReadBool();
-        }
+        protected override void Receive(InputPacketBuffer data) => Data = data.ReadBool();
 
         public static async Task<bool> Send(CommandLineArgs args)
         {
@@ -37,7 +34,6 @@ namespace Publisher.Client.Packets.Project
                 packet.WriteString16(item.Key);
                 packet.WriteString16(item.Value);
             }
-
 
             return await Instance.SendWaitAsync(packet);
 

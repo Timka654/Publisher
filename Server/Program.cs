@@ -1,5 +1,6 @@
 ﻿using Publisher.Server.Configuration;
 using Publisher.Server.Network;
+using Publisher.Server.Network.PublisherClient;
 using Publisher.Server.Tools;
 using System;
 using System.IO;

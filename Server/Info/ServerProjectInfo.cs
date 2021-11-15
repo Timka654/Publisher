@@ -1,7 +1,6 @@
 ﻿using SCLogger;
 using Newtonsoft.Json;
 using Publisher.Server.Network;
-using Publisher.Server.Network.Packets;
 using SocketCore.Utils.Buffer;
 using System;
 using System.Collections.Concurrent;
@@ -20,10 +19,12 @@ using System.Text.RegularExpressions;
 using Publisher.Server.Info.PacketInfo;
 using SocketCore.Utils;
 using System.Reflection;
+using Publisher.Server.Network.PublisherClient;
+using Publisher.Server.Network.PublisherClient.Packets;
 
 namespace Publisher.Server.Info
 {
-    public partial class ServerProjectInfo
+    public partial class ServerProjectInfo : IDisposable
     {
         #region Path
 
@@ -265,6 +266,9 @@ namespace Publisher.Server.Info
 
         private void runScript(Func<MethodInfo> function, Dictionary<string, object> pms)
         {
+            if (Info.PreventScriptExecution)
+                return;
+
             if (pms == null)
                 getScript().InvokeMethod<object>(method: function(), _obj: null, args: null);
             else
@@ -291,7 +295,7 @@ namespace Publisher.Server.Info
         public void BroadcastMessage(string log)
         {
             var packet = new OutputPacketBuffer();
-            packet.SetPacketId(Basic.PublisherClientPackets.ServerLog);
+            packet.SetPacketId(PublisherClientPackets.ServerLog);
             packet.WriteString16(log);
 
             CurrentLogger?.AppendLog(log);
@@ -491,7 +495,7 @@ namespace Publisher.Server.Info
 
             var uid = ProcessUser?.Id ?? currentDownloader?.UserInfo?.Id ?? "Unknown";
 
-            CurrentLogger = FileLogger.Initialize(LogsDirPath, $"upload {DateTime.Now:yyyy-MM-dd_HH:mm:ss} - {uid}");
+            CurrentLogger = FileLogger.Initialize(LogsDirPath, $"upload {DateTime.Now:yyyy-MM-dd_HH.mm.ss} - {uid}");
         }
 
         private void closeLogger()
@@ -507,16 +511,16 @@ namespace Publisher.Server.Info
 
         #region Publish
 
-        public bool StartProcess(UserInfo user)
+        public bool StartProcess(PublisherNetworkClient client)
         {
-            user.CurrentProject = this;
+            client.UserInfo.CurrentProject = this;
 
             patchLocker.WaitOne();
 
-            if (ProcessUser != null && ProcessUser != user)
+            if (ProcessUser != null && ProcessUser != client.UserInfo)
             {
-                if (!WaitQueue.Contains(user))
-                    WaitQueue.Enqueue(user);
+                if (!WaitQueue.Contains(client.UserInfo))
+                    WaitQueue.Enqueue(client.UserInfo);
 
                 if (ProcessUser.CurrentNetwork?.AliveState == true && ProcessUser.CurrentNetwork?.Network?.GetState() == true)
                 {
@@ -524,19 +528,19 @@ namespace Publisher.Server.Info
                 }
                 else
                 {
-                    if (StopProcess(user.CurrentNetwork, false))
+                    if (StopProcess(client.UserInfo.CurrentNetwork, false))
                         patchLocker.WaitOne();
                 }
             }
 
-            ProcessUser = user;
+            ProcessUser = client.UserInfo;
 
             initializeLogger();
             initializeTemp();
 
             var packet = new OutputPacketBuffer();
 
-            packet.SetPacketId(Basic.PublisherClientPackets.ProjectPublishStart);
+            packet.SetPacketId(PublisherClientPackets.ProjectPublishStart);
 
             packet.WriteInt32(Info.IgnoreFilePaths.Count);
 
@@ -545,7 +549,7 @@ namespace Publisher.Server.Info
                 packet.WriteString16(item);
             }
 
-            user.CurrentNetwork.Send(packet);
+            client.UserInfo.CurrentNetwork.Send(packet);
 
             return true;
         }
@@ -594,9 +598,9 @@ namespace Publisher.Server.Info
 
                     try { runScriptOnSuccessEnd(args ?? new Dictionary<string, string>()); } catch (Exception ex) { BroadcastMessage(ex.ToString()); }
 
-                    SaveProjectInfo();
-
                     Info.LatestUpdate = DateTime.UtcNow;
+                    
+                    SaveProjectInfo();
 
                     broadcastUpdateTime();
                 }
@@ -604,14 +608,14 @@ namespace Publisher.Server.Info
                     try { runScriptOnFailedEnd(); } catch (Exception ex) { BroadcastMessage(ex.ToString()); }
 
                 ProcessUser = null;
-
+                
                 patchLocker.Set();
 
                 while (WaitQueue.TryDequeue(out var newUser))
                 {
                     if (newUser.CurrentNetwork?.AliveState == true && newUser.CurrentNetwork?.Network?.GetState() == true)
                     {
-                        StartProcess(newUser);
+                        StartProcess(newUser.CurrentNetwork);
                         break;
                     }
                 }
@@ -621,7 +625,7 @@ namespace Publisher.Server.Info
             return false;
         }
 
-        internal void StartFile(IProcessFileContainer client, string relativePath)
+        internal void StartFile(IProcessFileContainer client, string relativePath, DateTime createTime, DateTime updateTime)
         {
             EndFile(client);
 
@@ -639,7 +643,7 @@ namespace Publisher.Server.Info
             }
 
             processFileList.Add(client.CurrentFile);
-            client.CurrentFile.StartFile();
+            client.CurrentFile.StartFile(createTime,updateTime);
         }
 
         internal void EndFile(IProcessFileContainer client)
@@ -706,7 +710,7 @@ namespace Publisher.Server.Info
             foreach (var file in files)
             {
                 filePath = file.FullName.Remove(0, ProjectDirPath.Length);
-                if (Info.IgnoreFilePaths.Any(x => System.Text.RegularExpressions.Regex.IsMatch(filePath, x)))
+                if (Info.IgnoreFilePaths.Any(x => Regex.IsMatch(filePath, x)))
                     continue;
                 var pfi = new ProjectFileInfo(ProjectDirPath, file, this);
 
@@ -751,7 +755,7 @@ namespace Publisher.Server.Info
             {
                 filePath = Path.GetRelativePath(ProjectDirPath, file.FullName);
 
-                if (Info.IgnoreFilePaths.Any(x => System.Text.RegularExpressions.Regex.IsMatch(filePath, x)))
+                if (Info.IgnoreFilePaths.Any(x => Regex.IsMatch(filePath, x)))
                     continue;
 
                 if (FileInfoList.Any(x => x.RelativePath == filePath))
@@ -841,7 +845,7 @@ namespace Publisher.Server.Info
                 user.Id,
                 user.Name,
                 user.RSAPublicKey,
-                user.PSAPrivateKey
+                user.RSAPrivateKey
             }));
 
             return true;
@@ -899,7 +903,12 @@ namespace Publisher.Server.Info
         private void CreateDefault()
         {
             if (!Directory.Exists(PublisherDirPath))
-                Directory.CreateDirectory(PublisherDirPath);
+            {
+                Directory.CreateDirectory(PublisherDirPath); 
+
+                if (Directory.Exists("Template"))
+                    DirectoryCopy("Template", PublisherDirPath, true);
+            }
 
             if (!Directory.Exists(UsersDirPath))
                 Directory.CreateDirectory(UsersDirPath);
@@ -915,6 +924,8 @@ namespace Publisher.Server.Info
 
             if (!Directory.Exists(LogsDirPath))
                 Directory.CreateDirectory(LogsDirPath);
+
+            
 
             CheckScriptsExists(script);
         }
@@ -988,6 +999,54 @@ namespace Publisher.Server.Info
         {
             Info.PatchInfo = info;
             SaveProjectInfo();
+        }
+
+        public void Dispose()
+        {
+            ScriptsWatch.Dispose();
+            SettingsWatch.Dispose();
+            UsersWatch.Dispose();
+
+            if (PatchClient != null)
+                PatchClient.SignOutProject(this);
+        }
+
+
+
+        private static void DirectoryCopy(string sourceDirName, string destDirName, bool copySubDirs)
+        {
+            // Get the subdirectories for the specified directory.
+            DirectoryInfo dir = new DirectoryInfo(sourceDirName);
+
+            if (!dir.Exists)
+            {
+                throw new DirectoryNotFoundException(
+                    "Source directory does not exist or could not be found: "
+                    + sourceDirName);
+            }
+
+            DirectoryInfo[] dirs = dir.GetDirectories();
+
+            // If the destination directory doesn't exist, create it.       
+            Directory.CreateDirectory(destDirName);
+
+            // Get the files in the directory and copy them to the new location.
+            FileInfo[] files = dir.GetFiles();
+            foreach (FileInfo file in files)
+            {
+                string tempPath = Path.Combine(destDirName, file.Name);
+                file.CopyTo(tempPath, false);
+            }
+
+            // If copying subdirectories, copy them and their contents to new location.
+            if (copySubDirs)
+            {
+                foreach (DirectoryInfo subdir in dirs)
+                {
+                    string tempPath = Path.Combine(destDirName, subdir.Name);
+                    DirectoryCopy(subdir.FullName, tempPath, copySubDirs);
+                }
+            }
         }
     }
 }

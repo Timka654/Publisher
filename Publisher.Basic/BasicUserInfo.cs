@@ -8,6 +8,6 @@
 
         public string RSAPublicKey { get; set; }
 
-        public string PSAPrivateKey { get; set; }
+        public string RSAPrivateKey { get; set; }
     }
 }

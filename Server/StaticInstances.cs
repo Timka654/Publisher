@@ -2,6 +2,7 @@
 using Publisher.Server.Configuration;
 using Publisher.Server.Managers;
 using Publisher.Server.Network;
+using Publisher.Server.Network.PublisherClient;
 #if RELEASE
 using System;
 using System.IO;

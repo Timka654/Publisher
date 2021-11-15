@@ -27,6 +27,8 @@ namespace Publisher.Client.Packets.Project
             packet.SetPacketId(PublisherServerPackets.FilePublishStart);
 
             packet.WritePath(file.RelativePath);
+            packet.WriteDateTime(file.FileInfo.CreationTimeUtc);
+            packet.WriteDateTime(file.FileInfo.LastWriteTimeUtc);
 
             await Instance.SendWaitAsync(packet);
         }

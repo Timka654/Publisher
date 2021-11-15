@@ -80,7 +80,7 @@ namespace Publisher.Server.Managers
             foreach (var item in dir.GetDirectories())
             {
                 if (item.CreationTimeUtc < minValue)
-                    item.Delete();
+                    item.Delete(true);
             }
         }
 

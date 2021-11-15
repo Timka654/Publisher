@@ -16,10 +16,7 @@ namespace Publisher.Client.Packets.Project
             Instance = this;
         }
 
-        protected override void Receive(InputPacketBuffer data)
-        {
-            Data = data.ReadBool();
-        }
+        protected override void Receive(InputPacketBuffer data) => Data = data.ReadBool();
 
         public static async Task<bool> Send(byte[] buf, int len)
         {

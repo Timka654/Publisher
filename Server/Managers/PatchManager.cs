@@ -1,13 +1,16 @@
 ﻿using Publisher.Basic;
 using Publisher.Server.Managers.Storages;
 using Publisher.Server.Network;
-using Publisher.Server.Network.Packets.PathServer;
 using Publisher.Server.Info;
 using ServerOptions.Extensions.Manager;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Net;
+using Publisher.Server.Network.PublisherClient;
+using Publisher.Server.Network.ClientPatchPackets;
+using Publisher.Server.Network.PublisherClient.Packets;
+using Publisher.Server.Network.PublisherClient.Packets.PacketRepository;
 
 namespace Publisher.Server.Managers
 {
@@ -22,13 +25,13 @@ namespace Publisher.Server.Managers
         }
 
 
-        internal void StartDownload(PublisherNetworkClient client, string projectId)
+        internal void StartDownload(PublisherNetworkClient client, string projectId, TransportModeEnum transportMode)
         {
             ServerProjectInfo proj = null;
 
             if (client.IsPatchClient == false || client.PatchProjectMap.TryGetValue(projectId, out proj) == false)
-                StartDownloadPacket.Send(client, false, new List<string>());
-            proj.StartDownload(client);
+                PatchServerPacketRepository.SendStartDownloadResult(client, false, new List<string>());
+            proj.StartDownload(client, transportMode);
         }
 
         internal void FinishDownload(PublisherNetworkClient client)
@@ -57,7 +60,7 @@ namespace Publisher.Server.Managers
 
             if (project == null)
             {
-                SignInPacket.Send(client, SignStateEnum.ProjectNotFound);
+                PatchServerPacketRepository.SendSignInResult(client, SignStateEnum.ProjectNotFound);
 
                 return;
             }

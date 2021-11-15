@@ -5,6 +5,13 @@ using System.Security.Cryptography;
 
 namespace Publisher.Basic
 {
+    public class DownloadFileInfo : BasicFileInfo
+    {
+        public DateTime CreationTime { get; set; }
+
+        public DateTime ModifiedTime { get; set; }
+    }
+
     public class BasicFileInfo
     {
         public virtual string RelativePath { get; set; }

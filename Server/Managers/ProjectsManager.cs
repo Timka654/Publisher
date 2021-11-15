@@ -3,11 +3,14 @@ using Newtonsoft.Json;
 using Publisher.Server.Info;
 using Publisher.Server.Managers.Storages;
 using Publisher.Server.Network;
+using Publisher.Server.Network.PublisherClient;
+using Publisher.Server.Network.PublisherClient.Packets.PacketRepository;
 using ServerOptions.Extensions.Manager;
 using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Publisher.Server.Managers
@@ -21,7 +24,7 @@ namespace Publisher.Server.Managers
 
         public static string ProjectsBackupDirPath => StaticInstances.ServerConfiguration.GetValue("paths.projects_backup.dir");
 
-        private FileSystemWatcher directoryWatcher;
+        private FileSystemWatcher projectsLibraryWatcher;
 
         public ProjectsManager()
         {
@@ -46,7 +49,7 @@ namespace Publisher.Server.Managers
 
             if (proj == null)
             {
-                Network.Packets.Project.SignInPacket.Send(client, Basic.SignStateEnum.ProjectNotFound);
+                ProjectPacketRepository.SendSignInResult(client, Basic.SignStateEnum.ProjectNotFound);
                 return;
             }
 
@@ -54,13 +57,13 @@ namespace Publisher.Server.Managers
 
             if (user == null)
             {
-                Network.Packets.Project.SignInPacket.Send(client, Basic.SignStateEnum.UserNotFound);
+                ProjectPacketRepository.SendSignInResult(client, Basic.SignStateEnum.UserNotFound);
                 return;
             }
 
             if (user.CurrentNetwork != null && user.CurrentNetwork.AliveState && user.CurrentNetwork.Network.GetState())
             {
-                Network.Packets.Project.SignInPacket.Send(client, Basic.SignStateEnum.AlreadyConnected);
+                ProjectPacketRepository.SendSignInResult(client, Basic.SignStateEnum.AlreadyConnected);
                 return;
             }
 
@@ -68,7 +71,7 @@ namespace Publisher.Server.Managers
             {
                 user.Cipher = new RSACipher();
 
-                user.Cipher.LoadXml(user.PSAPrivateKey);
+                user.Cipher.LoadXml(user.RSAPrivateKey);
             }
 
             byte[] data = user.Cipher.Decode(key, 0, key.Length);
@@ -81,14 +84,14 @@ namespace Publisher.Server.Managers
                 //StaticInstances.SessionManager.AddUser(client.UserInfo);
 
                 client.RunAliveChecker();
-                Network.Packets.Project.SignInPacket.Send(client, Basic.SignStateEnum.Ok);
+                ProjectPacketRepository.SendSignInResult(client, Basic.SignStateEnum.Ok);
 
-                proj.StartProcess(user);
+                proj.StartProcess(user.CurrentNetwork);
                 return;
             }
 
 
-            Network.Packets.Project.SignInPacket.Send(client, Basic.SignStateEnum.UserNotFound);
+            ProjectPacketRepository.SendSignInResult(client, Basic.SignStateEnum.UserNotFound);
         }
 
         private void LoadWatcher()
@@ -98,44 +101,56 @@ namespace Publisher.Server.Managers
 
             var fi = new FileInfo(ProjectsFilePath);
 
-            directoryWatcher = new FileSystemWatcher(fi.Directory.FullName, fi.Name);
-            directoryWatcher.Deleted += DirectoryWatcher_Deleted;
-            directoryWatcher.Changed += DirectoryWatcher_Changed;
-            directoryWatcher.EnableRaisingEvents = true;
+            projectsLibraryWatcher = new FileSystemWatcher(fi.Directory.FullName, fi.Name);
+            projectsLibraryWatcher.Deleted += DirectoryWatcher_Deleted;
+            projectsLibraryWatcher.Changed += DirectoryWatcher_Changed;
+            projectsLibraryWatcher.Created += DirectoryWatcher_Changed;
+            projectsLibraryWatcher.EnableRaisingEvents = true;
         }
+
+        private SemaphoreSlim projectsLibraryReadLocker = new SemaphoreSlim(1);
 
         private async void DirectoryWatcher_Changed(object sender, FileSystemEventArgs e)
         {
-            await Task.Delay(1500);
-            if (e.ChangeType != WatcherChangeTypes.Changed || e.ChangeType != WatcherChangeTypes.Created)
+            if (e.ChangeType != WatcherChangeTypes.Changed && e.ChangeType != WatcherChangeTypes.Created)
                 return;
+
+            await projectsLibraryReadLocker.WaitAsync();
+
+            await Task.Delay(2_000);
+
             string json = null;
 
-            try { json = File.ReadAllText(e.FullPath); }
-            catch { return; }
-
-            StaticInstances.ServerLogger.AppendInfo($"{ProjectsFilePath} changed. Reloading");
-
-            var projPathes = JsonConvert.DeserializeObject<string[]>(json);
-
-
-            foreach (var item in storage.Where(x => !projPathes.Contains(x.Value.ProjectDirPath)))
+            try
             {
-                RemoveProject(item.Value);
-                StaticInstances.ServerLogger.AppendInfo($"Project {item.Value.Info.Name}({item.Value.Info.Id}) removed");
-            }
+                StaticInstances.ServerLogger.AppendInfo($"{ProjectsFilePath} changed. Reloading");
 
-            foreach (var item in projPathes)
-            {
-                var exist = storage.Values.FirstOrDefault(x => x.ProjectDirPath == item);
+                json = File.ReadAllText(e.FullPath);
 
-                if (exist == null)
+
+                var projPathes = JsonConvert.DeserializeObject<string[]>(json);
+
+
+                foreach (var item in storage.Where(x => !projPathes.Contains(x.Value.ProjectDirPath)))
                 {
-                    exist = new ServerProjectInfo(item);
-                    AddProject(exist);
-                    StaticInstances.ServerLogger.AppendInfo($"Project {exist.Info.Name}({exist.Info.Id}) appended");
+                    RemoveProject(item.Value);
+                    StaticInstances.ServerLogger.AppendInfo($"Project {item.Value.Info.Name}({item.Value.Info.Id}) removed");
                 }
+
+                foreach (var item in projPathes)
+                {
+                    var exist = storage.Values.FirstOrDefault(x => x.ProjectDirPath == item);
+
+                    if (exist == null)
+                    {
+                        exist = new ServerProjectInfo(item);
+                        AddProject(exist);
+                        StaticInstances.ServerLogger.AppendInfo($"Project {exist.Info.Name}({exist.Info.Id}) appended");
+                    }
+                }
+                StaticInstances.ServerLogger.AppendInfo($"{ProjectsFilePath} changed. Success reloading");
             }
+            catch (Exception ex) { StaticInstances.ServerLogger.AppendError(ex.ToString()); }
         }
 
         private void DirectoryWatcher_Deleted(object sender, FileSystemEventArgs e)
@@ -169,11 +184,11 @@ namespace Publisher.Server.Managers
                 try
                 {
 
-                var proj = new ServerProjectInfo(item);
+                    var proj = new ServerProjectInfo(item);
 
-                AddProject(proj);
+                    AddProject(proj);
 
-                StaticInstances.ServerLogger.AppendInfo($"Project {proj.Info.Id} - {proj.Info.Name} loaded");
+                    StaticInstances.ServerLogger.AppendInfo($"Project {proj.Info.Id} - {proj.Info.Name} loaded");
                 }
                 catch (Exception ex)
                 {
@@ -184,7 +199,7 @@ namespace Publisher.Server.Managers
 
         public void SaveProjLibrary()
         {
-            File.WriteAllText(ProjectsFilePath, JsonConvert.SerializeObject(base.storage.Select(x => x.Value.ProjectDirPath)));
+            File.WriteAllText(ProjectsFilePath, JsonConvert.SerializeObject(storage.Select(x => x.Value.ProjectDirPath)));
         }
     }
 }

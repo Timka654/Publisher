@@ -10,6 +10,40 @@
   </PropertyGroup>
   
   <ItemGroup>
+    <Compile Remove="publish\**" />
+    <EmbeddedResource Remove="publish\**" />
+    <None Remove="publish\**" />
+  </ItemGroup>
+  
+  <ItemGroup Condition="'$(Configuration)' == 'Release'">
+    <Content Include="QuickUpdater">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Compile Remove="Template\scripts\OnEnd.cs" />
+    <Compile Remove="Template\scripts\OnFailedEnd.cs" />
+    <Compile Remove="Template\scripts\OnFileEnd.cs" />
+    <Compile Remove="Template\scripts\OnFileStart.cs" />
+    <Compile Remove="Template\scripts\OnStart.cs" />
+    <Compile Remove="Template\scripts\OnSuccessEnd.cs" />
+    <Compile Remove="Template\scripts\ScriptCore.cs" />
+    <Compile Remove="Template\scripts\Utils.cs" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Include="Template\scripts\OnEnd.cs" />
+    <None Include="Template\scripts\OnFailedEnd.cs" />
+    <None Include="Template\scripts\OnFileEnd.cs" />
+    <None Include="Template\scripts\OnFileStart.cs" />
+    <None Include="Template\scripts\OnStart.cs" />
+    <None Include="Template\scripts\OnSuccessEnd.cs" />
+    <None Include="Template\scripts\ScriptCore.cs" />
+    <None Include="Template\scripts\Utils.cs" />
+  </ItemGroup>
+  
+  <ItemGroup>
     <PackageReference Include="ConfigurationEngine.Providers.Json_Debug" Version="2021.10.15.1826" />
     <PackageReference Include="Logger_Debug" Version="2021.10.15.1826" />
     <PackageReference Include="Microsoft.Windows.Compatibility" Version="6.0.0" />
@@ -29,7 +63,16 @@
   <!--<PropertyGroup>
     <ServerGarbageCollection>true</ServerGarbageCollection>
   </PropertyGroup>-->
-
+	<ItemGroup>
+		<!--<Target Name="CreateLogsFolder" AfterTargets="AfterPublish">
+			<MakeDir Directories="$(PublishDir)logs" Condition="!Exists('$(PublishDir)logs')" />
+		</Target>-->
+		
+		<None Include="Template\**" CopyToOutputDirectory="PreserveNewest">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<!--<DeploymentContent>true</DeploymentContent>-->
+		</None>
+	</ItemGroup>
   <ItemGroup>
     <None Update="create_project.ps1">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

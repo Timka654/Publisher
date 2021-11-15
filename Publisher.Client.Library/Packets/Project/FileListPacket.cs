@@ -4,6 +4,7 @@ using SCL;
 using SCL.Utils;
 using SocketCore.Utils.Buffer;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Publisher.Client.Packets.Project
@@ -17,24 +18,12 @@ namespace Publisher.Client.Packets.Project
             Instance = this;
         }
 
-        protected override void Receive(InputPacketBuffer data)
-        {
-            List<BasicFileInfo> fl = new List<BasicFileInfo>();
-
-            int len = data.ReadInt32();
-            for (int i = 0; i < len; i++)
+        protected override void Receive(InputPacketBuffer data) => Data = data.ReadCollection(b => new BasicFileInfo()
             {
-                fl.Add(new BasicFileInfo()
-                {
-                    RelativePath = data.ReadPath(),
-                    Hash = data.ReadString16(),
-                    LastChanged = data.ReadDateTime()
-                });
-            }
-
-
-            Data = fl;
-        }
+                RelativePath = data.ReadPath(),
+                Hash = data.ReadString16(),
+                LastChanged = data.ReadDateTime()
+            }).ToList();
 
         public static async Task<List<BasicFileInfo>> Send()
         {

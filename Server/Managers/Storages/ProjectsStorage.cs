@@ -28,7 +28,13 @@ namespace Publisher.Server.Managers.Storages
 
         public bool RemoveProject(string projectId)
         {
-            return storage.TryRemove(projectId, out var dummy);
+            if (storage.TryRemove(projectId, out var project) == true)
+            {
+                project.Dispose();
+                return true;
+            }
+
+            return false;
         }
 
         public IEnumerable<ServerProjectInfo> GetProjects()

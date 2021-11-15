@@ -14,6 +14,8 @@ namespace Publisher.Server.Info
 
         public bool Backup { get; set; }
 
+        public bool PreventScriptExecution { get; set; } = false;
+
         public List<string> IgnoreFilePaths { get; set; }
 
         public DateTime? LatestUpdate { get; set; }
