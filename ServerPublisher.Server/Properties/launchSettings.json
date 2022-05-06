@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "ServerPublisher.Server": {
+      "commandName": "Project",
+      "commandLineArgs": "/service",
+      "workingDirectory": "D:\\Temp\\PublisherTest\\PublisherServer1"
+    }
+  }
+}

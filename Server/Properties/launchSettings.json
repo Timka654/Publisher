@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "Publisher.Server": {
-      "commandName": "Project",
-      "workingDirectory": "D:\\Temp\\PublisherTest\\PublisherServer1"
-    }
-  }
-}
