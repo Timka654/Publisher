@@ -1,4 +1,4 @@
-﻿using ServerOptions.Extensions.Manager;
+﻿using NSL.ServerOptions.Extensions.Manager;
 using ServerPublisher.Server.Info;
 using System;
 using System.IO;

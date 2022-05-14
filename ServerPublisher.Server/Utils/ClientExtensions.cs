@@ -1,6 +1,6 @@
 ﻿using ServerPublisher.Shared;
-using SocketCore;
-using SocketCore.Utils.Buffer;
+using NSL.SocketCore;
+using NSL.SocketCore.Utils.Buffer;
 
 namespace ServerPublisher.Server.Utils
 {

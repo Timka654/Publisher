@@ -2,10 +2,7 @@
 using ServerPublisher.Server.Configuration;
 using ServerPublisher.Server.Managers;
 using ServerPublisher.Server.Network.PublisherClient;
-#if RELEASE
-using System;
 using System.IO;
-#endif
 
 namespace ServerPublisher.Server
 {
@@ -14,9 +11,9 @@ namespace ServerPublisher.Server
         public static ServerConfigurationManager ServerConfiguration => ServerConfigurationManager.Instance;
 
 #if RELEASE
-        public static FileLogger ServerLogger { get; } = FileLogger.Initialize(Path.Combine(Application.Directory, "logs/server"));
+        public static FileLogger ServerLogger { get; } = new FileLogger(Path.Combine(Application.Directory, "logs", "server"), handleUnhandledThrow: true);
 #else
-        public static FileLogger ServerLogger { get; } = FileLogger.Initialize("logs/server");
+        public static FileLogger ServerLogger { get; } = new FileLogger(Path.Combine("logs", "server"), handleUnhandledThrow: true);
 #endif
 
 
@@ -27,6 +24,11 @@ namespace ServerPublisher.Server
         internal static PatchManager PatchManager => PatchManager.Instance;
 
         public static SessionManager SessionManager => SessionManager.Instance;
+
+        public static ServiceManager ServiceManager => ServiceManager.Instance;
+
+        public static ExplorerManager ExplorerManager => ExplorerManager.Instance;
+        public static UserManager UserManager => UserManager.Instance;
 
         public static bool CommandExecutor { get; set; } = false;
     }

@@ -11,6 +11,7 @@ using ServerPublisher.Shared;
 using NSL.Cipher.RSA;
 using Newtonsoft.Json;
 using ServerPublisher.Client.Library;
+using NSL.Utils;
 
 namespace ServerPublisher.Client
 {
@@ -166,9 +167,9 @@ namespace ServerPublisher.Client
                 EmptyParameterError("buffer_len");
 
             if (publishInfo.SuccessArgs == default)
-                this.successArgs = new CommandLineArgs(new string[] { });
+                this.successArgs = new CommandLineArgs(new string[] { }, false);
             else
-                this.successArgs = new CommandLineArgs(publishInfo.SuccessArgs.Split(" /").Select(x => "/" + x).ToArray());
+                this.successArgs = new CommandLineArgs(publishInfo.SuccessArgs.Split(" /").Select(x => "/" + x).ToArray(), false);
 
             if (!Directory.Exists(publishInfo.PublishDirectory))
                 LogError($"Publish directory {publishInfo.PublishDirectory} not exists");
@@ -200,7 +201,7 @@ namespace ServerPublisher.Client
 
             if (result != SignStateEnum.Ok)
             {
-                LogError($"Sign result - {Enum.GetName<SignStateEnum>(result)}, error");
+                LogError($"Sign result - {Enum.GetName(result)}, error");
             }
             Console.WriteLine($"Sign result - ok, wait....");
 

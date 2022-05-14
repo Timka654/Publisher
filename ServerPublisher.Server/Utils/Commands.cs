@@ -1,13 +1,17 @@
-﻿using ServerOptions.Extensions.Manager;
+﻿using NSL.Utils;
+using NSL.ServerOptions.Extensions.Manager;
 using ServerPublisher.Server.Info;
 using ServerPublisher.Server.Network.PublisherClient;
+using ServerPublisher.Server.Network.WebService;
 using ServerPublisher.Shared;
-using SocketServer;
+using NSL.SocketServer;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.ServiceProcess;
+using System.Threading;
 
 namespace ServerPublisher.Server.Utils
 {
@@ -19,7 +23,9 @@ namespace ServerPublisher.Server.Utils
         {
             commands = new Dictionary<string, Action<CommandLineArgs>>()
             {
+                { "service", RunService },
                 { "create_project", CreateProject },
+                { "link_project", LinkProject },
                 { "create_user", CreateUser },
                 { "add_user", AddUser },
                 { "add_patch_connection", AddPatchConnection },
@@ -28,6 +34,30 @@ namespace ServerPublisher.Server.Utils
                 { "reindexing", ReIndexing },
                 { "dev_clear_invalid_path", DevClearInvalidPath }
             };
+        }
+
+        private static void RunService(CommandLineArgs args)
+        {
+            bool webService = args.ContainsKey("webService");
+
+            if (webService)
+            {
+                WebStartup.Run();
+                return;
+            }
+
+#if RELEASE
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                ServiceBase.Run(new PublisherService());
+            else
+            {
+#endif
+                PublisherNetworkServer.Instance.Load();
+
+                Thread.Sleep(Timeout.Infinite);
+#if RELEASE
+            }
+#endif
         }
 
         private static bool GetDirParameter(CommandLineArgs args, string name, out string value)
@@ -42,6 +72,35 @@ namespace ServerPublisher.Server.Utils
             }
 
             return true;
+        }
+
+        private bool ConfirmAction(CommandLineArgs args)
+        {
+            if (args.TryGetOutValue("flags", out string flags))
+            {
+                if (flags.Contains("y", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine($"Flags contains 'y' - confirm action");
+                    return true;
+                }
+            }
+
+            string latestInput = default;
+
+            do
+            {
+                Console.Write("You confirm action? 'y' - yes/'n' - no:");
+
+                latestInput = Console.ReadLine();
+
+                if (latestInput.Equals("y", StringComparison.OrdinalIgnoreCase))
+                    return true;
+                else if (latestInput.Equals("n", StringComparison.OrdinalIgnoreCase))
+                    return false;
+                else
+                    Console.WriteLine($"Value cannot be {latestInput}. Try again or press Ctrl+C for cancel");
+
+            } while (true);
         }
 
         private static void PidOrDirInfo()
@@ -93,12 +152,19 @@ namespace ServerPublisher.Server.Utils
         {
             StaticInstances.ServerLogger.AppendInfo("Check Scripts");
 
+
+            if (!ConfirmAction(args))
+                return;
+
             GetProject(args)?.CheckScripts();
         }
 
         protected void ReIndexing(CommandLineArgs args)
         {
             StaticInstances.ServerLogger.AppendInfo("Try reindexing");
+
+            if (!ConfirmAction(args))
+                return;
 
             GetProject(args)?.ReIndexing();
         }
@@ -127,6 +193,9 @@ namespace ServerPublisher.Server.Utils
                 return;
             }
 
+            if (!ConfirmAction(args))
+                return;
+
             var proj = new ServerProjectInfo(args, directory);
 
             StaticInstances.ProjectsManager.AddProject(proj);
@@ -135,6 +204,43 @@ namespace ServerPublisher.Server.Utils
 
 
             StaticInstances.ServerLogger.AppendInfo($"project {proj.Info.Name} by id {proj.Info.Id} created");
+        }
+
+        protected void LinkProject(CommandLineArgs args)
+        {
+            StaticInstances.ServerLogger.AppendInfo("Link project");
+
+            GetDirParameter(args, "directory", out string directory);
+
+            if (!ConfirmAction(args))
+                return;
+
+            try
+            {
+                var proj = new ServerProjectInfo(directory);
+
+                var exists = StaticInstances.ProjectsManager.GetProject(proj);
+
+                if (exists != null && proj.ProjectDirPath == exists.ProjectDirPath)
+                    return;
+                else if (exists != null)
+                {
+                    Console.WriteLine($"Already exist: {exists.ProjectDirPath}");
+
+                    if (!ConfirmAction(args))
+                        return;
+
+                    StaticInstances.ProjectsManager.RemoveProject(exists, false);
+                }
+                StaticInstances.ProjectsManager.AddProject(proj);
+
+                StaticInstances.ProjectsManager.SaveProjLibrary();
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
         }
 
         protected void CreateUser(CommandLineArgs args)
@@ -151,6 +257,9 @@ namespace ServerPublisher.Server.Utils
 
             if (projectInfo != null)
             {
+                if (!ConfirmAction(args))
+                    return;
+
                 var user = new UserInfo(args);
 
                 if (projectInfo.AddUser(user))
@@ -174,6 +283,10 @@ namespace ServerPublisher.Server.Utils
 
             if (projectInfo != null)
             {
+
+                if (!ConfirmAction(args))
+                    return;
+
                 var fileInfo = new FileInfo(path);
 
                 if (!fileInfo.Exists)
@@ -237,6 +350,9 @@ namespace ServerPublisher.Server.Utils
 
             if (projectInfo != null)
             {
+                if (!ConfirmAction(args))
+                    return;
+
                 projectInfo.UpdatePatchInfo(new ProjectPatchInfo()
                 {
                     IpAddress = ip_address,
@@ -272,6 +388,9 @@ namespace ServerPublisher.Server.Utils
 
                     return;
                 }
+
+                if (!ConfirmAction(args))
+                    return;
 
                 var files = new DirectoryInfo(pisrc.UsersDirPath).GetFiles("*.priuk");
 
@@ -333,7 +452,7 @@ namespace ServerPublisher.Server.Utils
                 StaticInstances.ServerLogger.AppendInfo($"Cleared {c}");
 
                 item.ReIndexing();
-            }   
+            }
         }
 
         public bool Process()
@@ -350,7 +469,8 @@ namespace ServerPublisher.Server.Utils
                 StaticInstances.ServerLogger.AppendInfo($"Command not found {args["action"]}");
                 return true;
             }
-            StaticInstances.CommandExecutor = true;
+
+            StaticInstances.CommandExecutor = !args["action"].Equals("service");
 
             ServerOptions<PublisherNetworkClient> options = new ServerOptions<PublisherNetworkClient>();
 

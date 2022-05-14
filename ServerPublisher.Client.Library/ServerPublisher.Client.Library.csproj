@@ -2,12 +2,13 @@
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
+    <Configurations>Debug;Release;ScriptsDebugging</Configurations>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="NSL.Cipher" Version="2022.4.15.1626" />
-    <PackageReference Include="NSL.SocketCore.Extensions.Packet" Version="2022.4.15.1626" />
-    <PackageReference Include="NSL.TCP.Client" Version="2022.4.15.1626" />
+    <PackageReference Include="NSL.Cipher" Version="2022.5.15.15" />
+    <PackageReference Include="NSL.ClientOptions.Extensions.Packet" Version="2022.5.15.15" />
+    <PackageReference Include="NSL.TCP.Client" Version="2022.5.15.15" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,7 +1,7 @@
 ﻿using ServerPublisher.Server.Managers;
 using ServerPublisher.Server.Utils;
 using ServerPublisher.Shared;
-using SocketCore.Utils.Buffer;
+using NSL.SocketCore.Utils.Buffer;
 
 namespace ServerPublisher.Server.Network.PublisherClient.Packets
 {

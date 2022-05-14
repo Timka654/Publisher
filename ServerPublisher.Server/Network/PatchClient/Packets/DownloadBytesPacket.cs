@@ -2,7 +2,7 @@
 using NSL.SocketClient.Utils;
 using ServerPublisher.Server.Info.PacketInfo;
 using ServerPublisher.Shared;
-using SocketCore.Utils.Buffer;
+using NSL.SocketCore.Utils.Buffer;
 using System;
 using System.Threading.Tasks;
 

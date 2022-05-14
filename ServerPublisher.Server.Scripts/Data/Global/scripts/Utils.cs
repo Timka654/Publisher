@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-public class Utils
+internal class Utils
 {
     public static void CmdExec(string command)
     {

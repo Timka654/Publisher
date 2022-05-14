@@ -1,13 +1,10 @@
 ﻿{
-  "server": {
+  "server.publisher": {
     "io.port": "6583",
-    "io.buffer.size": 20480,
+    "io.buffer.size": 409600,
     "io.backlog": 10,
     "io.input.key": "!{b1HX11R**",
     "io.output.key": "!{b1HX11R**"
-  },
-  "paths": {
-    "projects_library": "proj_lib.json"
   },
   "upload": {
     "large.min.size": 400000000,

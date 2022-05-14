@@ -70,7 +70,7 @@ else {
 	}
 	$execFilePath = [System.IO.Path]::Combine($setupPath, "ServerPublisher.Server")
 	chmod +x $execFilePath
-	ln -sf $execFilePath /bin/pubs
+	ln -sf $execFilePath /bin/publs
 
 	Write-Host "Invoke 'sudo pwsh setup-service-linux.ps1' for install publisher linux server with sudo"
 	Write-Host "or 'sudo pwsh setup-service-linux.ps1 ""service_name"" ""service_file_name""'"

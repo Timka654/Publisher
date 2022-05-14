@@ -1,7 +1,7 @@
 ﻿using NSL.SocketClient;
 using NSL.SocketClient.Utils;
 using ServerPublisher.Shared;
-using SocketCore.Utils.Buffer;
+using NSL.SocketCore.Utils.Buffer;
 using System.Threading.Tasks;
 
 namespace ServerPublisher.Client.Library.Packets.Project

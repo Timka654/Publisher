@@ -1,4 +1,4 @@
-﻿using SocketCore.Extensions.Packet;
+﻿using NSL.SocketCore.Extensions.Packet;
 
 namespace ServerPublisher.Client.Library.Packets
 {

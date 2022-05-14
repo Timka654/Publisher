@@ -1,4 +1,4 @@
-﻿using ServerOptions.Extensions.Packet;
+﻿using NSL.SocketCore.Extensions.Packet;
 using ServerPublisher.Shared;
 
 namespace ServerPublisher.Server.Network.ClientPatchPackets

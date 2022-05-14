@@ -1,32 +1,37 @@
 ﻿using NSL.Cipher.RC.RC4;
-using NSL.Logger;
-using NSL.ServerOptions.Extensions;
-using NSL.ServerOptions.Extensions.ConfigurationEngine;
+using NSL.ConfigurationEngine;
+using NSL.Logger.Interface;
+using NSL.ServerOptions.Extensions.Packet;
+using NSL.SocketCore.Extensions.Packet;
+using NSL.SocketCore.Extensions.TCPServer;
 using NSL.TCP.Server;
-using ServerOptions.Extensions.Manager;
-using ServerOptions.Extensions.Packet;
+using NSL.ServerOptions.Extensions.Manager;
 using ServerPublisher.Server.Network.PublisherClient.Packets;
 using ServerPublisher.Shared;
-using SocketCore.Extensions.Packet;
-using SocketServer;
+using NSL.SocketServer;
 using System;
 using System.Reflection;
-using Utils;
+using NSL.Utils;
+using NSL.SocketCore.Utils.Logger.Enums;
 
 namespace ServerPublisher.Server.Network.PublisherClient
 {
-    internal class PublisherNetworkServer : NetworkServer<PublisherNetworkClient, PublisherNetworkServer>
+    internal class PublisherNetworkServer : TCPNetworkServerEntry<PublisherNetworkClient, PublisherNetworkServer>
     {
         protected override ILogger Logger => StaticInstances.ServerLogger;
 
+        protected override IConfigurationManager ConfigurationManager => StaticInstances.ServerConfiguration;
+
         protected override string ServerName => "Publisher";
+
+        protected override string ServerConfigurationName => "publisher";
 
         protected override ServerOptions<PublisherNetworkClient> LoadConfigurationAction()
         {
-            var options = StaticInstances.ServerConfiguration.LoadConfigurationServerOptions<PublisherNetworkClient>("server");
+            var options = base.LoadConfigurationAction();
 
-            options.inputCipher = new XRC4Cipher(StaticInstances.ServerConfiguration.GetValue("server.io.input.key"));
-            options.outputCipher = new XRC4Cipher(StaticInstances.ServerConfiguration.GetValue("server.io.output.key"));
+            options.InputCipher = new XRC4Cipher(ConfigurationManager.GetValue($"{NetworkConfigurationPath}.io.input.key"));
+            options.OutputCipher = new XRC4Cipher(ConfigurationManager.GetValue($"{NetworkConfigurationPath}.io.output.key"));
 
             return options;
         }
@@ -40,11 +45,11 @@ namespace ServerPublisher.Server.Network.PublisherClient
         {
             int len = Options.LoadPackets(typeof(ServerPacketAttribute));
 
-            Logger.Append(SocketCore.Utils.Logger.Enums.LoggerLevel.Log, $"Loaded {ServerName} {len} packets");
+            Logger.Append(LoggerLevel.Log, $"Loaded {ServerName} {len} packets");
 
             len = Options.Load<PublisherNetworkClient, ServerPacketDelegateContainerAttribute, ServerPacketAttribute>(Assembly.GetExecutingAssembly());
 
-            Logger.Append(SocketCore.Utils.Logger.Enums.LoggerLevel.Log, $"Loaded {ServerName} {len} packet handles");
+            Logger.Append(LoggerLevel.Log, $"Loaded {ServerName} {len} packet handles");
         }
 
         protected override void Listener_OnReceivePacket(TCPServerClient<PublisherNetworkClient> client, ushort pid, int len)
@@ -63,13 +68,11 @@ namespace ServerPublisher.Server.Network.PublisherClient
         protected override void Listener_OnSendPacket(TCPServerClient<PublisherNetworkClient> client, ushort pid, int len, string stacktrace)
         {
 #if DEBUG
-
             if (PacketEnumExtensions.IsDefined<PublisherClientPackets>(pid))
                 StaticInstances.ServerLogger.AppendDebug($"{ServerName} send packet pid:{Enum.GetName((PublisherClientPackets)pid)} to {client.GetRemotePoint()} (source:{stacktrace})");
 
             if (PacketEnumExtensions.IsDefined<PatchClientPackets>(pid))
                 StaticInstances.ServerLogger.AppendDebug($"{ServerName} send patch packet pid:{Enum.GetName((PatchClientPackets)pid)} to {client.GetRemotePoint()} (source:{stacktrace}])");
-
 #endif
         }
 

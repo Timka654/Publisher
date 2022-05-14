@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using NSL.Cipher.RSA;
+using NSL.Utils;
 using ServerPublisher.Server.Network.PublisherClient;
 using ServerPublisher.Shared;
 using System;
@@ -35,12 +36,21 @@ namespace ServerPublisher.Server.Info
             RSAPublicKey = Cipher.GetPublicKey();
             RSAPrivateKey = Cipher.GetPrivateKey();
         }
+
         internal void Reload(BasicUserInfo userInfo)
         {
             Id = userInfo.Id;
             Name = userInfo.Name;
             RSAPublicKey = userInfo.RSAPublicKey;
-            RSAPrivateKey = userInfo.RSAPrivateKey;
+
+            if (RSAPrivateKey != userInfo.RSAPrivateKey)
+            {
+                RSAPrivateKey = userInfo.RSAPrivateKey;
+
+                Cipher = new RSACipher();
+
+                Cipher.LoadXml(RSAPrivateKey);
+            }
         }
     }
 }

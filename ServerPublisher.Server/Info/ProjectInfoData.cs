@@ -21,5 +21,7 @@ namespace ServerPublisher.Server.Info
         public DateTime? LatestUpdate { get; set; }
 
         public ProjectPatchInfo PatchInfo { get; set; }
+
+        public Dictionary<string, string> Variables { get; set; } = new Dictionary<string, string>();
     }
 }

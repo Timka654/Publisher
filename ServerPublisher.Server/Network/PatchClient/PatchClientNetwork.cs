@@ -10,12 +10,12 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using ServerPublisher.Shared;
-using NSL.SocketClient;
-using Utils;
-using NSL.TCP.Client;
 using NSL.Cipher.RSA;
 using NSL.Cipher.RC.RC4;
-using ServerOptions.Extensions.Packet;
+using NSL.TCP.Client;
+using NSL.SocketClient;
+using NSL.ClientOptions.Extensions.Packet;
+using NSL.Utils;
 
 namespace ServerPublisher.Server.Network
 {
@@ -208,8 +208,8 @@ namespace ServerPublisher.Server.Network
 
             patchConnectionOptions.IpAddress = patchInfo.IpAddress;
             patchConnectionOptions.Port = patchInfo.Port;
-            patchConnectionOptions.inputCipher = new XRC4Cipher(patchInfo.InputCipherKey);
-            patchConnectionOptions.outputCipher = new XRC4Cipher(patchInfo.OutputCipherKey);
+            patchConnectionOptions.InputCipher = new XRC4Cipher(patchInfo.InputCipherKey);
+            patchConnectionOptions.OutputCipher = new XRC4Cipher(patchInfo.OutputCipherKey);
 
             patchConnectionOptions.AddressFamily = System.Net.Sockets.AddressFamily.InterNetwork;
 

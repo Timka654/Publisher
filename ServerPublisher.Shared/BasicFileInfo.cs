@@ -22,7 +22,7 @@ namespace ServerPublisher.Shared
 
         public FileInfo FileInfo { get; set; }
 
-        public BasicFileInfo(string dir, System.IO.FileInfo finfo)
+        public BasicFileInfo(string dir, FileInfo finfo)
         {
             FileInfo = finfo;
 

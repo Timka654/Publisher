@@ -1,134 +1,90 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
-  </PropertyGroup>
-  
-  <PropertyGroup>
-    <ServerGarbageCollection>false</ServerGarbageCollection>
-  </PropertyGroup>
-  
-  <ItemGroup>
-    <Compile Remove="publish\**" />
-    <EmbeddedResource Remove="publish\**" />
-    <None Remove="publish\**" />
-  </ItemGroup>
-  
-  <ItemGroup Condition="'$(Configuration)' == 'Release'">
-    <Content Include="QuickUpdater">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-  
-  <ItemGroup>
-    <Compile Remove="Template\scripts\OnEnd.cs" />
-    <Compile Remove="Template\scripts\OnFailedEnd.cs" />
-    <Compile Remove="Template\scripts\OnFileEnd.cs" />
-    <Compile Remove="Template\scripts\OnFileStart.cs" />
-    <Compile Remove="Template\scripts\OnStart.cs" />
-    <Compile Remove="Template\scripts\OnSuccessEnd.cs" />
-    <Compile Remove="Template\scripts\ScriptCore.cs" />
-    <Compile Remove="Template\scripts\Utils.cs" />
-  </ItemGroup>
-  
-  <ItemGroup>
-    <None Include="Template\scripts\OnEnd.cs" />
-    <None Include="Template\scripts\OnFailedEnd.cs" />
-    <None Include="Template\scripts\OnFileEnd.cs" />
-    <None Include="Template\scripts\OnFileStart.cs" />
-    <None Include="Template\scripts\OnStart.cs" />
-    <None Include="Template\scripts\OnSuccessEnd.cs" />
-    <None Include="Template\scripts\ScriptCore.cs" />
-    <None Include="Template\scripts\Utils.cs" />
-  </ItemGroup>
-  
-  <!--<ItemGroup>
-    <PackageReference Include="ConfigurationEngine.Providers.Json_Debug" Version="2021.10.15.1826" />
-    <PackageReference Include="Logger_Debug" Version="2021.10.15.1826" />
-    <PackageReference Include="Microsoft.Windows.Compatibility" Version="6.0.0" />
-    <PackageReference Include="NetScript_Debug" Version="2021.10.15.1826" />
-    <PackageReference Include="Network.Extensions_Debug" Version="2021.10.15.1826" />
-    <PackageReference Include="ServerOptions.Extensions.ConfigurationEngine_Debug" Version="2021.10.15.1826" />
-    <PackageReference Include="SocketCore.Extensions.Manager_Debug" Version="2021.10.15.1826" />
-    <PackageReference Include="SocketCore.Extensions.Packet_Debug" Version="2021.10.15.1826" />
-    <PackageReference Include="SocketServer_Debug" Version="2021.10.15.1826" />
-    <PackageReference Include="Utils_Debug" Version="2021.10.15.1826" />
-  </ItemGroup>-->
-  
-  <!--<PropertyGroup>
-    <ServerGarbageCollection>true</ServerGarbageCollection>
-  </PropertyGroup>-->
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net6.0</TargetFramework>
+		<Configurations>Debug;Release;ScriptsDebugging</Configurations>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<ServerGarbageCollection>false</ServerGarbageCollection>
+	</PropertyGroup>
+
 	<ItemGroup>
-		<!--<Target Name="CreateLogsFolder" AfterTargets="AfterPublish">
-			<MakeDir Directories="$(PublishDir)logs" Condition="!Exists('$(PublishDir)logs')" />
-		</Target>-->
-		
-		<None Include="Template\**" CopyToOutputDirectory="PreserveNewest">
+		<Compile Remove="publish\**" />
+		<EmbeddedResource Remove="publish\**" />
+		<None Remove="publish\**" />
+	</ItemGroup>
+	
+	<ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="6.0.5" />
+		<PackageReference Include="Microsoft.Windows.Compatibility" Version="6.0.0" />
+		<PackageReference Include="NSL.Cipher" Version="2022.5.15.15" />
+		<PackageReference Include="NSL.ClientOptions.Extensions.Packet" Version="2022.5.15.15" />
+		<PackageReference Include="NSL.ConfigurationEngine.Providers.Json" Version="2022.5.15.15" />
+		<PackageReference Include="NSL.Extensions.NetScript" Version="2022.5.15.15" />
+		<PackageReference Include="NSL.Logger" Version="2022.5.15.15" />
+		<PackageReference Include="NSL.ServerOptions.Extensions" Version="2022.5.7.234" />
+		<PackageReference Include="NSL.ServerOptions.Extensions.Packet" Version="2022.5.15.15" />
+		<PackageReference Include="NSL.SocketCore.Extensions.Manager" Version="2022.5.15.15" />
+		<PackageReference Include="NSL.SocketCore.Extensions.Packet" Version="2022.5.15.15" />
+		<PackageReference Include="NSL.SocketCore.Extensions.TCPServer" Version="2022.5.15.15" />
+		<PackageReference Include="NSL.SocketServer" Version="2022.5.15.15" />
+		<PackageReference Include="NSL.TCP.Client" Version="2022.5.15.15" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\ServerPublisher.Server.Scripts\ServerPublisher.Server.Scripts.csproj" />
+		<ProjectReference Include="..\ServerPublisher.Shared\ServerPublisher.Shared.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+		<None Update="create_project.ps1">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-			<!--<DeploymentContent>true</DeploymentContent>-->
+		</None>
+		<None Update="create_user.ps1">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="ServerSettings.json">
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</None>
+		<None Update="setup.ps1">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="tools\add_patch_connection.ps1">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="tools\reindexing_project.ps1">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="tools\check_scripts.ps1">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="tools\clone_identity.ps1">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="tools\create_project.ps1">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="tools\add_user.ps1">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="tools\create_user.ps1">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="tools\setup-service-linux.ps1">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="tools\setup-service-windows.ps1">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="tools\setup.ps1">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="tools\utils.psm1">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 	</ItemGroup>
 	<ItemGroup>
-	  <PackageReference Include="Microsoft.Windows.Compatibility" Version="6.0.0" />
-	  <PackageReference Include="NSL.Cipher" Version="2022.4.15.1626" />
-	  <PackageReference Include="NSL.ConfigurationEngine.Providers.Json" Version="2022.4.15.1626" />
-	  <PackageReference Include="NSL.Extensions.NetScript" Version="2022.4.15.1626" />
-	  <PackageReference Include="NSL.Logger" Version="2022.4.15.1626" />
-	  <PackageReference Include="NSL.ServerOptions.Extensions" Version="2022.4.15.1626" />
-	  <PackageReference Include="NSL.SocketCore.Extensions.Manager" Version="2022.4.15.1626" />
-	  <PackageReference Include="NSL.SocketCore.Extensions.Packet" Version="2022.4.15.1626" />
-	  <PackageReference Include="NSL.SocketServer" Version="2022.4.15.1626" />
+	  <Folder Include="Data\Users\" />
 	</ItemGroup>
-	<ItemGroup>
-	  <ProjectReference Include="..\ServerPublisher.Shared\ServerPublisher.Shared.csproj" />
-	</ItemGroup>
-  <ItemGroup>
-    <None Update="create_project.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="create_user.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="ServerSettings.json">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
-    <None Update="setup.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="tools\add_patch_connection.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="tools\reindexing_project.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="tools\check_scripts.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="tools\clone_identity.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="tools\create_project.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="tools\add_user.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="tools\create_user.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="tools\setup-service-linux.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="tools\setup-service-windows.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="tools\setup.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="tools\utils.psm1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
 
 </Project>

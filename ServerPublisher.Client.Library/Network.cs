@@ -6,10 +6,11 @@ using ServerPublisher.Client.Library.Packets.Project;
 using NSL.TCP.Client;
 using NSL.SocketClient;
 using NSL.Cipher.RC.RC4;
-using ServerOptions.Extensions.Packet;
 using ServerPublisher.Client.Library.Packets;
-using SocketCore.Extensions.Packet;
 using ServerPublisher.Shared;
+using NSL.ClientOptions.Extensions.Packet;
+using NSL.SocketCore.Extensions.Packet;
+using NSL.Utils;
 
 namespace ServerPublisher.Client.Library
 {
@@ -33,14 +34,17 @@ namespace ServerPublisher.Client.Library
 
         public Network(string ip, int port, string inputKey, string outputKey, Action<NetworkClient> disconnectedEvent, int bufferSize = 8196)
         {
-            options = new ClientOptions<NetworkClient>();
-            options.AddressFamily = System.Net.Sockets.AddressFamily.InterNetwork;
-            options.ProtocolType = System.Net.Sockets.ProtocolType.Tcp;
-            options.IpAddress = ip;
-            options.Port = port;
-            options.ReceiveBufferSize = bufferSize;
-            options.inputCipher = new XRC4Cipher(inputKey);
-            options.outputCipher = new XRC4Cipher(outputKey);
+            options = new ClientOptions<NetworkClient>
+            {
+                AddressFamily = System.Net.Sockets.AddressFamily.InterNetwork,
+                ProtocolType = System.Net.Sockets.ProtocolType.Tcp,
+                IpAddress = ip,
+                Port = port,
+                ReceiveBufferSize = bufferSize,
+                InputCipher = new XRC4Cipher(inputKey),
+                OutputCipher = new XRC4Cipher(outputKey)
+            };
+
             options.OnClientDisconnectEvent +=(e) => disconnectedEvent(e);
 
             options.LoadPackets(Assembly.GetExecutingAssembly(), typeof(ClientPacketAttribute));

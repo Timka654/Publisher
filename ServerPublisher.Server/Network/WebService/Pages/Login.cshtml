@@ -1,0 +1,11 @@
+﻿@page
+@model ServerPublisher.Server.Network.WebService.Pages.LoginModel
+@{
+    ViewBag.Title = "Авторизация";
+}
+
+<form method="post" enctype="multipart/form-data">
+    <label asp-for="signFile"></label>
+    <input asp-for="signFile" type="file" accept=".pubuk" />
+    <input type="submit" value="login" />
+</form>

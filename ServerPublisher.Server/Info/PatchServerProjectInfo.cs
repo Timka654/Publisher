@@ -9,8 +9,8 @@ using System.Text;
 using ServerPublisher.Server.Network.PublisherClient;
 using ServerPublisher.Server.Network.PublisherClient.Packets;
 using ServerPublisher.Shared;
-using SocketCore.Utils.Buffer;
-using SocketCore.Utils;
+using NSL.SocketCore.Utils.Buffer;
+using NSL.SocketCore.Utils;
 using NSL.Cipher.RSA;
 
 namespace ServerPublisher.Server.Info

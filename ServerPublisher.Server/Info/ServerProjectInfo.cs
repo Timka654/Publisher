@@ -14,14 +14,16 @@ using ServerPublisher.Server.Network.PublisherClient.Packets;
 using ServerPublisher.Server.Configuration;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
-using SocketCore.Utils.Buffer;
+using NSL.SocketCore.Utils.Buffer;
 using ServerPublisher.Shared;
 using Newtonsoft.Json;
 using NSL.Logger;
+using ServerPublisher.Server.Scripts;
+using NSL.Utils;
 
 namespace ServerPublisher.Server.Info
 {
-    public partial class ServerProjectInfo : IDisposable
+    public partial class ServerProjectInfo : IDisposable, IScriptableServerProjectInfo
     {
         #region Path
 
@@ -45,6 +47,8 @@ namespace ServerPublisher.Server.Info
 
 
         #region Scripts
+
+        public static string GlobalScriptsDirPath => Path.Combine(Application.Directory, "Data", "Global", "scripts");
 
         public string ScriptsDirPath => Path.Combine(PublisherDirPath, "scripts");
 
@@ -207,12 +211,16 @@ namespace ServerPublisher.Server.Info
             script.RegisterCoreReference("System.Collections.dll");
             script.RegisterCoreReference("System.ComponentModel.Primitives.dll");
             script.RegisterCoreReference("System.Diagnostics.Process.dll");
+            script.RegisterCoreReference("ServerPublisher.Server.Scripts.dll");
 
-            script.RegistrationGlobalVariable(new NSL.Extensions.NetScript.GlobalVariable("CurrentProject", typeof(ServerProjectInfo)));
+            script.RegistrationGlobalVariable(new NSL.Extensions.NetScript.GlobalVariable("CurrentProject", typeof(IScriptableServerProjectInfo)));
 
             CheckScriptsExists(script);
 
             script.AddFolder(ScriptsDirPath, true);
+
+            if (Directory.Exists(GlobalScriptsDirPath))
+                script.AddFolder(GlobalScriptsDirPath, true);
 
             script.Compile();
 
@@ -314,6 +322,13 @@ namespace ServerPublisher.Server.Info
             ScriptsWatch.Changed += ScriptsWatch_Changed;
             ScriptsWatch.Deleted += ScriptsWatch_Changed;
             ScriptsWatch.EnableRaisingEvents = true;
+
+            GlobalScriptsWatch = new FileSystemWatcher(GlobalScriptsDirPath, "*.cs");
+
+            GlobalScriptsWatch.Created += ScriptsWatch_Changed;
+            GlobalScriptsWatch.Changed += ScriptsWatch_Changed;
+            GlobalScriptsWatch.Deleted += ScriptsWatch_Changed;
+            GlobalScriptsWatch.EnableRaisingEvents = true;
         }
 
         private async void ScriptsWatch_Changed(object sender, FileSystemEventArgs e)
@@ -526,7 +541,7 @@ namespace ServerPublisher.Server.Info
 
             var uid = ProcessUser?.Id ?? currentDownloader?.UserInfo?.Id ?? "Unknown";
 
-            CurrentLogger = FileLogger.Initialize(LogsDirPath, $"upload {DateTime.Now:yyyy-MM-dd_HH.mm.ss} - {uid}");
+            CurrentLogger = new FileLogger(LogsDirPath, $"upload {DateTime.Now:yyyy-MM-dd_HH.mm.ss} - {uid}");
         }
 
         private void closeLogger()
@@ -934,14 +949,16 @@ namespace ServerPublisher.Server.Info
 
         public FileSystemWatcher ScriptsWatch;
 
+        public FileSystemWatcher GlobalScriptsWatch;
+
         private void CreateDefault()
         {
             if (!Directory.Exists(PublisherDirPath))
             {
                 Directory.CreateDirectory(PublisherDirPath);
 
-                if (Directory.Exists(Path.Combine(Application.Directory, "Template")))
-                    DirectoryCopy(Path.Combine(Application.Directory, "Template"), PublisherDirPath, true);
+                if (Directory.Exists(Path.Combine(Application.Directory, "Data", "ProjectTemplate")))
+                    DirectoryCopy(Path.Combine(Application.Directory, "Data", "ProjectTemplate"), PublisherDirPath, true);
             }
 
             if (!Directory.Exists(UsersDirPath))
@@ -1047,6 +1064,7 @@ namespace ServerPublisher.Server.Info
         public void Dispose()
         {
             ScriptsWatch.Dispose();
+            GlobalScriptsWatch.Dispose();
             SettingsWatch.Dispose();
             UsersWatch.Dispose();
 

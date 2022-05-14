@@ -2,8 +2,13 @@
   "profiles": {
     "ServerPublisher.Server": {
       "commandName": "Project",
-      "commandLineArgs": "/service",
-      "workingDirectory": "D:\\Temp\\PublisherTest\\PublisherServer1"
+      "commandLineArgs": "/action:service /webService",
+      "workingDirectory": "D:\\Temp\\publisher\\server"
+    },
+    "WSL": {
+      "commandName": "WSL2",
+      "environmentVariables": {},
+      "distributionName": ""
     }
   }
 }

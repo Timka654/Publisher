@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 using NSL.Cipher.RSA;
-using ServerOptions.Extensions.Manager;
+using NSL.ServerOptions.Extensions.Manager;
 using ServerPublisher.Server.Info;
 using ServerPublisher.Server.Managers.Storages;
 using ServerPublisher.Server.Network.PublisherClient;
@@ -53,7 +53,7 @@ namespace ServerPublisher.Server.Managers
                 return;
             }
 
-            var user = proj.GetUser(user_id);
+            var user = proj.GetUser(user_id) ?? StaticInstances.UserManager.GetUser(user_id);
 
             if (user == null)
             {
@@ -201,5 +201,29 @@ namespace ServerPublisher.Server.Managers
         {
             File.WriteAllText(ProjectsFilePath, JsonConvert.SerializeObject(storage.Select(x => x.Value.ProjectDirPath)));
         }
+
+        #region Storages
+
+        public new bool AddProject(ServerProjectInfo project)
+        {
+            var result = base.AddProject(project);
+
+            if (result)
+                StaticInstances.ServiceManager.TryRegisterService(project);
+
+            return result;
+        }
+
+        public bool RemoveProject(ServerProjectInfo project, bool fullRemove = true)
+        {
+            var result = base.RemoveProject(project);
+
+            if (result && fullRemove)
+                StaticInstances.ServiceManager.UnregisterService(project);
+
+            return result;
+        }
+
+        #endregion
     }
 }

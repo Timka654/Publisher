@@ -61,7 +61,7 @@ else {
 
 	chmod +x $execFilePath
 
-    ln -s "$setupPath/Publisher.Client" /bin/pubc
+    ln -s "$setupPath/Publisher.Client" /bin/publc
 }
 
 Set-Location $backLocation

@@ -1,6 +1,5 @@
-﻿using ServerOptions.Extensions.Packet;
+﻿using NSL.SocketCore.Extensions.Packet;
 using ServerPublisher.Shared;
-using SocketCore.Extensions.Packet;
 using System;
 
 namespace ServerPublisher.Server.Network.PublisherClient.Packets

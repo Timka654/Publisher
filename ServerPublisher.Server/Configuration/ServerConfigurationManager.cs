@@ -4,7 +4,6 @@ using NSL.ConfigurationEngine.Providers.Json;
 using System.Collections.Generic;
 using System.IO;
 #if RELEASE
-using System.Runtime.InteropServices;
 #endif
 
 namespace ServerPublisher.Server.Configuration
@@ -13,31 +12,40 @@ namespace ServerPublisher.Server.Configuration
     {
         private static readonly List<ConfigurationInfo> DefaultValues = new List<ConfigurationInfo>()
         {
-            new ConfigurationInfo("server.io.ip","0.0.0.0",""),
-            new ConfigurationInfo("server.io.port","6583",""),
-            new ConfigurationInfo("server.io.backlog","10",""),
-            new ConfigurationInfo("server.io.ipv","4",""),
-            new ConfigurationInfo("server.io.protocol","tcp",""),
-            new ConfigurationInfo("server.io.buffer.size","409600",""),
-            new ConfigurationInfo("server.io.input.key","!{b1HX11R**",""),
-            new ConfigurationInfo("server.io.output.key","!{b1HX11R**",""),
-            new ConfigurationInfo("paths.projects_library","proj_lib.json",""),
+            new ConfigurationInfo("server.publisher.io.ip","0.0.0.0",""),
+            new ConfigurationInfo("server.publisher.io.port","6583",""),
+            new ConfigurationInfo("server.publisher.io.backlog","10",""),
+            new ConfigurationInfo("server.publisher.io.ipv","4",""),
+            new ConfigurationInfo("server.publisher.io.protocol","tcp",""),
+            new ConfigurationInfo("server.publisher.io.buffer.size","409600",""),
+            new ConfigurationInfo("server.publisher.io.input.key","!{b1HX11R**",""),
+            new ConfigurationInfo("server.publisher.io.output.key","!{b1HX11R**",""),
+            new ConfigurationInfo("paths.projects_library", Path.Combine("Data", "Projects.json"),""),
             new ConfigurationInfo("patch.io.buffer.size","409600",""),
+            new ConfigurationInfo("service.use_integrate","false",""),
         };
 
-        public static ServerConfigurationManager Instance;
+        private static ServerConfigurationManager instance;
 
-        public static void Initialize()
+        public static ServerConfigurationManager Instance => instance ??= Initialize();
+
+        public static ServerConfigurationManager Initialize()
         {
-            StaticInstances.ServerLogger.AppendInfo("Loading server configuration");
+            var logger = StaticInstances.ServerLogger;
+            
+            logger.AppendInfo("Loading server configuration");
+            
             string dir = Application.Directory;
 
             if (File.Exists(Path.Combine(dir, "ServerSettings.json")) == false)
                 File.WriteAllText(Path.Combine(dir, "ServerSettings.json"), "{}");
 
-            Instance = new ServerConfigurationManager(Path.Combine(dir, "ServerSettings.json"));
-            Instance.OnLog += StaticInstances.ServerLogger.Append;
-            Instance.SetDefaults(DefaultValues, true);
+            var result = new ServerConfigurationManager(Path.Combine(dir, "ServerSettings.json"));
+
+            result.OnLog += logger.Append;
+            result.SetDefaults(DefaultValues, true);
+
+            return result;
         }
 
         public ServerConfigurationManager(string fileName) : base(fileName)

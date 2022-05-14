@@ -15,12 +15,12 @@ namespace ServerPublisher.Server.Managers.Storages
             storage = new ConcurrentDictionary<string, ServerProjectInfo>();
         }
 
-        public bool AddProject(ServerProjectInfo project)
+        protected bool AddProject(ServerProjectInfo project)
         {
             return storage.TryAdd(project.Info.Id, project);
         }
 
-        public bool RemoveProject(ServerProjectInfo project)
+        protected bool RemoveProject(ServerProjectInfo project)
         {
             return RemoveProject(project.Info.Id);
         }

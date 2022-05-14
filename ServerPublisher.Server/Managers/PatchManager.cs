@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using ServerPublisher.Server.Network.PublisherClient;
 using ServerPublisher.Server.Network.PublisherClient.Packets;
-using ServerOptions.Extensions.Manager;
+using NSL.ServerOptions.Extensions.Manager;
 using ServerPublisher.Shared;
 
 namespace ServerPublisher.Server.Managers

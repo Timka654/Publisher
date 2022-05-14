@@ -1,10 +1,17 @@
-﻿using ServerPublisher.Server.Network.PublisherClient;
+﻿
+using ServerPublisher.Server.Network.PublisherClient;
+using System.Runtime.Versioning;
 using System.ServiceProcess;
 
 namespace ServerPublisher.Server
 {
+    [SupportedOSPlatform("windows")]
     class PublisherService : ServiceBase
     {
+        public PublisherService()
+        {
+        }
+
         protected override void OnStart(string[] args)
         {
             StaticInstances.ServerLogger.AppendInfo("Service:Starting");
@@ -34,3 +41,4 @@ namespace ServerPublisher.Server
         }
     }
 }
+
