@@ -16,8 +16,8 @@ namespace ServerPublisher.Server.Managers
         public SessionManager()
         {
             Instance = this;
-            StaticInstances.ServerLogger.AppendInfo("Load users");
-            StaticInstances.ServerLogger.AppendInfo("Load users finished");
+            PublisherServer.ServerLogger.AppendInfo("Load users");
+            PublisherServer.ServerLogger.AppendInfo("Load users finished");
         }
 
         public void DisconnectClient(PublisherNetworkClient client)

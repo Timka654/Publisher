@@ -1,13 +1,13 @@
 ﻿using NSL.SocketClient;
 using NSL.SocketClient.Utils;
 using NSL.Utils;
-using ServerPublisher.Shared;
 using NSL.SocketCore.Utils.Buffer;
 using System.Threading.Tasks;
+using ServerPublisher.Shared.Enums;
 
 namespace ServerPublisher.Client.Library.Packets.Project
 {
-    [ClientPacket(PublisherClientPackets.ProjectPublishEndResult)]
+    [ClientPacket(PublisherPacketEnum.ProjectPublishEndResult)]
     internal class ProjectPublishEndPacket : IPacketReceive<NetworkClient, bool>
     {
         private static ProjectPublishEndPacket Instance { get; set; }
@@ -23,7 +23,7 @@ namespace ServerPublisher.Client.Library.Packets.Project
         {
             var packet = new OutputPacketBuffer();
 
-            packet.SetPacketId(PublisherServerPackets.ProjectPublishEnd);
+            packet.SetPacketId(PublisherPacketEnum.PublishProjectFinish);
 
             var a = args.GetArgs();
 

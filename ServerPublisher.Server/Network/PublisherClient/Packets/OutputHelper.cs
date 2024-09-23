@@ -1,16 +1,11 @@
-﻿using ServerPublisher.Shared;
-using NSL.SocketCore.Utils.Buffer;
+﻿using NSL.SocketCore.Utils.Buffer;
+using ServerPublisher.Shared.Enums;
 
 namespace ServerPublisher.Server.Network.PublisherClient.Packets
 {
     public static class OutputHelper
     {
-        public static void SetPacketId(this OutputPacketBuffer packetBuffer, PublisherClientPackets id)
-        {
-            packetBuffer.PacketId = (ushort)id;
-        }
-
-        public static void SetPacketId(this OutputPacketBuffer packetBuffer, PatchClientPackets id)
+        public static void SetPacketId(this OutputPacketBuffer packetBuffer, PublisherPacketEnum id)
         {
             packetBuffer.PacketId = (ushort)id;
         }

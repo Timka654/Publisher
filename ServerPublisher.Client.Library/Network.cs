@@ -7,10 +7,11 @@ using NSL.TCP.Client;
 using NSL.SocketClient;
 using NSL.Cipher.RC.RC4;
 using ServerPublisher.Client.Library.Packets;
-using ServerPublisher.Shared;
 using NSL.ClientOptions.Extensions.Packet;
 using NSL.SocketCore.Extensions.Packet;
 using NSL.Utils;
+using ServerPublisher.Shared.Info;
+using ServerPublisher.Shared.Enums;
 
 namespace ServerPublisher.Client.Library
 {

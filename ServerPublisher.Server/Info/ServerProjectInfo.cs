@@ -5,21 +5,21 @@ using System.IO;
 using System.Linq;
 using ServerPublisher.Server.Managers;
 using System.Threading.Tasks;
-using ServerPublisher.Server.Network.ClientPatchPackets;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Reflection;
 using ServerPublisher.Server.Network.PublisherClient;
 using ServerPublisher.Server.Network.PublisherClient.Packets;
-using ServerPublisher.Server.Configuration;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
 using NSL.SocketCore.Utils.Buffer;
-using ServerPublisher.Shared;
 using Newtonsoft.Json;
 using NSL.Logger;
 using ServerPublisher.Server.Scripts;
 using NSL.Utils;
+using ServerPublisher.Shared.Enums;
+using ServerPublisher.Shared.Info;
+using ServerPublisher.Shared.Models.RequestModels;
 
 namespace ServerPublisher.Server.Info
 {
@@ -288,7 +288,7 @@ namespace ServerPublisher.Server.Info
         public void BroadcastMessage(string log)
         {
             var packet = new OutputPacketBuffer();
-            packet.SetPacketId(PublisherClientPackets.ServerLog);
+            packet.SetPacketId(PublisherPacketEnum.ServerLog);
             packet.WriteString16(log);
 
             CurrentLogger?.AppendLog(log);
@@ -352,7 +352,7 @@ namespace ServerPublisher.Server.Info
             }
             catch { return; }
 
-            StaticInstances.ServerLogger.AppendInfo($"{ProjectFilePath} changed \r\nold {JsonConvert.SerializeObject(oldInfo)}\r\nnew {JsonConvert.SerializeObject(Info)}");
+            PublisherServer.ServerLogger.AppendInfo($"{ProjectFilePath} changed \r\nold {JsonConvert.SerializeObject(oldInfo)}\r\nnew {JsonConvert.SerializeObject(Info)}");
 
 
             if (oldInfo.PatchInfo == null && Info.PatchInfo != null)
@@ -589,7 +589,7 @@ namespace ServerPublisher.Server.Info
 
             var packet = new OutputPacketBuffer();
 
-            packet.SetPacketId(PublisherClientPackets.ProjectPublishStart);
+            packet.SetPacketId(PublisherPacketEnum.ProjectPublishStart);
 
             packet.WriteInt32(Info.IgnoreFilePaths.Count);
 
@@ -674,11 +674,11 @@ namespace ServerPublisher.Server.Info
             return false;
         }
 
-        internal void StartFile(IProcessFileContainer client, string relativePath, DateTime createTime, DateTime updateTime)
+        internal void StartFile(IProcessFileContainer client, PublishFileStartRequestModel data)
         {
             EndFile(client);
 
-            client.CurrentFile = FileInfoList.FirstOrDefault(x => x.RelativePath == relativePath);
+            client.CurrentFile = FileInfoList.FirstOrDefault(x => x.RelativePath == data.RelativePath);
 
             if (client.CurrentFile != null && !client.CurrentFile.FileInfo.Exists)
             {
@@ -688,11 +688,11 @@ namespace ServerPublisher.Server.Info
 
             if (client.CurrentFile == null)
             {
-                client.CurrentFile = new ProjectFileInfo(ProjectDirPath, new FileInfo(Path.Combine(ProjectDirPath, relativePath)), this);
+                client.CurrentFile = new ProjectFileInfo(ProjectDirPath, new FileInfo(Path.Combine(ProjectDirPath, data.RelativePath)), this);
             }
 
             processFileList.Add(client.CurrentFile);
-            client.CurrentFile.StartFile(createTime, updateTime);
+            client.CurrentFile.StartFile(data.CreateTime, data.UpdateTime);
         }
 
         internal void EndFile(IProcessFileContainer client)
@@ -728,7 +728,7 @@ namespace ServerPublisher.Server.Info
                 else
                     FileInfoList = new List<ProjectFileInfo>();
 
-                StaticInstances.ServerLogger.AppendInfo($"Project {Info.Name}({Info.Id}) Loaded {FileInfoList.Count} files");
+                PublisherServer.ServerLogger.AppendInfo($"Project {Info.Name}({Info.Id}) Loaded {FileInfoList.Count} files");
 
                 var removed = new List<ProjectFileInfo>();
 
@@ -740,7 +740,7 @@ namespace ServerPublisher.Server.Info
                         removed.Add(item);
                 }
 
-                StaticInstances.ServerLogger.AppendInfo($"Project {Info.Name}({Info.Id}) Removed {FileInfoList.RemoveAll(x => removed.Contains(x))} invalid files");
+                PublisherServer.ServerLogger.AppendInfo($"Project {Info.Name}({Info.Id}) Removed {FileInfoList.RemoveAll(x => removed.Contains(x))} invalid files");
 
                 GC.Collect();
             }
@@ -776,7 +776,7 @@ namespace ServerPublisher.Server.Info
 
         internal void ReIndexing()
         {
-            StaticInstances.ServerLogger.AppendInfo($"Try reindexing project {Info.Name}({Info.Id})");
+            PublisherServer.ServerLogger.AppendInfo($"Try reindexing project {Info.Name}({Info.Id})");
 
             ProcessFolder();
 
@@ -791,7 +791,7 @@ namespace ServerPublisher.Server.Info
 
                 if (oldHash != item.Hash)
                 {
-                    StaticInstances.ServerLogger.AppendInfo($"{item.RelativePath} invaliid hash ({oldHash} vs {item.Hash})");
+                    PublisherServer.ServerLogger.AppendInfo($"{item.RelativePath} invaliid hash ({oldHash} vs {item.Hash})");
                     exists = true;
                 }
             }
@@ -816,7 +816,7 @@ namespace ServerPublisher.Server.Info
 
                 FileInfoList.Add(pfi);
 
-                StaticInstances.ServerLogger.AppendInfo($"{pfi.RelativePath} new file {pfi.Hash}");
+                PublisherServer.ServerLogger.AppendInfo($"{pfi.RelativePath} new file {pfi.Hash}");
             }
 
             if (exists)
@@ -824,7 +824,7 @@ namespace ServerPublisher.Server.Info
                 DumpFileList();
                 Info.LatestUpdate = DateTime.UtcNow;
                 SaveProjectInfo();
-                StaticInstances.ServerLogger.AppendInfo($"Success reindexing project");
+                PublisherServer.ServerLogger.AppendInfo($"Success reindexing project");
             }
 
         }
@@ -843,7 +843,7 @@ namespace ServerPublisher.Server.Info
             }
             catch (Exception ex)
             {
-                StaticInstances.ServerLogger.AppendError(ex.ToString());
+                PublisherServer.ServerLogger.AppendError(ex.ToString());
             }
 
             return false;
@@ -878,7 +878,7 @@ namespace ServerPublisher.Server.Info
         {
             if (users.Any(x => x.Name.Equals(user.Name, StringComparison.OrdinalIgnoreCase)))
             {
-                StaticInstances.ServerLogger.AppendError($"{user.Name} already exist in project {Info.Name}");
+                PublisherServer.ServerLogger.AppendError($"{user.Name} already exist in project {Info.Name}");
                 return false;
             }
 
@@ -991,7 +991,7 @@ namespace ServerPublisher.Server.Info
                 }
                 catch (Exception ex)
                 {
-                    StaticInstances.ServerLogger.AppendError($"cannot read {item} user data, exception: {ex.ToString()}");
+                    PublisherServer.ServerLogger.AppendError($"cannot read {item} user data, exception: {ex.ToString()}");
                 }
             }
         }
@@ -1018,7 +1018,7 @@ namespace ServerPublisher.Server.Info
 
         public ServerProjectInfo(CommandLineArgs args, string directory)
         {
-            StaticInstances.ServerLogger.AppendInfo("project creating");
+            PublisherServer.ServerLogger.AppendInfo("project creating");
 
             Info = new ProjectInfoData()
             {

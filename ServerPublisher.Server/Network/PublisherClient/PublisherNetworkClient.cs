@@ -1,9 +1,9 @@
 ﻿using ServerPublisher.Server.Info;
-using ServerPublisher.Shared;
 using NSL.SocketServer.Utils;
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using ServerPublisher.Shared.Enums;
 
 namespace ServerPublisher.Server.Network.PublisherClient
 {

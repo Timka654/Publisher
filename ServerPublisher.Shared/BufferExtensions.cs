@@ -12,7 +12,7 @@ namespace ServerPublisher.Shared
             byte count = data.ReadByte();
             for (int i = 0; i < count; i++)
             {
-                path = Path.Combine(path, data.ReadString16());
+                path = Path.Combine(path, data.ReadString());
             }
 
             return path;
@@ -30,7 +30,7 @@ namespace ServerPublisher.Shared
 
             foreach (var item in path)
             {
-                packet.WriteString16(item);
+                packet.WriteString(item);
             }
         }
     }

@@ -9,7 +9,7 @@ namespace ServerPublisher.Server.Network.ClientPatchPackets
         {
             var packet = new OutputPacketBuffer();
 
-            packet.SetPacketId(PatchServerPackets.NextFile);
+            packet.SetPacketId(PatchServerPacketEnum.NextFile);
 
             packet.WritePath(relativePath);
 

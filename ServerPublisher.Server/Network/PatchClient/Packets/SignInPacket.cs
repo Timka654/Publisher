@@ -1,14 +1,15 @@
 ﻿using NSL.SocketClient;
 using NSL.SocketClient.Utils;
-using ServerPublisher.Shared;
 using NSL.SocketCore.Utils.Buffer;
 using System;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using ServerPublisher.Shared.Enums;
+using ServerPublisher.Server.Network.PublisherClient.Packets;
 
 namespace ServerPublisher.Server.Network.ClientPatchPackets
 {
-    [PathClientPacket(PatchClientPackets.SignInResult)]
+    [ServerPacket(PublisherPacketEnum.SignInResult)]
     internal class SignInPacket : IPacketReceive<NetworkPatchClient, SignStateEnum>
     {
         protected override void Receive(InputPacketBuffer data) => Data = (SignStateEnum)data.ReadByte();
@@ -16,7 +17,7 @@ namespace ServerPublisher.Server.Network.ClientPatchPackets
         public async Task<SignStateEnum> Send(string projectId, string userId, byte[] encoded, DateTime? latestUpdate)
         {
             var packet = new OutputPacketBuffer();
-            packet.SetPacketId(PatchServerPackets.SignIn);
+            packet.SetPacketId(PublisherPacketEnum.PublishSignIn);
             packet.WriteString16(userId);
             packet.WriteString16(projectId);
             packet.WriteInt32(encoded.Length);

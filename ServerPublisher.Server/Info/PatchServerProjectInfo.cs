@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using ServerPublisher.Server.Network.ClientPatchPackets;
 using System.Text;
 using ServerPublisher.Server.Network.PublisherClient;
 using ServerPublisher.Server.Network.PublisherClient.Packets;
@@ -12,6 +10,10 @@ using ServerPublisher.Shared;
 using NSL.SocketCore.Utils.Buffer;
 using NSL.SocketCore.Utils;
 using NSL.Cipher.RSA;
+using ServerPublisher.Shared.Enums;
+using System.Threading.Tasks;
+using NSL.Utils;
+using ServerPublisher.Shared.Models.RequestModels;
 
 namespace ServerPublisher.Server.Info
 {
@@ -30,7 +32,7 @@ namespace ServerPublisher.Server.Info
         {
             var packet = new OutputPacketBuffer();
 
-            packet.SetPacketId(PatchClientPackets.ChangeLatestUpdateHandle);
+            packet.SetPacketId(PatchClientPacketEnum.ChangeLatestUpdateHandle);
 
             packet.WriteString16(Info.Id);
             packet.WriteDateTime(Info.LatestUpdate.Value);
@@ -44,7 +46,7 @@ namespace ServerPublisher.Server.Info
                 client.Send(packet);
         }
 
-        public void SignPatchClient(PublisherNetworkClient client, string userId, byte[] key, DateTime latestUpdate)
+        public SignStateEnum SignPatchClient(PublisherNetworkClient client, ProjectProxySignInRequestModel request)
         {
             if (client.IsPatchClient == false)
             {
@@ -55,20 +57,16 @@ namespace ServerPublisher.Server.Info
             {
                 if (client.PatchProjectMap.ContainsKey(Info.Id))
                 {
-                    if (Info.LatestUpdate.HasValue && Info.LatestUpdate.Value > latestUpdate)
+                    if (Info.LatestUpdate.HasValue && Info.LatestUpdate.Value > request.LatestUpdate)
                         broadcastUpdateTime(client);
 
-                    return;
+                    return SignStateEnum.Ok;
                 }
             }
 
-            var user = users.FirstOrDefault(x => x.Id == userId);
+            var user = users.FirstOrDefault(x => x.Id == request.UserId);
 
-            if (user == null)
-            {
-                PatchServerPacketRepository.SendSignInResult(client, SignStateEnum.UserNotFound);
-                return;
-            }
+            if (user == null) return SignStateEnum.UserNotFound;
 
             if (user.Cipher == null)
             {
@@ -77,22 +75,23 @@ namespace ServerPublisher.Server.Info
                 user.Cipher.LoadXml(user.RSAPrivateKey);
             }
 
-            byte[] data = user.Cipher.Decode(key, 0, key.Length);
+            byte[] data = user.Cipher.Decode(request.IdentityKey, 0, request.IdentityKey.Length);
 
-            if (Encoding.ASCII.GetString(data) != userId)
-            {
-                PatchServerPacketRepository.SendSignInResult(client, SignStateEnum.UserNotFound);
-                return;
-            }
+            if (Encoding.ASCII.GetString(data) != request.UserId) return SignStateEnum.UserNotFound;
 
             patchClients.Add(client);
 
             client.PatchProjectMap.Add(Info.Id, this);
 
-            PatchServerPacketRepository.SendSignInResult(client, SignStateEnum.Ok);
 
-            if (Info.LatestUpdate.HasValue && Info.LatestUpdate.Value > latestUpdate)
-                broadcastUpdateTime(client);
+            if (Info.LatestUpdate.HasValue && Info.LatestUpdate.Value > request.LatestUpdate)
+                Task.Run(async () =>
+                {
+                    await Task.Delay(500);
+                    broadcastUpdateTime(client);
+                }).RunAsync();
+
+            return SignStateEnum.Ok;
         }
 
         public void SignOutPatchClient(PublisherNetworkClient client)
@@ -112,13 +111,13 @@ namespace ServerPublisher.Server.Info
             initializeLogger();
             client.PatchDownloadProject = this;
 
-            PatchServerPacketRepository.SendStartDownloadResult(client, true, Info.IgnoreFilePaths);
+            ProjectProxyPacketRepository.SendStartDownloadResult(client, true, Info.IgnoreFilePaths);
         }
 
-        public void NextDownloadFile(PublisherNetworkClient client, string relativePath)
+        public bool NextDownloadFile(PublisherNetworkClient client, string relativePath)
         {
             if (client != currentDownloader)
-                return;
+                return false;
 
             if (currentDownloader.CurrentFile != null)
                 currentDownloader.CurrentFile.CloseRead();
@@ -133,6 +132,8 @@ namespace ServerPublisher.Server.Info
 
             if (client.CurrentFile != null)
                 client.CurrentFile.OpenRead();
+
+            return true;
         }
 
         internal void EndDownload<T>(T client, bool success = false)
@@ -156,7 +157,7 @@ namespace ServerPublisher.Server.Info
             {
                 var packet = new OutputPacketBuffer();
 
-                packet.SetPacketId(PatchClientPackets.FinishDownloadResult);
+                packet.SetPacketId(PatchClientPacketEnum.FinishDownloadResult);
 
                 byte[] buf = null;
 

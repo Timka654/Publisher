@@ -1,11 +1,11 @@
 ﻿using NSL.SocketCore.Extensions.Packet;
-using ServerPublisher.Shared;
+using ServerPublisher.Shared.Enums;
 
 namespace ServerPublisher.Client.Library.Packets
 {
     internal class ClientPacketAttribute : PacketAttribute
     {
-        public ClientPacketAttribute(PublisherClientPackets packetId) : base((ushort)packetId)
+        public ClientPacketAttribute(PublisherPacketEnum packetId) : base((ushort)packetId)
         {
         }
     }

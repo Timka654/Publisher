@@ -5,10 +5,12 @@ using NSL.SocketCore.Utils.Buffer;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using ServerPublisher.Shared.Info;
+using ServerPublisher.Shared.Enums;
 
 namespace ServerPublisher.Client.Library.Packets.Project
 {
-    [ClientPacket(PublisherClientPackets.FileListResult)]
+    [ClientPacket(PublisherPacketEnum.FileListResult)]
     internal class FileListPacket : IPacketReceive<NetworkClient, List<BasicFileInfo>>
     {
         private static FileListPacket Instance;
@@ -27,7 +29,7 @@ namespace ServerPublisher.Client.Library.Packets.Project
         public static async Task<List<BasicFileInfo>> Send()
         {
             var packet = new OutputPacketBuffer();
-            packet.SetPacketId(PublisherServerPackets.ProjectFileList);
+            packet.SetPacketId(PublisherPacketEnum.PublishProjectFileList);
             return await Instance.SendWaitAsync(packet);
         }
     }

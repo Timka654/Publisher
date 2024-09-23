@@ -1,13 +1,13 @@
 ﻿using NSL.SocketClient;
 using NSL.SocketClient.Utils;
-using ServerPublisher.Shared;
 using NSL.SocketCore.Utils.Buffer;
 using System.Collections.Generic;
 using System.Linq;
+using ServerPublisher.Shared.Enums;
 
 namespace ServerPublisher.Client.Library.Packets.Project
 {
-    [ClientPacket(PublisherClientPackets.ProjectPublishStart)]
+    [ClientPacket(PublisherPacketEnum.ProjectPublishStart)]
     internal class ProjectPublishStartPacket : IPacketMessage<NetworkClient, List<string>>
     {
         public static ProjectPublishStartPacket Instance { get; private set; }

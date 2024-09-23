@@ -4,10 +4,12 @@ using ServerPublisher.Shared;
 using NSL.SocketCore.Utils.Buffer;
 using System.Linq;
 using System.Threading.Tasks;
+using ServerPublisher.Server.Network.PublisherClient.Packets;
+using ServerPublisher.Shared.Enums;
 
 namespace ServerPublisher.Server.Network.ClientPatchPackets
 {
-    [PathClientPacket(PatchClientPackets.FinishDownloadResult)]
+    [ServerPacket(PublisherPacketEnum.FinishDownloadResult)]
     internal class FinishDownloadPacket : IPacketReceive<NetworkPatchClient, (string fileName, byte[] data)[]>
     {
         protected override void Receive(InputPacketBuffer data) => Data = data.ReadCollection<(string fileName, byte[] data)>(
@@ -18,7 +20,7 @@ namespace ServerPublisher.Server.Network.ClientPatchPackets
         {
             var packet = new OutputPacketBuffer();
 
-            packet.SetPacketId(PatchServerPackets.FinishDownload);
+            packet.SetPacketId(PublisherPacketEnum.FinishDownload);
 
             return await SendWaitAsync(packet);
         }

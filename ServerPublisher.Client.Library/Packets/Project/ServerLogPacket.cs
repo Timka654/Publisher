@@ -1,11 +1,11 @@
 ﻿using NSL.SocketClient;
 using NSL.SocketClient.Utils;
-using ServerPublisher.Shared;
 using NSL.SocketCore.Utils.Buffer;
+using ServerPublisher.Shared.Enums;
 
 namespace ServerPublisher.Client.Library.Packets.Project
 {
-    [ClientPacket(PublisherClientPackets.ServerLog)]
+    [ClientPacket(PublisherPacketEnum.ServerLog)]
     internal class ServerLogPacket : IPacketMessage<NetworkClient, string>
     {
         public static ServerLogPacket Instance { get; private set; }

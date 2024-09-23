@@ -1,5 +1,4 @@
-﻿using ServerPublisher.Server.Info.PacketInfo;
-using ServerPublisher.Server.Network.ClientPatchPackets;
+﻿using ServerPublisher.Server.Network.ClientPatchPackets;
 using ServerPublisher.Server.Info;
 using System;
 using System.Collections.Concurrent;
@@ -9,54 +8,114 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using ServerPublisher.Shared;
 using NSL.Cipher.RSA;
 using NSL.Cipher.RC.RC4;
 using NSL.TCP.Client;
-using NSL.SocketClient;
-using NSL.ClientOptions.Extensions.Packet;
 using NSL.Utils;
+using ServerPublisher.Shared.Info;
+using ServerPublisher.Shared.Enums;
+using NSL.Logger;
+using ServerPublisher.Server.Network.PublisherClient.Packets;
+using NSL.BuilderExtensions.TCPClient;
+using NSL.BuilderExtensions.SocketCore;
+using Microsoft.Extensions.Configuration;
+using NSL.SocketCore.Extensions.Buffer;
+using NSL.SocketCore.Utils.Buffer;
+using ServerPublisher.Shared.Models.RequestModels;
+using ServerPublisher.Shared.Models.ResponseModel;
 
 namespace ServerPublisher.Server.Network
 {
-    class PatchClientNetwork : TCPNetworkClient<NetworkPatchClient, ClientOptions<NetworkPatchClient>>
+    class PatchClientNetwork
     {
-        public ClientOptions<NetworkPatchClient> Options => base.Options as ClientOptions<NetworkPatchClient>;
+        public string IpAddress { get; private set; }
 
-        public SignInPacket GetSignInPacket() 
-            => Options.GetPacket<SignInPacket>((ushort)PatchClientPackets.SignInResult);
+        public int Port { get; private set; }
 
-        public StartDownloadPacket GetStartDownloadPacket() 
-            => Options.GetPacket<StartDownloadPacket>((ushort)PatchClientPackets.StartDownloadResult);
-
-        public FinishDownloadPacket GetFinishDownloadPacket() 
-            => Options.GetPacket<FinishDownloadPacket>((ushort)PatchClientPackets.FinishDownloadResult);
-
-        public DownloadBytesPacket GetDownloadBytesPacket() 
-            => Options.GetPacket<DownloadBytesPacket>((ushort)PatchClientPackets.DownloadBytesResult);
-
-        public ChangeLatestUpdateHandlePacket GetChangeLatestUpdateHandlePacket() 
-            => Options.GetPacket<ChangeLatestUpdateHandlePacket>((ushort)PatchClientPackets.ChangeLatestUpdateHandle);
-
-        public FileListPacket GetFileListPacket() 
-            => Options.GetPacket<FileListPacket>((ushort)PatchClientPackets.ProjectFileListResult);
-
-        public PatchClientNetwork(ClientOptions<NetworkPatchClient> options) : base(options)
+        public PatchClientNetwork(ProjectPatchInfo patchInfo)// : base(options)
         {
-            options.OnClientConnectEvent += Options_OnClientConnectEvent;
-            options.OnClientDisconnectEvent += Options_OnClientDisconnectEvent;
-            options.OnReconnectEvent += Options_OnReconnectEvent;
+            IpAddress = patchInfo.IpAddress;
+            Port = patchInfo.Port;
 
-            options.OnExceptionEvent += Options_OnExceptionEvent;
+            client = TCPClientEndPointBuilder.Create()
+                .WithClientProcessor<NetworkPatchClient>()
+                .WithOptions()
+                .WithEndPoint(patchInfo.IpAddress, patchInfo.Port)
+                .WithCode(builder =>
+                {
+                    builder.SetLogger(PublisherServer.AppLogger);
 
-            options.HelperLogger = StaticInstances.ServerLogger;
+                    builder.GetOptions().ConfigureRequestProcessor();
 
-            GetChangeLatestUpdateHandlePacket().OnReceiveEvent += PatchClientNetwork_OnReceiveEvent;
+                    builder.WithInputCipher(new XRC4Cipher(patchInfo.InputCipherKey));
+                    builder.WithOutputCipher(new XRC4Cipher(patchInfo.OutputCipherKey));
+
+                    builder.WithBufferSize(GetDefaultBufferSize());
+
+                    builder.AddConnectHandle(Options_OnClientConnectEvent);
+                    builder.AddConnectHandle(Options_OnClientDisconnectEvent);
+                    builder.AddExceptionHandle(Options_OnExceptionEvent);
+                })
+                .Build();
+
+            //options.OnClientConnectEvent += Options_OnClientConnectEvent;
+            //options.OnClientDisconnectEvent += Options_OnClientDisconnectEvent;
+            //options.OnReconnectEvent += Options_OnReconnectEvent;
+
+            //options.OnExceptionEvent += Options_OnExceptionEvent;
+
+            //options.HelperLogger = PublisherServer.ServerLogger;
+
+            //GetChangeLatestUpdateHandlePacket().OnReceiveEvent += PatchClientNetwork_OnReceiveEvent;
         }
+
+        private RequestProcessor requestProcessor;
+
+        public async Task<ProjectProxyDownloadBytesResponseModel> DownloadAsync(int? buffLenght = null)
+        {
+            buffLenght ??= GetDefaultBufferSize();
+
+            var packet = RequestPacketBuffer.Create(PublisherPacketEnum.DownloadBytes);
+
+            new ProjectProxyDownloadBytesRequestModel
+            {
+                BufferLength = buffLenght.Value
+            }
+            .WriteFullTo(packet);
+
+            //await client.Data.GetRequestProcessor().SendRequestAsync(packet)
+
+            await requestProcessor.SendRequestAsync(packet, data =>
+            {
+
+                return Task.FromResult(true);
+            });
+
+            packet.SetPacketId(PublisherPacketEnum.DownloadBytes);
+
+            packet.WriteInt32(buffLenght.Value);
+
+            var result = await SendWaitAsync(packet);
+
+            GC.Collect(GC.GetGeneration(Data));
+
+            Data = null;
+
+            return result;
+        }
+
+        private static int GetDefaultBufferSize() => PublisherServer.Configuration.GetValue<int>("patch:io:buffer_size") - sizeof(int) - sizeof(bool);
+
+        private void ChangeLatestUpdateMessageHandle(NetworkPatchClient client, InputPacketBuffer data)
+        {
+            //(string projectId, DateTime updateTime)
+        }
+
+
 
         private void Options_OnExceptionEvent(Exception ex, NetworkPatchClient client)
         {
-            StaticInstances.ServerLogger.AppendError(ex.ToString());
+            PublisherServer.ServerLogger.AppendError(ex.ToString());
         }
 
         private async void Options_OnReconnectEvent(int currentTry, bool result)
@@ -72,18 +131,18 @@ namespace ServerPublisher.Server.Network
                 await ConnectAsync();
                 return;
             }
-            StaticInstances.ServerLogger.AppendDebug($"PatchClient {Options.IpAddress}:{Options.Port} reconnection try: {currentTry} with result = {result}");
 
+            PublisherServer.ServerLogger.AppendDebug($"PatchClient {Options.IpAddress}:{Options.Port} reconnection try: {currentTry} with result = {result}");
         }
 
         protected override void OnReceive(ushort pid, int len)
         {
-            if (PacketEnumExtensions.IsDefined<PatchClientPackets>(pid))
-                StaticInstances.ServerLogger.AppendDebug($"PatchClient receive packet pid:{Enum.GetName((PatchClientPackets)pid)} from {Options.IpAddress}:{Options.Port}");
+            if (PacketEnumExtensions.IsDefined<PublisherPacketEnum>(pid))
+                PublisherServer.ServerLogger.AppendDebug($"PatchClient receive packet pid:{Enum.GetName((PublisherPacketEnum)pid)} from {Options.IpAddress}:{Options.Port}");
         }
         private async void Options_OnClientConnectEvent(NetworkPatchClient client)
         {
-            StaticInstances.ServerLogger.AppendInfo($"Success connected to PatchServer({Options.IpAddress}:{Options.Port})");
+            PublisherServer.ServerLogger.AppendInfo($"Success connected to PatchServer({Options.IpAddress}:{Options.Port})");
 
             SetFailed();
 
@@ -129,10 +188,10 @@ namespace ServerPublisher.Server.Network
 
                 item.ClearPatchClient();
 
-                StaticInstances.ServerLogger.AppendError($"Project {item.Info.Name}({item.Info.Id}) cannot sign PatchServer({Options.IpAddress}:{Options.Port}) reasone ={Enum.GetName(result)} - removed");
+                PublisherServer.ServerLogger.AppendError($"Project {item.Info.Name}({item.Info.Id}) cannot sign PatchServer({Options.IpAddress}:{Options.Port}) reasone ={Enum.GetName(result)} - removed");
             }
             else if (result == SignStateEnum.Ok)
-                StaticInstances.ServerLogger.AppendInfo($"Project {item.Info.Name}({item.Info.Id}) success sign on PatchServer({Options.IpAddress}:{Options.Port})");
+                PublisherServer.ServerLogger.AppendInfo($"Project {item.Info.Name}({item.Info.Id}) success sign on PatchServer({Options.IpAddress}:{Options.Port})");
 
             return result;
         }
@@ -197,35 +256,7 @@ namespace ServerPublisher.Server.Network
             NextFilePacket.Send(this.Options.ClientData, file.RelativePath);
         }
 
-        public async Task<DownloadPacketData> Download()
-        {
-            return await GetDownloadBytesPacket().Send();
-        }
-
-        public static PatchClientNetwork Load(ProjectPatchInfo patchInfo)
-        {
-            var patchConnectionOptions = new ClientOptions<NetworkPatchClient>();
-
-            patchConnectionOptions.IpAddress = patchInfo.IpAddress;
-            patchConnectionOptions.Port = patchInfo.Port;
-            patchConnectionOptions.InputCipher = new XRC4Cipher(patchInfo.InputCipherKey);
-            patchConnectionOptions.OutputCipher = new XRC4Cipher(patchInfo.OutputCipherKey);
-
-            patchConnectionOptions.AddressFamily = System.Net.Sockets.AddressFamily.InterNetwork;
-
-            patchConnectionOptions.EnableAutoRecovery = true;
-            patchConnectionOptions.RecoveryWaitTime = 10_000;
-            patchConnectionOptions.MaxRecoveryTryTime = int.MaxValue;
-
-            patchConnectionOptions.HelperLogger = StaticInstances.ServerLogger;
-            patchConnectionOptions.MaxRecoveryTryTime = int.MaxValue;
-            patchConnectionOptions.ProtocolType = System.Net.Sockets.ProtocolType.Tcp;
-            patchConnectionOptions.ReceiveBufferSize = StaticInstances.ServerConfiguration.GetValue<int>("patch.io.buffer.size");
-
-            int cnt = patchConnectionOptions.LoadPackets(typeof(PathClientPacketAttribute));
-
-            return new PatchClientNetwork(patchConnectionOptions);
-        }
+        private TCPClient<NetworkPatchClient> client;
 
 
         private void SetFailed()

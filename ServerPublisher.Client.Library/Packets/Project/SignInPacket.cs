@@ -1,13 +1,14 @@
 ﻿using NSL.SocketClient;
 using NSL.SocketClient.Utils;
-using ServerPublisher.Shared;
 using NSL.SocketCore.Utils.Buffer;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using ServerPublisher.Shared.Info;
+using ServerPublisher.Shared.Enums;
 
 namespace ServerPublisher.Client.Library.Packets.Project
 {
-    [ClientPacket(PublisherClientPackets.SignInResult)]
+    [ClientPacket(PublisherPacketEnum.SignInResult)]
     internal class SignInPacket : IPacketReceive<NetworkClient,SignStateEnum>
     {
         private static SignInPacket Instance;
@@ -21,7 +22,7 @@ namespace ServerPublisher.Client.Library.Packets.Project
         public static async Task<SignStateEnum> Send(string projectId, BasicUserInfo user, byte[] encoded, bool compressed)
         {
             var packet = new OutputPacketBuffer();
-            packet.SetPacketId(PublisherServerPackets.SignIn);
+            packet.SetPacketId(PublisherPacketEnum.PublishSignIn);
 
             packet.WriteString16(user.Id);
 

@@ -1,5 +1,4 @@
-﻿using ServerPublisher.Shared;
-using NSL.SocketCore.Utils.Buffer;
+﻿using NSL.SocketCore.Utils.Buffer;
 
 namespace ServerPublisher.Server.Network.ClientPatchPackets
 {
@@ -9,7 +8,7 @@ namespace ServerPublisher.Server.Network.ClientPatchPackets
         {
             var packet = new OutputPacketBuffer();
 
-            packet.SetPacketId(PatchServerPackets.SignOut);
+            packet.SetPacketId(PatchServerPacketEnum.SignOut);
 
             packet.WriteString16(projectId);
 

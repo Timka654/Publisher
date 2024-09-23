@@ -5,10 +5,12 @@ using NSL.SocketCore.Utils.Buffer;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using ServerPublisher.Server.Network.PublisherClient.Packets;
+using ServerPublisher.Shared.Enums;
 
 namespace ServerPublisher.Server.Network.ClientPatchPackets
 {
-    [PathClientPacket(PatchClientPackets.StartDownloadResult)]
+    [ServerPacket(PublisherPacketEnum.StartDownloadResult)]
     internal class StartDownloadPacket : IPacketReceive<NetworkPatchClient, (bool result, List<string>)>
     {
         protected override void Receive(InputPacketBuffer data) => Data = 
@@ -18,7 +20,7 @@ namespace ServerPublisher.Server.Network.ClientPatchPackets
         {
             var packet = new OutputPacketBuffer();
 
-            packet.SetPacketId(PatchServerPackets.StartDownload);
+            packet.SetPacketId(PublisherPacketEnum.StartDownload);
 
             packet.WriteString16(projectId);
 

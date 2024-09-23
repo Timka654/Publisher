@@ -1,4 +1,4 @@
-﻿using ServerPublisher.Shared;
+﻿using ServerPublisher.Shared.Info;
 using System;
 using System.IO;
 

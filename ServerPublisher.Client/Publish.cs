@@ -7,11 +7,12 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.IO.Compression;
 using System.Collections.Concurrent;
-using ServerPublisher.Shared;
 using NSL.Cipher.RSA;
 using Newtonsoft.Json;
 using ServerPublisher.Client.Library;
 using NSL.Utils;
+using ServerPublisher.Shared.Info;
+using ServerPublisher.Shared.Enums;
 
 namespace ServerPublisher.Client
 {

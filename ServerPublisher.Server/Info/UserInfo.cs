@@ -2,7 +2,7 @@
 using NSL.Cipher.RSA;
 using NSL.Utils;
 using ServerPublisher.Server.Network.PublisherClient;
-using ServerPublisher.Shared;
+using ServerPublisher.Shared.Info;
 using System;
 using System.IO;
 
@@ -26,7 +26,7 @@ namespace ServerPublisher.Server.Info
 
         public UserInfo(CommandLineArgs args)
         {
-            StaticInstances.ServerLogger.AppendInfo("user creating");
+            PublisherServer.ServerLogger.AppendInfo("user creating");
 
             Id = Guid.NewGuid().ToString();
             Name = args["name"];

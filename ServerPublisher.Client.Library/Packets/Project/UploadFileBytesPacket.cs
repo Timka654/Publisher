@@ -1,12 +1,12 @@
 ﻿using NSL.SocketClient;
 using NSL.SocketClient.Utils;
-using ServerPublisher.Shared;
 using NSL.SocketCore.Utils.Buffer;
 using System.Threading.Tasks;
+using ServerPublisher.Shared.Enums;
 
 namespace ServerPublisher.Client.Library.Packets.Project
 {
-    [ClientPacket(PublisherClientPackets.UploadFileBytesResult)]
+    [ClientPacket(PublisherPacketEnum.UploadFileBytesResult)]
     internal class UploadFileBytesPacket : IPacketReceive<NetworkClient, bool>
     {
         private static UploadFileBytesPacket Instance { get; set; }
@@ -22,7 +22,7 @@ namespace ServerPublisher.Client.Library.Packets.Project
         {
             var packet = new OutputPacketBuffer(len);
 
-            packet.SetPacketId(PublisherServerPackets.UploadFileBytes);
+            packet.SetPacketId(PublisherPacketEnum.UploadFileBytes);
 
             packet.WriteInt32(len);
             packet.Write(buf);

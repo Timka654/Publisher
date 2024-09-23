@@ -5,9 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
-using ServerPublisher.Server.Info.PacketInfo;
-using ServerPublisher.Shared;
 using NSL.SocketClient;
+using ServerPublisher.Shared.Info;
 
 namespace ServerPublisher.Server.Info
 {
@@ -37,7 +36,7 @@ namespace ServerPublisher.Server.Info
             if (Info.PatchInfo == null || !File.Exists(PatchSignFilePath))
                 return false;
 
-            PatchClient = await StaticInstances.PatchManager.LoadProjectPatchClient(this);
+            PatchClient = await PublisherServer.ProjectProxyManager.LoadProjectPatchClient(this);
 
             if (PatchClient.GetState())
                 await PatchClient.SignProject(this);
@@ -105,10 +104,13 @@ namespace ServerPublisher.Server.Info
             {
                 PatchClient.NextDownloadFile(file);
                 StartFile(
-                    PatchClient.Options.ClientData, 
-                    file.RelativePath, 
-                    file.CreationTime, 
-                    file.ModifiedTime);
+                    PatchClient.Options.ClientData,
+                    new Shared.Models.RequestModels.PublishFileStartRequestModel()
+                    {
+                        RelativePath = file.RelativePath,
+                        CreateTime = file.CreationTime,
+                        UpdateTime = file.ModifiedTime
+                    });
 
                 do
                 {
