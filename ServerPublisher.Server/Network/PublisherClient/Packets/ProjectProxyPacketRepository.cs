@@ -4,6 +4,7 @@ using ServerPublisher.Shared.Models.RequestModels;
 using ServerPublisher.Shared.Models.ResponseModel;
 using System.Threading.Tasks;
 using ServerPublisher.Shared.Info;
+using ServerPublisher.Server.Info;
 
 namespace ServerPublisher.Server.Network.PublisherClient.Packets
 {
@@ -80,7 +81,10 @@ namespace ServerPublisher.Server.Network.PublisherClient.Packets
         {
             var request = ProjectProxyStartDownloadRequestModel.ReadFullFrom(data);
 
-            var project = PublisherServer.ProjectProxyManager.StartDownload(client, request);
+            ServerProjectInfo project = null;
+
+            if (client.ProxyClientContext?.PatchProjectMap.TryGetValue(request.ProjectId, out project) == true)
+                project.StartDownload(client, Shared.Enums.TransportModeEnum.NoArchive);
 
             new ProjectProxyStartDownloadResponseModel()
             {

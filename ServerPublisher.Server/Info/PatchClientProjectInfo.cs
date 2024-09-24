@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using ServerPublisher.Shared.Info;
+using System.Threading;
 
 namespace ServerPublisher.Server.Info
 {
@@ -47,35 +48,54 @@ namespace ServerPublisher.Server.Info
             await LoadPatchAsync();
         }
 
+
+        private DateTime currentDownloadTime;
+
+        private void FailedDownload(ProjectDownloadContext context)
+        {
+            patchLocker.Set();
+
+            context.Reload();
+        }
+
         internal async Task Download(DateTime latestChangeTime)
+        {
+            await Download(new ProjectDownloadContext()
+            {
+                UpdateTime = latestChangeTime,
+                ProjectInfo = this,
+                TempPath = initializeTempPath()
+            });
+        }
+
+        internal async Task Download(ProjectDownloadContext context)
         {
             patchLocker.WaitOne();
 
-            if (!await PatchClient.InitializeDownload(this))
+            if (currentDownloadTime > context.UpdateTime)
             {
-                patchLocker.Set();
-                DelayDownload(latestChangeTime);
+                context.Dispose();
                 return;
             }
 
-            initializeLogger();
-            initializeTemp();
+            currentDownloadTime = context.UpdateTime;
 
-            IEnumerable<DownloadFileInfo> fileList = await PatchClient.GetFileList(this);
 
-            if (fileList == default)
+            if (!await PatchClient.StartDownload(this))
             {
-                patchLocker.Set();
-                DelayDownload(latestChangeTime);
+                FailedDownload(context);
                 return;
             }
 
-            //if (Info.LatestUpdate.HasValue != false)
-            //    fileList = fileList.Where(x => x.LastChanged > Info.LatestUpdate.Value);
+            context.FileList = await PatchClient.GetFileList(this);
 
-            //fileList = fileList.Where(x => !Info.IgnoreFilePaths.Any(ig => Regex.IsMatch(x.RelativePath, ig))).Reverse().ToList();
+            if (context.FileList == default)
+            {
+                FailedDownload(context);
+                return;
+            }
 
-            fileList = fileList
+            context.FileList = context.FileList
                 .Where(x => !Info.IgnoreFilePaths.Any(ig => Regex.IsMatch(x.RelativePath, ig)))
                 .Where(x =>
                 {
@@ -90,95 +110,103 @@ namespace ServerPublisher.Server.Info
                 .Reverse()
                 .ToList();
 
+            int offset = 0;
+            do
+            {
+                var downloadFiles = context.FileList.Skip(offset).Take(10).ToList();
+
+                var results = await Task.WhenAll(downloadFiles.Select(x => downloadFile(context, x)));
+
+                if (results.Any(x => !x))
+                {
+                    FailedDownload(context);
+                    return;
+                }
+
+                offset += downloadFiles.Count;
+            } while (offset < context.FileList.Count());
+
+            var result = await PatchClient.FinishDownload(this);
+
+            if (result?.Success != true)
+            {
+                FailedDownload(context);
+                return;
+            }
+
+            foreach (var item in result.FileList)
+            {
+                File.WriteAllBytes(Path.Combine(ProjectDirPath, item.RelativePath), item.Data);
+            }
+
+            Info.LatestUpdate = context.UpdateTime;
+
+            getScript(true);
+
+            EndPatchReceive(context);
+
+            patchLocker.Set();
+        }
+
+        private async Task<bool> downloadFile(ProjectDownloadContext context, DownloadFileInfo file)
+        {
             bool EOF = false;
 
             byte q = byte.MinValue;
 
-            foreach (var file in fileList)
-            {
-                PatchClient.NextDownloadFile(this, file);
-                StartFile(
-                    PatchClient.Options.ClientData,
-                    new Shared.Models.RequestModels.PublishFileStartRequestModel()
-                    {
-                        RelativePath = file.RelativePath,
-                        CreateTime = file.CreationTime,
-                        UpdateTime = file.ModifiedTime
-                    });
+            var startResponse = await PatchClient.StartFileAsync(Info.Id, file.RelativePath);
 
-                do
+            if (startResponse?.Result != true)
+                return false;
+
+            var fileInfo = new FileInfo(Path.Combine(context.TempPath, file.RelativePath));
+
+            using var fs = fileInfo.Create();
+
+            do
+            {
+                await Task.Delay(20);
+                var downloadProc = await PatchClient.DownloadAsync(startResponse.FileId);
+
+                if (downloadProc == default)
+                    return false;
+
+                EOF = downloadProc.EOF;
+
+                fs.Write(downloadProc.Bytes);
+
+                if (++q % 10 == 0)
                 {
-                    await Task.Delay(20);
-                    DownloadPacketData downloadProc = await PatchClient.Download();
-
-                    if (downloadProc == default)
-                    {
-                        EndFile(PatchClient.Options.ClientData);
-                        EndPatchReceive(false, latestChangeTime);
-                        DelayDownload(latestChangeTime);
-                        return;
-                    }
-
-                    EOF = downloadProc.EOF;
-
-                    PatchClient.Options.ClientData.CurrentFile.IO.Write(downloadProc.Buff, 0, downloadProc.Buff.Length);
-                    if (q % 10 == 0) PatchClient.Options.ClientData.CurrentFile.IO.Flush(true);
-
-                    downloadProc.Dispose();
-                    GC.Collect(GC.GetGeneration(downloadProc));
-                    downloadProc = null;
-
-
-                    if (q++ == byte.MaxValue / 10)
-                    {
-                        //GC.Collect(GC.GetGeneration(downloadProc));
-                        GC.GetTotalMemory(true);
-                        GC.WaitForFullGCComplete();
-                        q = byte.MinValue;
-                    }
+                    fs.Flush();
+                    GC.GetTotalMemory(true);
+                    GC.WaitForFullGCComplete();
+                    q = byte.MinValue;
                 }
-                while (EOF == false);
-                //PatchClient.Options.ClientData.CurrentFile.CloseRead();
-                EndFile(PatchClient.Options.ClientData);
-                await Task.Delay(125);
-
             }
+            while (EOF == false);
 
-            var result = await PatchClient.FinishDownload(this);
+            var stopResponse = await PatchClient.StopFileAsync(startResponse.FileId);
 
-            if (result == default)
-            {
-                EndPatchReceive(false, latestChangeTime);
-                DelayDownload(latestChangeTime);
-                return;
-            }
+            if (stopResponse?.Result != true)
+                return false;
 
-            foreach (var item in result)
-            {
-                File.WriteAllBytes(Path.Combine(ProjectDirPath, item.fileName), item.data);
-            }
+            await Task.Delay(125);
 
-            Info.LatestUpdate = latestChangeTime;
-
-            getScript(true);
-
-            EndPatchReceive(true, latestChangeTime);
+            return true;
         }
 
-        private void EndPatchReceive(bool success, DateTime updateTime)
+        private void EndPatchReceive(ProjectDownloadContext context)
         {
-            if (success)
-            {
-                try { runScriptOnStart(); } catch (Exception ex) { BroadcastMessage(ex.ToString()); }
+            bool success = false;
 
-                success = processTemp();
+            try { runScriptOnStart(); } catch (Exception ex) { BroadcastMessage(ex.ToString()); }
 
-                if (!success)
-                    recoveryBackup();
-                try { runScriptOnEnd(); } catch (Exception ex) { BroadcastMessage(ex.ToString()); }
-            }
+            success = processTemp();
 
-            processFileList.Clear();
+            if (!success)
+                recoveryBackup();
+
+            try { runScriptOnEnd(); } catch (Exception ex) { BroadcastMessage(ex.ToString()); }
 
             if (success)
             {
@@ -186,7 +214,7 @@ namespace ServerPublisher.Server.Info
 
                 try { runScriptOnSuccessEnd(new Dictionary<string, string>()); } catch (Exception ex) { BroadcastMessage(ex.ToString()); }
 
-                Info.LatestUpdate = updateTime;
+                Info.LatestUpdate = context.UpdateTime;
                 SaveProjectInfo();
 
                 broadcastUpdateTime();
@@ -195,13 +223,6 @@ namespace ServerPublisher.Server.Info
                 try { runScriptOnFailedEnd(); } catch (Exception ex) { BroadcastMessage(ex.ToString()); }
 
             patchLocker.Set();
-        }
-
-        private async void DelayDownload(DateTime latestChangeTime)
-        {
-            await Task.Delay(TimeSpan.FromSeconds(20));
-
-            await Download(latestChangeTime);
         }
     }
 }

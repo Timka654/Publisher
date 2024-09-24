@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
 using NSL.Cipher.RSA;
 using NSL.Logger;
 using NSL.ServerOptions.Extensions.Manager;
@@ -21,9 +22,9 @@ namespace ServerPublisher.Server.Managers
     {
         public static ProjectsManager Instance { get; private set; }
 
-        public static string ProjectsFilePath => Path.Combine(Application.Directory, PublisherServer.ServerConfiguration.GetValue("paths.projects_library"));
+        public static string ProjectsFilePath => Path.Combine(Application.Directory, PublisherServer.Configuration.GetValue<string>("paths.projects_library"));
 
-        public static string ProjectsBackupDirPath => PublisherServer.ServerConfiguration.GetValue("paths.projects_backup.dir");
+        public static string ProjectsBackupDirPath => PublisherServer.Configuration.GetValue<string>("paths.projects_backup.dir");
 
         private FileSystemWatcher projectsLibraryWatcher;
 

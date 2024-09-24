@@ -19,6 +19,7 @@ using NSL.Utils;
 using ServerPublisher.Shared.Enums;
 using ServerPublisher.Shared.Info;
 using ServerPublisher.Shared.Models.RequestModels;
+using Microsoft.Extensions.Configuration;
 
 namespace ServerPublisher.Server.Info
 {
@@ -189,9 +190,9 @@ namespace ServerPublisher.Server.Info
 
         private MethodInfo OnFailedMethod;
 
-        private NSL.Extensions.NetScript.Script getScript(bool force = false)
+        private NSL.Extensions.NetScript.Script getScript(bool ignoreCache = false)
         {
-            if (scriptLatestBuilded.HasValue && scriptLatestBuilded >= scriptLatestChanged && force == false)
+            if (scriptLatestBuilded.HasValue && scriptLatestBuilded >= scriptLatestChanged && ignoreCache == false)
                 return script;
 
             //if (script != null)
@@ -286,11 +287,10 @@ namespace ServerPublisher.Server.Info
 
         public void BroadcastMessage(string log)
         {
-            var packet = new OutputPacketBuffer();
-            packet.SetPacketId(PublisherPacketEnum.ServerLog);
+            var packet = OutputPacketBuffer.Create(PublisherPacketEnum.ServerLog);
+            CurrentLogger?.AppendLog(log);
             packet.WriteString16(log);
 
-            CurrentLogger?.AppendLog(log);
 
             foreach (var item in users)
             {
@@ -400,14 +400,14 @@ namespace ServerPublisher.Server.Info
 
         #region Temp
 
-        private void initializeTemp()
+        private string initializeTempPath()
         {
             var di = new DirectoryInfo(TempDirPath);
 
-            if (di.Exists)
-                di.Delete(true);
+            if (!di.Exists)
+                di.Create();
 
-            di.Create();
+            return di.CreateSubdirectory($"{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid()}").FullName;
         }
 
         private bool processCompressedTemp(PublisherNetworkClient client)
@@ -530,30 +530,6 @@ namespace ServerPublisher.Server.Info
 
         #endregion
 
-        #region Logger
-
-        public FileLogger CurrentLogger { get; set; } = null;
-
-        private void initializeLogger()
-        {
-            closeLogger();
-
-            var uid = ProcessUser?.Id ?? currentDownloader?.UserInfo?.Id ?? "Unknown";
-
-            CurrentLogger = new FileLogger(LogsDirPath, $"upload {DateTime.Now:yyyy-MM-dd_HH.mm.ss} - {uid}");
-        }
-
-        private void closeLogger()
-        {
-            if (CurrentLogger != null)
-            {
-                CurrentLogger.Flush();
-                CurrentLogger.Dispose();
-            }
-        }
-
-        #endregion
-
         #region Publish
 
         public bool StartProcess(PublisherNetworkClient client)
@@ -601,8 +577,6 @@ namespace ServerPublisher.Server.Info
 
             return true;
         }
-
-        private List<ProjectFileInfo> processFileList = new List<ProjectFileInfo>();
 
         public bool StopProcess(PublisherNetworkClient client, bool success, Dictionary<string, string> args = null)
         {
@@ -1028,11 +1002,7 @@ namespace ServerPublisher.Server.Info
                 IgnoreFilePaths = new List<string>() { $"Publisher{Path.DirectorySeparatorChar}[\\s|\\S]*" }
             };
 
-            Info.IgnoreFilePaths.AddRange(ServerConfigurationManager.Instance
-                .GetConfigArray()
-                .Where(x => x.Path.StartsWith(".default.append.ignorefilepaths"))
-                .Select(x => x.Value)
-                .ToArray());
+            Info.IgnoreFilePaths.AddRange(PublisherServer.Configuration.GetValue<string[]>("default.IgnoreFilePaths"));
 
             ProjectDirPath = directory;
 
@@ -1116,6 +1086,32 @@ namespace ServerPublisher.Server.Info
                 CurrentOS = OSTypeEnum.Windows;
             else
                 CurrentOS = OSTypeEnum.Unix;
+        }
+    }
+
+    public class ProjectDownloadContext : IDisposable
+    {
+        public DateTime UpdateTime { get; set; }
+
+        public string TempPath { get; set; }
+
+        public ServerProjectInfo ProjectInfo { get; set; }
+
+        public IEnumerable<DownloadFileInfo> FileList { get; set; }
+
+        public FileLogger Logger { get; set; }
+
+        public async void Reload()
+        {
+            await Task.Delay(TimeSpan.FromSeconds(20));
+
+            await ProjectInfo.Download(this);
+
+        }
+
+        public void Dispose()
+        {
+            throw new NotImplementedException();
         }
     }
 }

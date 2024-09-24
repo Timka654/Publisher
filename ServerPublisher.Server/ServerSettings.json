@@ -12,5 +12,5 @@
     "max.file.count": 999999999
   },
 
-  "default.append.IgnoreFilePaths": [ "appsettings.[\\s|\\S]*" ]
+  "default.IgnoreFilePaths": [ "appsettings.[\\s|\\S]*" ]
 }

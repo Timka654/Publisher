@@ -26,9 +26,6 @@ namespace ServerPublisher.Server.Info
 
         private ConcurrentBag<PublisherNetworkClient> patchClients = new ConcurrentBag<PublisherNetworkClient>();
 
-        private PublisherNetworkClient currentDownloader = null;
-        private TransportModeEnum currentDownloaderTransportMode = TransportModeEnum.NoArchive;
-
         private void broadcastUpdateTime(PublisherNetworkClient client = null)
         {
             using var packet = OutputPacketBuffer.Create(PublisherPacketEnum.ProjectProxyUpdateDataMessage);
@@ -42,7 +39,7 @@ namespace ServerPublisher.Server.Info
             if (client == null)
                 foreach (var item in patchClients)
                 {
-                    try { item.Send(packet,false); } catch { }
+                    try { item.Send(packet, false); } catch { }
                 }
             else
                 client.Send(packet);
@@ -50,20 +47,14 @@ namespace ServerPublisher.Server.Info
 
         public SignStateEnum SignPatchClient(PublisherNetworkClient client, ProjectProxySignInRequestModel request)
         {
-            if (client.IsPatchClient == false)
-            {
-                client.IsPatchClient = true;
-                client.PatchProjectMap = new Dictionary<string, ServerProjectInfo>();
-            }
-            else
-            {
-                if (client.PatchProjectMap.ContainsKey(Info.Id))
-                {
-                    if (Info.LatestUpdate.HasValue && Info.LatestUpdate.Value > request.LatestUpdate)
-                        broadcastUpdateTime(client);
+            client.ProxyClientContext ??= new ProxyClientContextDataModel();
 
-                    return SignStateEnum.Ok;
-                }
+            if (client.ProxyClientContext.PatchProjectMap.ContainsKey(Info.Id))
+            {
+                if (Info.LatestUpdate.HasValue && Info.LatestUpdate.Value > request.LatestUpdate)
+                    broadcastUpdateTime(client);
+
+                return SignStateEnum.Ok;
             }
 
             var user = users.FirstOrDefault(x => x.Id == request.UserId);
@@ -83,7 +74,7 @@ namespace ServerPublisher.Server.Info
 
             patchClients.Add(client);
 
-            client.PatchProjectMap.Add(Info.Id, this);
+            client.ProxyClientContext.PatchProjectMap.TryAdd(Info.Id, this);
 
 
             if (Info.LatestUpdate.HasValue && Info.LatestUpdate.Value > request.LatestUpdate)
@@ -107,23 +98,11 @@ namespace ServerPublisher.Server.Info
         {
             client.Lock(patchLocker);
 
-            currentDownloader = client;
-            currentDownloaderTransportMode = transportMode;
-
             initializeLogger();
-            client.PatchDownloadProject = this;
-
-            ProjectProxyPacketRepository.SendStartDownloadResult(client, true, Info.IgnoreFilePaths);
         }
 
         public bool NextDownloadFile(PublisherNetworkClient client, string relativePath)
         {
-            if (client != currentDownloader)
-                return false;
-
-            if (currentDownloader.CurrentFile != null)
-                currentDownloader.CurrentFile.CloseRead();
-
             client.CurrentFile = FileInfoList.FirstOrDefault(x => x.RelativePath == relativePath);
 
             if (client.CurrentFile != null && !client.CurrentFile.FileInfo.Exists)
@@ -141,17 +120,11 @@ namespace ServerPublisher.Server.Info
         internal ProjectProxyEndDownloadResponseModel EndDownload<T>(T client, bool success = false)
             where T : INetworkClient, IProcessFileContainer
         {
-            if (client != currentDownloader)
-                return;
-
             if (client.CurrentFile != null)
             {
                 client.CurrentFile.CloseRead();
                 client.CurrentFile = null;
             }
-            currentDownloader = null;
-            if (client is PublisherNetworkClient c)
-                c.PatchDownloadProject = null;
 
             patchLocker.Set();
 

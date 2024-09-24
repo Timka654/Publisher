@@ -19,18 +19,6 @@ namespace ServerPublisher.Server.Managers
             Instance = this;
         }
 
-        internal ServerProjectInfo StartDownload(PublisherNetworkClient client, ProjectProxyStartDownloadRequestModel request)
-        {
-            ServerProjectInfo proj = null;
-
-            if (client.IsPatchClient == false || client.PatchProjectMap.TryGetValue(request.ProjectId, out proj) == false)
-                return null;
-
-            proj.StartDownload(client, request.TransportMode);
-
-            return proj;
-        }
-
         internal void FinishDownload(PublisherNetworkClient client, ProjectProxyEndDownloadRequestModel request)
         {
             client.PatchDownloadProject?.EndDownload(client, true);
@@ -45,7 +33,7 @@ namespace ServerPublisher.Server.Managers
                 return c;
             });
 
-            client.ProjectMap.TryAdd(project.Info.Id, project);
+            client.SignProject(project);
 
             return client;
         }

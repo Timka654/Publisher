@@ -94,21 +94,59 @@ namespace ServerPublisher.Server.Network
         }
 
 
-        public async Task<ProjectProxyDownloadBytesResponseModel?> DownloadAsync(int? buffLenght = null)
+        public async Task<ProjectProxyStartFileResponseModel?> StartFileAsync(string projectId, string relativePath)
         {
-            buffLenght ??= GetMaxReceiveSize();
+            var packet = RequestPacketBuffer.Create(PublisherPacketEnum.ProjectProxyStartFile);
 
-            var packet = RequestPacketBuffer.Create(PublisherPacketEnum.DownloadBytes);
+            new ProjectProxyStartFileRequestModel
+            {
+                ProjectId = projectId,
+                RelativePath = relativePath
+            }
+            .WriteFullTo(packet);
+
+            var response = await RequestAsync(packet, data =>
+            {
+                return Task.FromResult(ProjectProxyStartFileResponseModel.ReadFullFrom(data));
+            });
+
+            return response;
+        }
+
+        public async Task<ProjectProxyDownloadBytesResponseModel?> DownloadAsync(Guid fileId, int? buffLength = null)
+        {
+            buffLength ??= GetMaxReceiveSize();
+
+            var packet = RequestPacketBuffer.Create(PublisherPacketEnum.ProjectProxyDownloadBytes);
 
             new ProjectProxyDownloadBytesRequestModel
             {
-                BufferLength = buffLenght.Value
+                FileId = fileId,
+                BufferLength = buffLength.Value
             }
             .WriteFullTo(packet);
 
             var response = await RequestAsync(packet, data =>
             {
                 return Task.FromResult(ProjectProxyDownloadBytesResponseModel.ReadFullFrom(data));
+            });
+
+            return response;
+        }
+
+        public async Task<ProjectProxyProjectProxyFinishFileResponseModel?> StopFileAsync(Guid fileId)
+        {
+            var packet = RequestPacketBuffer.Create(PublisherPacketEnum.ProjectProxyFinishFile);
+
+            new ProjectProxyProjectProxyFinishFileRequestModel
+            {
+                FileId = fileId,
+            }
+            .WriteFullTo(packet);
+
+            var response = await RequestAsync(packet, data =>
+            {
+                return Task.FromResult(ProjectProxyProjectProxyFinishFileResponseModel.ReadFullFrom(data));
             });
 
             return response;
@@ -195,8 +233,7 @@ namespace ServerPublisher.Server.Network
                 ProjectId = item.Info.Id,
                 UserId = userInfo.Id,
                 IdentityKey = identityKey,
-                LatestUpdate = item.Info.LatestUpdate ?? DateTime.UtcNow
-
+                LatestUpdate = item.Info.LatestUpdate ?? DateTime.MinValue
             }.WriteFullTo(packet);
 
 
@@ -238,7 +275,7 @@ namespace ServerPublisher.Server.Network
             item.ClearPatchClient();
         }
 
-        public async Task<bool> InitializeDownload(ServerProjectInfo item)
+        public async Task<bool> StartDownload(ServerProjectInfo item)
         {
             var packet = RequestPacketBuffer.Create(PublisherPacketEnum.ProjectProxyStartDownload);
 

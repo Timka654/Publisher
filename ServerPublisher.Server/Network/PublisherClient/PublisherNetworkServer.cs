@@ -10,6 +10,7 @@ using Microsoft.Extensions.Configuration;
 using ServerPublisher.Shared.Enums;
 using NSL.SocketCore.Extensions.Buffer;
 using ServerPublisher.Server.Network.PublisherClient.Packets.PacketRepository;
+using NSL.SocketCore.Utils.Logger;
 
 namespace ServerPublisher.Server.Network.PublisherClient
 {
@@ -19,7 +20,7 @@ namespace ServerPublisher.Server.Network.PublisherClient
 
         static IConfiguration Configuration => PublisherServer.Configuration;
 
-        static ILogger Logger => PublisherServer.AppLogger;
+        static IBasicLogger Logger => PublisherServer.AppLogger;
 
 
         static int BindingPort => Configuration.GetValue<int>("publisher:network:binding_port", 6583);

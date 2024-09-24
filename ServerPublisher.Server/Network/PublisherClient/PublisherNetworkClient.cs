@@ -20,8 +20,6 @@ namespace ServerPublisher.Server.Network.PublisherClient
 
         public ProxyClientContextDataModel? ProxyClientContext { get; set; }
 
-        public Dictionary<string, ServerProjectInfo> PatchProjectMap { get; set; } = null;
-
         public OSTypeEnum? Platform { get; internal set; }
 
         private List<EventWaitHandle> lockers = new List<EventWaitHandle>();
@@ -87,6 +85,10 @@ namespace ServerPublisher.Server.Network.PublisherClient
 
     public class ProxyClientContextDataModel
     {
-        public ConcurrentDictionary<string, ServerProjectInfo> PatchProjectMap { get; } = new ();
+        public ConcurrentDictionary<string, ServerProjectInfo> PatchProjectMap { get; } = new();
+
+        public ConcurrentDictionary<Guid, ProjectFileInfo> TempFileMap { get; } = new();
+
+        public ConcurrentBag<string> ProcessingProjects = new();
     }
 }

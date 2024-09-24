@@ -11,7 +11,7 @@ namespace ServerPublisher.Server.Managers.Storages
 
         protected void RemoveClient(PatchClientNetwork network)
         {
-            RemoveClient(network.Options.IpAddress, network.Options.Port);
+            RemoveClient(network.IpAddress, network.Port);
         }
 
         protected void RemoveClient(string ipAddress, int port)
