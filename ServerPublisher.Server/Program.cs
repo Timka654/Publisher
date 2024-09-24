@@ -7,6 +7,8 @@ namespace ServerPublisher.Server
     {
         static void Main(string[] args)
         {
+            PublisherServer.InitializeApp();
+
             if ((new Commands()).Process())
                 return;
 

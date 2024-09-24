@@ -11,12 +11,6 @@ namespace ServerPublisher.Server.Network.PublisherClient.Packets
     {
         public static async Task<bool> ProjectProxyDownloadBytesReceive(PublisherNetworkClient client, InputPacketBuffer data, OutputPacketBuffer response)
         {
-            if (client.PatchDownloadProject == null || client.CurrentFile == null)
-            {
-                client.Network?.Disconnect();
-                return false;
-            }
-
             var request = ProjectProxyDownloadBytesRequestModel.ReadFullFrom(data);
 
             if (request.BufferLength > client.CurrentFile.IO.Length - client.CurrentFile.IO.Position)
@@ -37,37 +31,15 @@ namespace ServerPublisher.Server.Network.PublisherClient.Packets
 
         public static async Task<bool> ProjectProxyFinishDownloadReceive(PublisherNetworkClient client, InputPacketBuffer data, OutputPacketBuffer response)
         {
-            PublisherServer.ProjectProxyManager.FinishDownload(client);
+            var request = ProjectProxyEndDownloadRequestModel.ReadFullFrom(data);
 
-            return true;
-        }
-
-        public static async Task<bool> ProjectProxyNextFileReceive(PublisherNetworkClient client, InputPacketBuffer data, OutputPacketBuffer response)
-        {
-            if (client.PatchDownloadProject == null)
-            {
-                client.Network?.Disconnect();
-                return false;
-            }
-
-            var request = ProjectProxyNextFileRequestModel.ReadFullFrom(data);
-
-            new ProjectProxyNextFileResponseModel()
-            {
-                Result = client.PatchDownloadProject.NextDownloadFile(client, request.Path)
-            }.WriteFullTo(response);
+            PublisherServer.ProjectProxyManager.FinishDownload(client, request);
 
             return true;
         }
 
         public static async Task<bool> ProjectProxyProjectFileListReceive(PublisherNetworkClient client, InputPacketBuffer data, OutputPacketBuffer response)
         {
-            if (client.PatchDownloadProject == null)
-            {
-                client.Network?.Disconnect();
-                return false;
-            }
-
             new ProjectProxyProjectFileListResponseModel()
             {
                 FileList = client.PatchDownloadProject.FileInfoList.Where(x => x.FileInfo.Exists).Select(x => new DownloadFileInfo()

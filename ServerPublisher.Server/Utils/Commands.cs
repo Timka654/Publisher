@@ -38,19 +38,7 @@ namespace ServerPublisher.Server.Utils
 
         private static void RunService(CommandLineArgs args)
         {
-
-#if RELEASE
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                ServiceBase.Run(new PublisherService());
-            else
-            {
-#endif
-                PublisherNetworkServer.Instance.Load();
-
-                Thread.Sleep(Timeout.Infinite);
-#if RELEASE
-            }
-#endif
+            PublisherServer.RunServer();
         }
 
         private static bool GetDirParameter(CommandLineArgs args, string name, out string value)

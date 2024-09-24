@@ -16,11 +16,11 @@
 
         ProjectProxyDownloadBytes,
         ProjectProxyFinishDownload,
-        ProjectProxyNextFile,
         ProjectProxyProjectFileList,
         ProjectProxySignIn,
         ProjectProxySignOut,
         ProjectProxyStartDownload,
+        ProjectProxyUpdateDataMessage,
 
 
 
@@ -31,19 +31,18 @@
 
 
 
+        //ProjectPublishStart,
+        //PublisherFileList,
 
-        ProjectPublishStart,
-        PublisherFileList,
+        //DownloadBytes,
+        //NextFile,
+        //FinishDownload,
+        //StartDownload,
+        //SignOut,
 
-        DownloadBytes,
-        NextFile,
-        FinishDownload,
-        StartDownload,
-        SignOut,
+        //PatchSignIn,
 
-        PatchSignIn,
-
-        ChangeLatestUpdateHandle,
+        //ChangeLatestUpdateHandle,
 
         ExplorerCreateSignFile,
         ExplorerDownloadFile,
@@ -52,6 +51,6 @@
         ExplorerPathRemove,
         ExplorerRemoveSignFile,
         ExplorerSignIn,
-        ExplorerUploadFile,
+        ExplorerUploadFile
     }
 }

@@ -31,18 +31,16 @@ namespace ServerPublisher.Server.Managers
             return proj;
         }
 
-        internal void FinishDownload(PublisherNetworkClient client)
+        internal void FinishDownload(PublisherNetworkClient client, ProjectProxyEndDownloadRequestModel request)
         {
             client.PatchDownloadProject?.EndDownload(client, true);
         }
 
-        public async Task<PatchClientNetwork> LoadProjectPatchClient(ServerProjectInfo project)
+        public async Task<PatchClientNetwork> ConnectProxyClient(ServerProjectInfo project)
         {
             var client = GetClient(project.Info.PatchInfo.IpAddress, project.Info.PatchInfo.Port, () => {
 
-                var c = PatchClientNetwork.Load(project.Info.PatchInfo);
-
-                c.Connect();
+                var c = new PatchClientNetwork(project.Info.PatchInfo);
 
                 return c;
             });

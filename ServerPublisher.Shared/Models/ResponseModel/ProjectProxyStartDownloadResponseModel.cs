@@ -7,6 +7,7 @@ namespace ServerPublisher.Shared.Models.RequestModels
     public partial class ProjectProxyStartDownloadResponseModel
     {
         public bool Result { get; set; }
+
         public List<string> IgnoreFilePathes { get; set; }
     }
 }

@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
-using NSL.SocketClient;
 using ServerPublisher.Shared.Info;
 
 namespace ServerPublisher.Server.Info
@@ -24,8 +23,6 @@ namespace ServerPublisher.Server.Info
 
         internal PatchClientNetwork PatchClient { get; private set; }
 
-        internal ClientOptions<NetworkPatchClient> PatchClientOptions => PatchClient?.Options;
-
         private async void LoadPatch()
         {
             await LoadPatchAsync();
@@ -36,10 +33,7 @@ namespace ServerPublisher.Server.Info
             if (Info.PatchInfo == null || !File.Exists(PatchSignFilePath))
                 return false;
 
-            PatchClient = await PublisherServer.ProjectProxyManager.LoadProjectPatchClient(this);
-
-            if (PatchClient.GetState())
-                await PatchClient.SignProject(this);
+            PatchClient = await PublisherServer.ProjectProxyManager.ConnectProxyClient(this);
 
             return PatchClient != null;
         }
@@ -102,7 +96,7 @@ namespace ServerPublisher.Server.Info
 
             foreach (var file in fileList)
             {
-                PatchClient.NextDownloadFile(file);
+                PatchClient.NextDownloadFile(this, file);
                 StartFile(
                     PatchClient.Options.ClientData,
                     new Shared.Models.RequestModels.PublishFileStartRequestModel()

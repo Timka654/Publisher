@@ -58,8 +58,6 @@ namespace ServerPublisher.Server.Network.PublisherClient
 
                         options.AddAsyncRequestPacketHandle(PublisherPacketEnum.ProjectProxyFinishDownload, ProjectProxyPacketRepository.ProjectProxyFinishDownloadReceive);
 
-                        options.AddAsyncRequestPacketHandle(PublisherPacketEnum.ProjectProxyNextFile, ProjectProxyPacketRepository.ProjectProxyNextFileReceive);
-
                         options.AddAsyncRequestPacketHandle(PublisherPacketEnum.ProjectProxyProjectFileList, ProjectProxyPacketRepository.ProjectProxyProjectFileListReceive);
 
                         options.AddAsyncRequestPacketHandle(PublisherPacketEnum.ProjectProxySignIn, ProjectProxyPacketRepository.ProjectProxySignInReceive);

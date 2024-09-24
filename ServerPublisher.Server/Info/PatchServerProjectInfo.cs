@@ -14,6 +14,7 @@ using ServerPublisher.Shared.Enums;
 using System.Threading.Tasks;
 using NSL.Utils;
 using ServerPublisher.Shared.Models.RequestModels;
+using ServerPublisher.Shared.Models.ResponseModel;
 
 namespace ServerPublisher.Server.Info
 {
@@ -30,17 +31,18 @@ namespace ServerPublisher.Server.Info
 
         private void broadcastUpdateTime(PublisherNetworkClient client = null)
         {
-            var packet = new OutputPacketBuffer();
+            using var packet = OutputPacketBuffer.Create(PublisherPacketEnum.ProjectProxyUpdateDataMessage);
 
-            packet.SetPacketId(PatchClientPacketEnum.ChangeLatestUpdateHandle);
-
-            packet.WriteString16(Info.Id);
-            packet.WriteDateTime(Info.LatestUpdate.Value);
+            new ProjectProxyUpdateDataRequestModel()
+            {
+                ProjectId = Info.Id,
+                UpdateTime = Info.LatestUpdate.Value
+            }.WriteFullTo(packet);
 
             if (client == null)
                 foreach (var item in patchClients)
                 {
-                    try { item.Send(packet); } catch { }
+                    try { item.Send(packet,false); } catch { }
                 }
             else
                 client.Send(packet);
@@ -136,7 +138,7 @@ namespace ServerPublisher.Server.Info
             return true;
         }
 
-        internal void EndDownload<T>(T client, bool success = false)
+        internal ProjectProxyEndDownloadResponseModel EndDownload<T>(T client, bool success = false)
             where T : INetworkClient, IProcessFileContainer
         {
             if (client != currentDownloader)

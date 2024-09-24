@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using ServerPublisher.Shared.Enums;
+using System.Collections.Concurrent;
 
 namespace ServerPublisher.Server.Network.PublisherClient
 {
@@ -15,13 +16,12 @@ namespace ServerPublisher.Server.Network.PublisherClient
 
         public ProjectFileInfo CurrentFile { get; set; }
 
-        public bool IsPatchClient { get; set; } = false;
-
-        public ServerProjectInfo PatchDownloadProject { get; set; }
-
         public bool Compressed { get; set; }
 
+        public ProxyClientContextDataModel? ProxyClientContext { get; set; }
+
         public Dictionary<string, ServerProjectInfo> PatchProjectMap { get; set; } = null;
+
         public OSTypeEnum? Platform { get; internal set; }
 
         private List<EventWaitHandle> lockers = new List<EventWaitHandle>();
@@ -83,5 +83,10 @@ namespace ServerPublisher.Server.Network.PublisherClient
             safeLockers.Set();
 
         }
+    }
+
+    public class ProxyClientContextDataModel
+    {
+        public ConcurrentDictionary<string, ServerProjectInfo> PatchProjectMap { get; } = new ();
     }
 }

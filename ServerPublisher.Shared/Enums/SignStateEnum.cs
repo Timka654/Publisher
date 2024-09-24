@@ -3,10 +3,10 @@
     public enum SignStateEnum
     {
         CannotConnected,
+        Ok,
         UserNotFound,
         ProjectNotFound,
         AlreadyConnected,
-        InvalidIdentityKey,
-        Ok
+        InvalidIdentityKey
     }
 }
