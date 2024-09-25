@@ -85,6 +85,7 @@ namespace ServerPublisher.Server.Network.PublisherClient
 
         public ConcurrentDictionary<Guid, ProjectFileInfo> TempFileMap { get; } = new();
 
+
         public ConcurrentBag<string> ProcessingProjects = new();
     }
 }

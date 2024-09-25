@@ -22,6 +22,8 @@ using ServerPublisher.Shared.Models.RequestModels;
 using Microsoft.Extensions.Configuration;
 using NSL.SocketCore;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using ServerPublisher.Shared.Models.ResponseModel;
+using ServerPublisher.Server.Utils;
 
 namespace ServerPublisher.Server.Info
 {
@@ -294,9 +296,9 @@ namespace ServerPublisher.Server.Info
             packet.WriteString16(log);
 
 
-            foreach (var item in users)
+            foreach (var item in ConnectedPublishers.Values.ToArray())
             {
-                item.ne.Send(packet);
+                item.Send(packet);
             }
         }
 
@@ -409,8 +411,12 @@ namespace ServerPublisher.Server.Info
             context.Logger = new FileLogger(LogsDirPath, $"{DateTime.Now:yyyy-MM-dd_HH.mm.ss} - upload - {uid}");
         }
 
-        #endregion
+        private void initializeDownloadLogger(ProjectDownloadContext context)
+        {
+            context.Logger = new FileLogger(LogsDirPath, $"{DateTime.Now:yyyy-MM-dd_HH.mm.ss} - download");
+        }
 
+        #endregion
 
         #region Temp
 
@@ -426,31 +432,39 @@ namespace ServerPublisher.Server.Info
 
         private bool processCompressedTemp(ProjectPublishContext context)
         {
-            foreach (var archiveFile in archives)
+            var archiveFile = context.FileMap.Values.First();
+
+            context.FileMap.Clear();
+
+            var archivePath = Path.Combine(TempDirPath, archiveFile.RelativePath);
+
+            using (var archive = ZipFile.OpenRead(archivePath))
             {
-                var archivePath = Path.Combine(TempDirPath, archiveFile.RelativePath);
-
-                using (var archive = ZipFile.OpenRead(archivePath))
+                foreach (var archiveEntry in archive.Entries)
                 {
-                    foreach (var archiveEntry in archive.Entries)
+                    var id = StartPublishFile(
+                         context, new PublishFileStartRequestModel()
+                         {
+                             RelativePath = CorrectCompressedPath(context, archiveEntry.FullName),
+                             CreateTime = archiveEntry.LastWriteTime.DateTime,
+                             UpdateTime = archiveEntry.LastWriteTime.DateTime
+                         });
+
+                    if (!id.HasValue)
+                        return false;
+
+                    var file = context.FileMap[id.Value];
+
+                    using (var ex = archiveEntry.Open())
                     {
-                        StartPublishFile(
-                            context,
-                            CorrectCompressedPath(client, archiveEntry.FullName),
-                            archiveEntry.LastWriteTime.DateTime,
-                            archiveEntry.LastWriteTime.DateTime);
-
-                        using (var ex = archiveEntry.Open())
-                        {
-                            ex.CopyTo(client.CurrentFile.IO);
-                        }
-
-                        EndPublishFile(context);
+                        ex.CopyTo(file.WriteIO);
                     }
-                }
 
-                File.Delete(archivePath);
+                    EndPublishFile(context, file);
+                }
             }
+
+            File.Delete(archivePath);
 
             return processTemp(context);
         }
@@ -468,12 +482,13 @@ namespace ServerPublisher.Server.Info
             return path.Replace('/', '\\');
         }
 
-        private bool processTemp(ProjectPublishContext context)
+        private bool processTemp(IProcessingFilesContext context)
         {
             initializeBackup();
-            foreach (var item in processFileList)
+
+            foreach (var item in context.GetFiles())
             {
-                addBackupFile(item);
+                createFileBackup(item);
 
                 runScriptOnFileStart(item.Path);
 
@@ -503,7 +518,7 @@ namespace ServerPublisher.Server.Info
             currentBackupDirPath = Path.Combine(ProjectBackupPath, DateTime.UtcNow.ToString("yyyy-MM-ddTHH_mm_ss"));
         }
 
-        private void addBackupFile(ProjectFileInfo file)
+        private void createFileBackup(ProjectFileInfo file)
         {
             if (Info.Backup == false)
                 return;
@@ -555,6 +570,8 @@ namespace ServerPublisher.Server.Info
             if (context.ProjectInfo != this)
                 return false;
 
+
+
             if (!patchLocker.WaitOne(0))
             {
                 if (!WaitPublishQueue.Contains(client))
@@ -588,14 +605,21 @@ namespace ServerPublisher.Server.Info
 
             initializePublishLogger(context);
 
-            if (context.Network?.GetState(true) != true )
+            if (context.Network?.GetState(true) != true)
             {
                 context.Actual = false;
                 NextPublisherOrUnlock();
                 return false;
             }
 
-            var packet = OutputPacketBuffer.Create(PublisherPacketEnum.PublishProjectUnlockMessage);
+            var packet = OutputPacketBuffer.Create(PublisherPacketEnum.PublishProjectStartMessage);
+
+            new ProjectFileListResponseModel()
+            {
+                FileList = FileInfoList.Cast<BasicFileInfo>().ToArray()
+            }
+
+            .WriteDefaultTo(packet);
 
             context.Network?.Send(packet);
 
@@ -674,38 +698,41 @@ namespace ServerPublisher.Server.Info
             return true;
         }
 
-        internal void StartPublishFile(ProjectPublishContext context, PublishFileStartRequestModel data)
+        internal Guid? StartPublishFile(ProjectPublishContext context, PublishFileStartRequestModel data)
         {
-            EndPublishFile(client);
+            var file = new ProjectFileInfo(ProjectDirPath, new FileInfo(Path.Combine(ProjectDirPath, data.RelativePath)), this);
 
-            client.CurrentFile = FileInfoList.FirstOrDefault(x => x.RelativePath == data.RelativePath);
+            Guid id = default;
 
-            if (client.CurrentFile != null && !client.CurrentFile.FileInfo.Exists)
-            {
-                FileInfoList.Remove(client.CurrentFile);
-                client.CurrentFile = null;
-            }
+            while (!context.FileMap.TryAdd(id = Guid.NewGuid(), file)) ;
 
-            if (client.CurrentFile == null)
-            {
-                client.CurrentFile = new ProjectFileInfo(ProjectDirPath, new FileInfo(Path.Combine(ProjectDirPath, data.RelativePath)), this);
-            }
+            file.StartFile(data.CreateTime, data.UpdateTime);
 
-            processFileList.Add(client.CurrentFile);
-            client.CurrentFile.StartFile(data.CreateTime, data.UpdateTime);
+            return id;
         }
 
-        internal void EndPublishFile(ProjectPublishContext context)
+        internal bool UploadPublishFile(ProjectPublishContext context, PublishUploadFileBytesRequestModel request)
         {
-            if (client.CurrentFile == null)
-                return;
+            if (context.Actual == false || CurrentPublishContext != context)
+                return false;
 
-            if (!FileInfoList.Contains(client.CurrentFile))
-                FileInfoList.Add(client.CurrentFile);
+            if (!context.FileMap.TryGetValue(request.FileId, out var file))
+                return false;
 
-            client.CurrentFile.EndFile();
+            file.WriteIO.Write(request.Bytes);
 
-            client.CurrentFile = null;
+            if (request.EOF)
+                EndPublishFile(context, file);
+
+            return true;
+        }
+
+        internal void EndPublishFile(ProjectPublishContext context, ProjectFileInfo file)
+        {
+            if (!FileInfoList.Contains(file))
+                FileInfoList.Add(file);
+
+            file.EndFile();
         }
 
         #endregion
@@ -1116,7 +1143,7 @@ namespace ServerPublisher.Server.Info
         }
     }
 
-    public class ProjectDownloadContext : IDisposable
+    public class ProjectDownloadContext : IProcessingFilesContext, IDisposable
     {
         public DateTime UpdateTime { get; set; }
 
@@ -1124,7 +1151,7 @@ namespace ServerPublisher.Server.Info
 
         public ServerProjectInfo ProjectInfo { get; set; }
 
-        public IEnumerable<DownloadFileInfo> FileList { get; set; }
+        public IEnumerable<ProjectFileInfo> FileList { get; set; }
 
         public FileLogger? Logger { get; set; }
 
@@ -1147,9 +1174,12 @@ namespace ServerPublisher.Server.Info
         {
             throw new NotImplementedException();
         }
+
+        public IEnumerable<ProjectFileInfo> GetFiles()
+            => FileList;
     }
 
-    public class ProjectPublishContext : IDisposable
+    public class ProjectPublishContext : IProcessingFilesContext, IDisposable
     {
         public Guid Id { get; } = Guid.NewGuid();
 
@@ -1165,6 +1195,12 @@ namespace ServerPublisher.Server.Info
 
         public bool UseCompression { get; set; }
 
+        public OSTypeEnum Platform { get; set; }
+
+        public UploadMethodEnum UploadMethod { get; set; }
+
+        public ConcurrentDictionary<Guid, ProjectFileInfo> FileMap { get; } = new();
+
         public void Log(string text)
         {
             Logger?.AppendLog(text);
@@ -1176,5 +1212,13 @@ namespace ServerPublisher.Server.Info
         {
             throw new NotImplementedException();
         }
+
+        public IEnumerable<ProjectFileInfo> GetFiles()
+            => FileMap.Values;
+    }
+
+    public interface IProcessingFilesContext
+    {
+        IEnumerable<ProjectFileInfo> GetFiles();
     }
 }

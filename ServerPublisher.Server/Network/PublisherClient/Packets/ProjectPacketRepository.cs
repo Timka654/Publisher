@@ -3,6 +3,8 @@ using System.Linq;
 using ServerPublisher.Shared.Models.RequestModels;
 using System.Threading.Tasks;
 using ServerPublisher.Shared.Models.ResponseModel;
+using ServerPublisher.Shared.Enums;
+using ServerPublisher.Shared.Info;
 
 namespace ServerPublisher.Server.Network.PublisherClient.Packets.PacketRepository
 {
@@ -15,8 +17,8 @@ namespace ServerPublisher.Server.Network.PublisherClient.Packets.PacketRepositor
             var context = client.PublishContext;
 
             var project = context?.ProjectInfo;
-            
-            project.StartPublishFile(context, request);
+
+            response.WriteGuid(project.StartPublishFile(context, request));
 
             return true;
         }
@@ -38,7 +40,10 @@ namespace ServerPublisher.Server.Network.PublisherClient.Packets.PacketRepositor
         {
             var request = PublishSignInRequestModel.ReadFullFrom(data);
 
-            var result = PublisherServer.ProjectsManager.SignIn(client, request);
+            SignStateEnum result = client.PublishContext != null ? SignStateEnum.Ok : default;
+
+            if (result == default)
+                result = PublisherServer.ProjectsManager.SignIn(client, request);
 
             new PublishSignInResponseModel
             {
@@ -51,9 +56,14 @@ namespace ServerPublisher.Server.Network.PublisherClient.Packets.PacketRepositor
 
         public static async Task<bool> PublishProjectUploadFilePartReceive(PublisherNetworkClient client, InputPacketBuffer data, OutputPacketBuffer response)
         {
-            client.CurrentFile.IO.Write(data.ReadByteArray());
+            var context = client.PublishContext;
 
-            return true;
+            if (context != null)
+                return false;
+
+            var request = PublishUploadFileBytesRequestModel.ReadFullFrom(data);
+
+            return context.ProjectInfo.UploadPublishFile(context, request);
         }
     }
 }

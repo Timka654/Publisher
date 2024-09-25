@@ -39,23 +39,6 @@ namespace ServerPublisher.Server.Network.PublisherClient.Packets
             return true;
         }
 
-        public static async Task<bool> ProjectProxyProjectFileListReceive(PublisherNetworkClient client, InputPacketBuffer data, OutputPacketBuffer response)
-        {
-            new ProjectProxyProjectFileListResponseModel()
-            {
-                FileList = client.PatchDownloadProject.FileInfoList.Where(x => x.FileInfo.Exists).Select(x => new DownloadFileInfo()
-                {
-                    RelativePath = x.RelativePath,
-                    Hash = x.Hash,
-                    LastChanged = x.LastChanged,
-                    CreationTime = x.FileInfo.CreationTimeUtc,
-                    ModifiedTime = x.FileInfo.LastWriteTimeUtc
-                }).ToArray()
-            }.WriteDefaultTo(response);
-
-            return true;
-        }
-
         public static async Task<bool> ProjectProxySignInReceive(PublisherNetworkClient client, InputPacketBuffer data, OutputPacketBuffer response)
         {
             var request = ProjectProxySignInRequestModel.ReadFullFrom(data);
@@ -86,7 +69,7 @@ namespace ServerPublisher.Server.Network.PublisherClient.Packets
             if (client.ProxyClientContext?.PatchProjectMap.TryGetValue(request.ProjectId, out project) == true)
                 project.StartDownload(client, Shared.Enums.TransportModeEnum.NoArchive);
 
-            new ProjectProxyStartDownloadResponseModel()
+            new Shared.Models.RequestModels.ProjectProxyStartDownloadResponseModel()
             {
                 Result = project != null,
                 IgnoreFilePathes = project?.Info.IgnoreFilePaths

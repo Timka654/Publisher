@@ -55,13 +55,16 @@ namespace ServerPublisher.Server.Managers
                 user.Cipher.LoadXml(user.RSAPrivateKey);
             }
 
-            byte[] data = user.Cipher.Decode(request.IdentityKey,0, request.IdentityKey.Length);
+            byte[] data = user.Cipher.Decode(request.IdentityKey, 0, request.IdentityKey.Length);
 
             if (Encoding.ASCII.GetString(data) == request.UserId)
             {
                 client.UserInfo = user;
 
                 proj.StartPublishProcess(client);
+
+                client.PublishContext.Platform = request.OSType;
+                client.PublishContext.UploadMethod = request.UploadMethod;
 
                 return SignStateEnum.Ok;
             }

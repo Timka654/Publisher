@@ -13,5 +13,7 @@ namespace ServerPublisher.Shared.Models.RequestModels
         public byte[] IdentityKey { get; set; }
 
         public OSTypeEnum OSType { get; set; }
+
+        public UploadMethodEnum UploadMethod { get; set; }
     }
 }

@@ -5,7 +5,7 @@ using System.Threading;
 
 namespace ServerPublisher.Server.Network
 {
-    public class NetworkProjectProxyClient : BaseSocketNetworkClient, IProcessFileContainer
+    public class NetworkProjectProxyClient : BaseSocketNetworkClient
     {
         public ProjectFileInfo CurrentFile { get; set; }
 

@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using NSL.Utils;
 using ServerPublisher.Shared.Models.RequestModels;
 using ServerPublisher.Shared.Models.ResponseModel;
+using ServerPublisher.Shared.Info;
 
 namespace ServerPublisher.Server.Info
 {
@@ -87,66 +88,81 @@ namespace ServerPublisher.Server.Info
             return SignStateEnum.Ok;
         }
 
-        public void SignOutPatchClient(PublisherNetworkClient client)
-        {
-            patchClients = new ConcurrentBag<PublisherNetworkClient>(patchClients.Where(x => x != client));
+        //public void SignOutPatchClient(PublisherNetworkClient client)
+        //{
+        //    patchClients = new ConcurrentBag<PublisherNetworkClient>(patchClients.Where(x => x != client));
 
-            EndDownload(client, true);
-        }
+        //    EndDownload(client, true);
+        //}
 
         public void StartDownload(PublisherNetworkClient client, TransportModeEnum transportMode)
         {
             client.Lock(patchLocker);
 
-            initializeLogger();
-        }
+            var message = OutputPacketBuffer.Create(PublisherPacketEnum.ProjectProxyStartMessage);
 
-        public bool NextDownloadFile(PublisherNetworkClient client, string relativePath)
-        {
-            client.CurrentFile = FileInfoList.FirstOrDefault(x => x.RelativePath == relativePath);
-
-            if (client.CurrentFile != null && !client.CurrentFile.FileInfo.Exists)
+            new ProjectProxyStartDownloadMessageModel()
             {
-                FileInfoList.Remove(client.CurrentFile);
-                client.CurrentFile = null;
-            }
-
-            if (client.CurrentFile != null)
-                client.CurrentFile.OpenRead();
-
-            return true;
-        }
-
-        internal ProjectProxyEndDownloadResponseModel EndDownload<T>(T client, bool success = false)
-            where T : INetworkClient, IProcessFileContainer
-        {
-            if (client.CurrentFile != null)
-            {
-                client.CurrentFile.CloseRead();
-                client.CurrentFile = null;
-            }
-
-            patchLocker.Set();
-
-            if (success)
-            {
-                var packet = new OutputPacketBuffer();
-
-                packet.SetPacketId(PatchClientPacketEnum.FinishDownloadResult);
-
-                byte[] buf = null;
-
-                packet.WriteCollection(Directory.GetFiles(ScriptsDirPath, "*.cs"), (p, d) =>
+                ProjectId = Info.Id,
+                FileList = FileInfoList.Select(x => new DownloadFileInfo()
                 {
-                    buf = File.ReadAllBytes(d);
-                    p.WritePath(Path.GetRelativePath(ProjectDirPath, d));
-                    p.WriteInt32(buf.Length);
-                    p.Write(buf);
-                });
+                    RelativePath = x.RelativePath,
+                    Hash = x.Hash,
+                    LastChanged = x.LastChanged,
+                    CreationTime = x.FileInfo.CreationTimeUtc,
+                    ModifiedTime = x.FileInfo.LastWriteTimeUtc
+                }).ToArray()
+            }.WriteDefaultTo(message);
 
-                client.Network?.Send(packet);
-            }
+            client.Send(message);
         }
+
+        //public bool NextDownloadFile(PublisherNetworkClient client, string relativePath)
+        //{
+        //    client.CurrentFile = FileInfoList.FirstOrDefault(x => x.RelativePath == relativePath);
+
+        //    if (client.CurrentFile != null && !client.CurrentFile.FileInfo.Exists)
+        //    {
+        //        FileInfoList.Remove(client.CurrentFile);
+        //        client.CurrentFile = null;
+        //    }
+
+        //    if (client.CurrentFile != null)
+        //        client.CurrentFile.OpenRead();
+
+        //    return true;
+        //}
+
+        //internal ProjectProxyEndDownloadResponseModel EndDownload<T>(T client, bool success = false)
+        //    where T : INetworkClient
+        //{
+        //    if (client.CurrentFile != null)
+        //    {
+        //        client.CurrentFile.CloseRead();
+        //        client.CurrentFile = null;
+        //    }
+
+        //    patchLocker.Set();
+
+        //    if (success)
+        //    {
+        //        var packet = new OutputPacketBuffer();
+
+        //        packet.SetPacketId(PatchClientPacketEnum.FinishDownloadResult);
+
+        //        byte[] buf = null;
+
+        //        packet.WriteCollection(Directory.GetFiles(ScriptsDirPath, "*.cs"), (p, d) =>
+        //        {
+        //            buf = File.ReadAllBytes(d);
+        //            p.WritePath(Path.GetRelativePath(ProjectDirPath, d));
+        //            p.WriteInt32(buf.Length);
+        //            p.Write(buf);
+        //        });
+
+        //        client.Network?.Send(packet);
+        //    }
+        //}
 
         #endregion
 

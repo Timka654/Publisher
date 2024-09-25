@@ -10,7 +10,7 @@ namespace ServerPublisher.Server.Info
 
         public override DateTime LastChanged => FileInfo.LastWriteTimeUtc;
 
-        public FileStream IO { get; set; }
+        public FileStream WriteIO { get; set; }
 
         public ServerProjectInfo Project { get; set; }
 
@@ -23,14 +23,17 @@ namespace ServerPublisher.Server.Info
         private DateTime? updateTime;
         private FileInfo fi;
 
+        public string GetTempPath()
+            => System.IO.Path.Combine(Project.TempDirPath, RelativePath);
+
         public void StartFile(DateTime createTime, DateTime updateTime)
         {
-            fi = new FileInfo(System.IO.Path.Combine(Project.TempDirPath, RelativePath));
+            fi = new FileInfo(GetTempPath());
 
             if (fi.Directory.Exists == false)
                 fi.Directory.Create();
 
-            IO = fi.Create();
+            WriteIO = fi.Create();
 
             this.createTime = createTime;
             this.updateTime = updateTime;
@@ -40,14 +43,14 @@ namespace ServerPublisher.Server.Info
 
         public bool EndFile()
         {
-            if (IO == null)
+            if (WriteIO == null)
                 return false;
-            IO.Flush();
-            IO.Dispose();
-            IO = null;
-            try { fi.CreationTimeUtc = createTime.Value; } catch (Exception ex) { Project.BroadcastMessage($"starting error -> {ex}"); }
+            WriteIO.Flush();
+            WriteIO.Dispose();
+            WriteIO = null;
+            try { fi.CreationTimeUtc = createTime.Value; } catch (Exception ex) { Project.BroadcastMessage($"finishing error -> {ex}"); }
             createTime = null;
-            try { fi.LastWriteTimeUtc = updateTime.Value; } catch (Exception ex) { Project.BroadcastMessage($"starting error -> {ex}"); }
+            try { fi.LastWriteTimeUtc = updateTime.Value; } catch (Exception ex) { Project.BroadcastMessage($"finishing error -> {ex}"); }
             updateTime = null;
 
             fi = null;
@@ -59,7 +62,7 @@ namespace ServerPublisher.Server.Info
 
         public bool TempRelease()
         {
-            var fi = new FileInfo(System.IO.Path.Combine(Project.TempDirPath, RelativePath));
+            var fi = new FileInfo(GetTempPath());
 
             if (fi.Exists == false)
             {
@@ -84,13 +87,13 @@ namespace ServerPublisher.Server.Info
 
         public void OpenRead()
         {
-            IO = FileInfo.OpenRead();
+            WriteIO = FileInfo.OpenRead();
         }
 
         public void CloseRead()
         {
-            IO?.Dispose();
-            IO = null;
+            WriteIO?.Dispose();
+            WriteIO = null;
         }
 
         public ProjectFileInfo()

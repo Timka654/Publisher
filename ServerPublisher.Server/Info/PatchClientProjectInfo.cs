@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using ServerPublisher.Shared.Info;
 using System.Threading;
+using ServerPublisher.Shared.Models.ResponseModel;
+using System.Security.AccessControl;
 
 namespace ServerPublisher.Server.Info
 {
@@ -48,6 +50,18 @@ namespace ServerPublisher.Server.Info
             await LoadPatchAsync();
         }
 
+        private Func<ProjectProxyStartDownloadMessageModel, Task>? downloadUnlockAction = null;
+
+        public async Task UnlockDownload(ProjectProxyStartDownloadMessageModel data)
+        {
+            var action = downloadUnlockAction;
+
+            if (action == null)
+                return;
+
+            await action(data);
+        }
+
 
         private DateTime currentDownloadTime;
 
@@ -64,12 +78,14 @@ namespace ServerPublisher.Server.Info
             {
                 UpdateTime = latestChangeTime,
                 ProjectInfo = this,
-                TempPath = initializeTempPath()
+                TempPath = initializeTempPath(),
             });
         }
 
         internal async Task Download(ProjectDownloadContext context)
         {
+            initializeDownloadLogger(context);
+
             patchLocker.WaitOne();
 
             if (currentDownloadTime > context.UpdateTime)
@@ -80,16 +96,20 @@ namespace ServerPublisher.Server.Info
 
             currentDownloadTime = context.UpdateTime;
 
+            var waitLockerSource = new CancellationTokenSource();
+
+            downloadUnlockAction = (data) =>
+            {
+                downloadUnlockAction = null;
+
+                context.FileList = data.FileList;
+                
+                waitLockerSource.Cancel();
+
+                return Task.CompletedTask;
+            };
 
             if (!await PatchClient.StartDownload(this))
-            {
-                FailedDownload(context);
-                return;
-            }
-
-            context.FileList = await PatchClient.GetFileList(this);
-
-            if (context.FileList == default)
             {
                 FailedDownload(context);
                 return;

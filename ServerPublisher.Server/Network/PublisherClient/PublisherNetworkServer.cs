@@ -46,8 +46,6 @@ namespace ServerPublisher.Server.Network.PublisherClient
 
                         options.AddAsyncRequestPacketHandle(PublisherPacketEnum.PublishProjectFileStart, ProjectPacketRepository.PublishProjectFileStartReceive);
 
-                        options.AddAsyncRequestPacketHandle(PublisherPacketEnum.PublishProjectFileList, ProjectPacketRepository.PublishProjectFileListReceive);
-
                         options.AddAsyncRequestPacketHandle(PublisherPacketEnum.PublishProjectFinish, ProjectPacketRepository.PublishProjectFinishReceive);
 
                         options.AddAsyncRequestPacketHandle(PublisherPacketEnum.PublishProjectSignIn, ProjectPacketRepository.PublishProjectSignInReceive);
@@ -58,8 +56,6 @@ namespace ServerPublisher.Server.Network.PublisherClient
                         options.AddAsyncRequestPacketHandle(PublisherPacketEnum.ProjectProxyDownloadBytes, ProjectProxyPacketRepository.ProjectProxyDownloadBytesReceive);
 
                         options.AddAsyncRequestPacketHandle(PublisherPacketEnum.ProjectProxyFinishDownload, ProjectProxyPacketRepository.ProjectProxyFinishDownloadReceive);
-
-                        options.AddAsyncRequestPacketHandle(PublisherPacketEnum.ProjectProxyProjectFileList, ProjectProxyPacketRepository.ProjectProxyProjectFileListReceive);
 
                         options.AddAsyncRequestPacketHandle(PublisherPacketEnum.ProjectProxySignIn, ProjectProxyPacketRepository.ProjectProxySignInReceive);
 
@@ -86,12 +82,11 @@ namespace ServerPublisher.Server.Network.PublisherClient
 
                         builder.AddExceptionHandle((ex, client) =>
                         {
+                            var context = client?.PublishContext;
+
                             if (client != null)
                             {
-                                if (client.UserInfo?.CurrentProject != null)
-                                {
-                                    client.UserInfo.CurrentProject.BroadcastMessage(ex.ToString());
-                                }
+                                context?.Log(ex.ToString());
 
                                 if (client.Network?.GetState() == true)
                                 {
@@ -103,7 +98,15 @@ namespace ServerPublisher.Server.Network.PublisherClient
                     .WithBindingPoint(BindingPort)
                     .WithBacklog(Backlog)
                     .Build();
+        }
 
+        public static void Run()
+        {
+            listener.Start();
+        }
+
+        public static void Stop()
+        {
             listener.Start();
         }
     }

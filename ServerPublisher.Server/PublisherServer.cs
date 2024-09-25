@@ -30,8 +30,6 @@ namespace ServerPublisher.Server
 
         internal static ProjectProxyManager ProjectProxyManager => ProjectProxyManager.Instance;
 
-        public static SessionManager SessionManager => SessionManager.Instance;
-
         public static ServiceManager ServiceManager => ServiceManager.Instance;
 
         public static ExplorerManager ExplorerManager => ExplorerManager.Instance;

@@ -68,9 +68,22 @@ namespace ServerPublisher.Server.Network
                     builder.AddConnectHandle(Options_OnClientDisconnectEvent);
                     builder.AddExceptionHandle(Options_OnExceptionEvent);
 
-
+                    builder.AddAsyncPacketHandle(PublisherPacketEnum.ProjectProxyStartMessage, StartMessageHandle);
                 })
                 .Build();
+        }
+
+        private async Task StartMessageHandle(NetworkProjectProxyClient client, InputPacketBuffer data)
+        {
+            var message = ProjectProxyStartDownloadMessageModel.ReadDefaultFrom(data);
+
+            if (!ProjectMap.TryGetValue(message.ProjectId, out var project))
+            {
+                SignOutProject(message.ProjectId);
+                return;
+            }
+
+            await project.UnlockDownload(message);
         }
 
         private RequestProcessor? requestProcessor => client.Data?.GetRequestProcessor();
@@ -261,18 +274,23 @@ namespace ServerPublisher.Server.Network
 
         public void SignOutProject(ServerProjectInfo item)
         {
+            SignOutProject(item.Info.Id);
+
+            item.ClearPatchClient();
+        }
+
+        public void SignOutProject(string projectId)
+        {
             var packet = OutputPacketBuffer.Create(PublisherPacketEnum.ProjectProxySignOut);
 
             new ProjectProxySignOutResponseModel()
             {
-                ProjectId = item.Info.Id
+                ProjectId = projectId
             }.WriteFullTo(packet);
 
             client.Send(packet);
 
-            ProjectMap.TryRemove(item.Info.Id, out var dummy);
-
-            item.ClearPatchClient();
+            ProjectMap.TryRemove(projectId, out var dummy);
         }
 
         public async Task<bool> StartDownload(ServerProjectInfo item)
@@ -287,7 +305,7 @@ namespace ServerPublisher.Server.Network
 
             var response = await RequestAsync(packet, data =>
             {
-                return Task.FromResult(ProjectProxyStartDownloadResponseModel.ReadFullFrom(data));
+                return Task.FromResult(Shared.Models.RequestModels.ProjectProxyStartDownloadResponseModel.ReadFullFrom(data));
             });
 
             if (response?.Result == true)
@@ -296,24 +314,6 @@ namespace ServerPublisher.Server.Network
             }
 
             return response?.Result == true;
-        }
-
-        public async Task<DownloadFileInfo[]> GetFileList(ServerProjectInfo project)
-        {
-            var packet = RequestPacketBuffer.Create(PublisherPacketEnum.ProjectProxyProjectFileList);
-
-            new ProjectProxyFileListRequestModel()
-            {
-                ProjectId = project.Info.Id
-            }.WriteFullTo(packet);
-
-            var response = await RequestAsync(packet, data =>
-            {
-                return Task.FromResult(ProjectProxyProjectFileListResponseModel.ReadFullFrom(data));
-            });
-
-
-            return response?.FileList;
         }
 
         public async Task<ProjectProxyEndDownloadResponseModel> FinishDownload(ServerProjectInfo project)

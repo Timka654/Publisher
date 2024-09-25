@@ -10,7 +10,7 @@
         PublishProjectFinish,
         PublishProjectFileStart,
         PublishProjectUploadFilePart,
-        PublishProjectPublishStartMessage,
+        PublishProjectStartMessage,
 
 
 
@@ -21,8 +21,8 @@
         ProjectProxyDownloadBytes,
         ProjectProxyFinishFile,
         ProjectProxyStartDownload,
-        ProjectProxyProjectFileList,
         ProjectProxyFinishDownload,
+        ProjectProxyStartMessage,
 
 
 

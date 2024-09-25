@@ -11,33 +11,36 @@ namespace ServerPublisher.Server
     {
         public PublisherService()
         {
+            PublisherNetworkServer.Initialize();
         }
 
         protected override void OnStart(string[] args)
         {
             PublisherServer.ServerLogger.AppendInfo("Service:Starting");
-            PublisherNetworkServer.Instance.Load();
+
+            PublisherNetworkServer.Run();
+
             base.OnStart(args);
         }
 
         protected override void OnStop()
         {
             PublisherServer.ServerLogger.AppendInfo("Service:Stopping");
-            PublisherNetworkServer.Listener.Stop();
+            PublisherNetworkServer.Stop();
             base.OnStop();
         }
 
         protected override void OnContinue()
         {
             PublisherServer.ServerLogger.AppendInfo("Service:Continue");
-            PublisherNetworkServer.Listener.Run();
+            PublisherNetworkServer.Run();
             base.OnContinue();
         }
 
         protected override void OnPause()
         {
             PublisherServer.ServerLogger.AppendInfo("Service:Pausing");
-            PublisherNetworkServer.Listener.Stop();
+            PublisherNetworkServer.Stop();
             base.OnPause();
         }
     }
