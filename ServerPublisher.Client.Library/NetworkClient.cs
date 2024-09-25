@@ -2,13 +2,5 @@
 
 namespace ServerPublisher.Client.Library
 {
-    public class NetworkClient : BaseSocketNetworkClient
-    {
-        public static NetworkClient Instance { get; private set; }
-
-        public NetworkClient()
-        {
-            Instance = this;
-        }
-    }
+    public class NetworkClient : BaseSocketNetworkClient { }
 }

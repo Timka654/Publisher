@@ -20,10 +20,7 @@ using ServerPublisher.Shared.Enums;
 using ServerPublisher.Shared.Info;
 using ServerPublisher.Shared.Models.RequestModels;
 using Microsoft.Extensions.Configuration;
-using NSL.SocketCore;
-using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using ServerPublisher.Shared.Models.ResponseModel;
-using ServerPublisher.Server.Utils;
 
 namespace ServerPublisher.Server.Info
 {
@@ -293,8 +290,7 @@ namespace ServerPublisher.Server.Info
         {
             var packet = OutputPacketBuffer.Create(PublisherPacketEnum.ServerLog);
 
-            packet.WriteString16(log);
-
+            packet.WriteString(log);
 
             foreach (var item in ConnectedPublishers.Values.ToArray())
             {
@@ -443,7 +439,7 @@ namespace ServerPublisher.Server.Info
                 foreach (var archiveEntry in archive.Entries)
                 {
                     var id = StartPublishFile(
-                         context, new PublishFileStartRequestModel()
+                         context, new PublishProjectFileStartRequestModel()
                          {
                              RelativePath = CorrectCompressedPath(context, archiveEntry.FullName),
                              CreateTime = archiveEntry.LastWriteTime.DateTime,
@@ -698,7 +694,7 @@ namespace ServerPublisher.Server.Info
             return true;
         }
 
-        internal Guid? StartPublishFile(ProjectPublishContext context, PublishFileStartRequestModel data)
+        internal Guid? StartPublishFile(ProjectPublishContext context, PublishProjectFileStartRequestModel data)
         {
             var file = new ProjectFileInfo(ProjectDirPath, new FileInfo(Path.Combine(ProjectDirPath, data.RelativePath)), this);
 
@@ -711,7 +707,7 @@ namespace ServerPublisher.Server.Info
             return id;
         }
 
-        internal bool UploadPublishFile(ProjectPublishContext context, PublishUploadFileBytesRequestModel request)
+        internal bool UploadPublishFile(ProjectPublishContext context, PublishProjectUploadFileBytesRequestModel request)
         {
             if (context.Actual == false || CurrentPublishContext != context)
                 return false;

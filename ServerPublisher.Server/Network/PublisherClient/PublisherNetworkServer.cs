@@ -1,5 +1,4 @@
 ﻿using NSL.Cipher.RC.RC4;
-using NSL.Logger.Interface;
 using NSL.TCP.Server;
 using ServerPublisher.Server.Network.PublisherClient.Packets;
 using NSL.SocketServer;

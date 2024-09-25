@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using NSL.Logger;
-using NSL.Logger.Interface;
 using NSL.SocketCore.Utils.Logger;
 using ServerPublisher.Server.Managers;
 using ServerPublisher.Server.Network.PublisherClient;

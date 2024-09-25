@@ -4,7 +4,7 @@ using System;
 namespace ServerPublisher.Shared.Models.RequestModels
 {
     [NSLBIOType]
-    public partial class PublishFileStartRequestModel
+    public partial class PublishProjectFileStartRequestModel
     {
         public string RelativePath { get; set; }
 

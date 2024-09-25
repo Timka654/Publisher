@@ -1,6 +1,5 @@
 ﻿using NSL.Generators.BinaryTypeIOGenerator.Attributes;
 using ServerPublisher.Shared.Info;
-using System;
 
 namespace ServerPublisher.Shared.Models.ResponseModel
 {

@@ -1,14 +1,10 @@
 ﻿using NSL.Generators.BinaryTypeIOGenerator.Attributes;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ServerPublisher.Shared.Models.RequestModels
 {
     [NSLBIOType]
-    public partial class PublishUploadFileBytesRequestModel
+    public partial class PublishProjectUploadFileBytesRequestModel
     {
         public Guid FileId { get; set; }
 

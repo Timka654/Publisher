@@ -1,79 +1,97 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Reflection;
+﻿using System.Threading.Tasks;
 using System;
-using ServerPublisher.Client.Library.Packets.Project;
 using NSL.TCP.Client;
 using NSL.SocketClient;
 using NSL.Cipher.RC.RC4;
-using ServerPublisher.Client.Library.Packets;
-using NSL.ClientOptions.Extensions.Packet;
-using NSL.SocketCore.Extensions.Packet;
-using NSL.Utils;
-using ServerPublisher.Shared.Info;
 using ServerPublisher.Shared.Enums;
+using NSL.BuilderExtensions.TCPClient;
+using NSL.BuilderExtensions.SocketCore;
+using NSL.SocketCore.Extensions.Buffer;
+using ServerPublisher.Shared.Models.ResponseModel;
+using ServerPublisher.Shared.Models.RequestModels;
+using NSL.SocketCore.Utils.Buffer;
 
 namespace ServerPublisher.Client.Library
 {
-    public class Network
+    public partial class Network
     {
-        ClientOptions<NetworkClient> options;
+        TCPNetworkClient<NetworkClient, ClientOptions<NetworkClient>> Client { get; set; }
 
-        internal TCPNetworkClient<NetworkClient, ClientOptions<NetworkClient>> Client { get; private set; }
+        public event Action<ProjectFileListResponseModel> OnPublishProjectStartMessage = (d) => { };
 
-        public event ProjectPublishStartPacket.OnReceiveEventHandle OnProjectPublishStartMessage
-        {
-            add => ProjectPublishStartPacket.Instance.OnReceiveEvent += value;
-            remove => ProjectPublishStartPacket.Instance.OnReceiveEvent -= value;
-        }
-
-        public event ServerLogPacket.OnReceiveEventHandle OnServerLogMessage
-        {
-            add => ServerLogPacket.Instance.OnReceiveEvent += value;
-            remove => ServerLogPacket.Instance.OnReceiveEvent -= value;
-        }
+        public event Action<string> OnServerLogMessage = (d) => { };
 
         public Network(string ip, int port, string inputKey, string outputKey, Action<NetworkClient> disconnectedEvent, int bufferSize = 8196)
         {
-            options = new ClientOptions<NetworkClient>
+            Client = TCPClientEndPointBuilder.Create()
+            .WithClientProcessor<NetworkClient>()
+            .WithOptions()
+            .WithEndPoint(ip, port)
+            .WithCode(builder =>
             {
-                AddressFamily = System.Net.Sockets.AddressFamily.InterNetwork,
-                ProtocolType = System.Net.Sockets.ProtocolType.Tcp,
-                IpAddress = ip,
-                Port = port,
-                ReceiveBufferSize = bufferSize,
-                InputCipher = new XRC4Cipher(inputKey),
-                OutputCipher = new XRC4Cipher(outputKey)
-            };
+                builder.WithBufferSize(bufferSize);
 
-            options.OnClientDisconnectEvent +=(e) => disconnectedEvent(e);
+                builder.GetOptions().ConfigureRequestProcessor();
 
-            options.LoadPackets(Assembly.GetExecutingAssembly(), typeof(ClientPacketAttribute));
+                builder.AddPacketHandle(PublisherPacketEnum.PublishProjectStartMessage, (c, d) => OnPublishProjectStartMessage(ProjectFileListResponseModel.ReadDefaultFrom(d)));
+                builder.AddPacketHandle(PublisherPacketEnum.ServerLog, (c, d) => OnServerLogMessage(d.ReadString()));
 
-            options.Load<NetworkClient, PacketDelegateContainerAttribute, ClientPacketAttribute>();
+                builder.WithInputCipher(new XRC4Cipher(inputKey));
+                builder.WithOutputCipher(new XRC4Cipher(outputKey));
 
-            Client = new TCPNetworkClient<NetworkClient, ClientOptions<NetworkClient>>(options);
+                builder.AddDisconnectHandle(c => disconnectedEvent?.Invoke(c));
+            })
+            .Build();
         }
 
-        public bool Connect()
-        {
-            return Client.Connect();
-        }
+        public Task<bool> ConnectAsync()
+            => Client.ConnectAsync();
 
         public void Disconnect()
+            => Client.Disconnect();
+        private RequestProcessor? requestProcessor => Client.Data?.GetRequestProcessor();
+
+        private async Task<TResult> Request<TResult>(PublisherPacketEnum pid
+            , Action<RequestPacketBuffer> buildRequest
+            , Func<InputPacketBuffer, TResult> readResponse)
         {
-            Client.Disconnect();
+            var request = RequestPacketBuffer.Create(pid);
+
+            buildRequest(request);
+
+            TResult result = default;
+
+            await requestProcessor.SendRequestAsync(request, data =>
+            {
+                if (data != null)
+                    result = readResponse(data);
+
+                return Task.FromResult(true);
+            });
+
+            return result;
         }
 
-        public async Task<SignStateEnum> SignIn(string projectId, BasicUserInfo user, byte[] encoded, bool compressed) => await SignInPacket.Send(projectId, user,encoded, compressed);
+        private async Task Message(PublisherPacketEnum pid
+            , Action<OutputPacketBuffer> buildRequest)
+        {
+            var request = OutputPacketBuffer.Create(pid);
 
-        public async Task<List<BasicFileInfo>> GetFileList() => await FileListPacket.Send();
+            buildRequest(request);
 
-        public async Task FilePublishStart(BasicFileInfo file) => await FilePublishStartPacket.Send(file);
+            Client.Send(request);
+        }
 
-        public async Task ProjectPublishEnd(CommandLineArgs args) => await ProjectPublishEndPacket.Send(args);
+        public async Task<PublishSignInResponseModel> SignIn(PublishSignInRequestModel request)
+            => await Request(PublisherPacketEnum.PublishProjectSignIn, request.WriteFullTo, PublishSignInResponseModel.ReadFullFrom);
 
-        public async Task UploadFileBytes(byte[] buf, int len) => await UploadFileBytesPacket.Send(buf,len);
+        public async Task ProjectFinish(PublishProjectFinishRequestModel request)
+            => await Message(PublisherPacketEnum.PublishProjectFinish, request.WriteFullTo);
 
+        public async Task<PublishProjectFileStartResponseModel> FileStart(PublishProjectFileStartRequestModel request)
+            => await Request(PublisherPacketEnum.PublishProjectFileStart, request.WriteFullTo, PublishProjectFileStartResponseModel.ReadFullFrom);
+
+        public async Task<bool> UploadFilePart(PublishProjectUploadFileBytesRequestModel request)
+            => await Request(PublisherPacketEnum.PublishProjectUploadFilePart, request.WriteFullTo, r => true);
     }
 }

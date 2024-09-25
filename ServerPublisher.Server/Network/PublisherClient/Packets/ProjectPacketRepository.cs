@@ -1,10 +1,8 @@
 ﻿using NSL.SocketCore.Utils.Buffer;
-using System.Linq;
 using ServerPublisher.Shared.Models.RequestModels;
 using System.Threading.Tasks;
 using ServerPublisher.Shared.Models.ResponseModel;
 using ServerPublisher.Shared.Enums;
-using ServerPublisher.Shared.Info;
 using System;
 
 namespace ServerPublisher.Server.Network.PublisherClient.Packets.PacketRepository
@@ -13,7 +11,7 @@ namespace ServerPublisher.Server.Network.PublisherClient.Packets.PacketRepositor
     {
         public static async Task<bool> PublishProjectFileStartReceive(PublisherNetworkClient client, InputPacketBuffer data, OutputPacketBuffer response)
         {
-            var request = PublishFileStartRequestModel.ReadFullFrom(data);
+            var request = PublishProjectFileStartRequestModel.ReadFullFrom(data);
 
             var context = client.PublishContext;
 
@@ -68,7 +66,7 @@ namespace ServerPublisher.Server.Network.PublisherClient.Packets.PacketRepositor
             if (context != null)
                 return false;
 
-            var request = PublishUploadFileBytesRequestModel.ReadFullFrom(data);
+            var request = PublishProjectUploadFileBytesRequestModel.ReadFullFrom(data);
 
             return context.ProjectInfo.UploadPublishFile(context, request);
         }
