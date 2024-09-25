@@ -4,6 +4,7 @@ using NSL.Logger;
 using NSL.SocketCore.Utils.Logger;
 using ServerPublisher.Server.Managers;
 using ServerPublisher.Server.Network.PublisherClient;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.ServiceProcess;
@@ -37,9 +38,23 @@ namespace ServerPublisher.Server
 
         public static bool CommandExecutor { get; set; } = false;
 
+        static Dictionary<string, string> defaultConfiguration = new Dictionary<string, string>()
+        {
+            {"publisher:network:binding_port","6583"},
+            {"publisher:network:backlog","100"},
+            {"server.publisher.io.buffer.size","409600"},
+            {"server.publisher.io.input.key","!{b1HX11R**"},
+            {"server.publisher.io.output.key","!{b1HX11R**"},
+            {"paths.projects_library", Path.Combine("Data", "Projects.json")},
+            {"patch.io.buffer.size","409600"},
+            {"service.use_integrate","false"},
+        };
+
         public static void InitializeApp()
         {
             Configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(defaultConfiguration)
+                .AddJsonFile("ServerSettings.json")
                     .Build();
 
             var loggerFactory = LoggerFactory.Create(b => b.AddConsole());
