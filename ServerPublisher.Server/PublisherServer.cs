@@ -54,6 +54,7 @@ namespace ServerPublisher.Server
         {
 #if DEBUG
             PublisherNetworkServer.Initialize();
+            PublisherNetworkServer.Run();
             Thread.Sleep(Timeout.Infinite);
 #endif
 

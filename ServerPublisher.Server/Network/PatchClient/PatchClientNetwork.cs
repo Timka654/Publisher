@@ -194,7 +194,7 @@ namespace ServerPublisher.Server.Network
                 await Task.Delay(60_000);
 
 #endif
-                await ConnectAsync();
+                await client.ConnectAsync();
 
                 return;
             }

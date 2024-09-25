@@ -6,6 +6,7 @@ using ServerPublisher.Server.Network.PublisherClient;
 using NSL.ServerOptions.Extensions.Manager;
 using ServerPublisher.Shared.Enums;
 using ServerPublisher.Shared.Models.RequestModels;
+using ServerPublisher.Shared.Models.ResponseModel;
 
 namespace ServerPublisher.Server.Managers
 {
@@ -19,9 +20,18 @@ namespace ServerPublisher.Server.Managers
             Instance = this;
         }
 
-        internal void FinishDownload(PublisherNetworkClient client, ProjectProxyEndDownloadRequestModel request)
+        internal ProjectProxyEndDownloadResponseModel FinishDownload(PublisherNetworkClient client, ProjectProxyEndDownloadRequestModel request)
         {
-            client.PatchDownloadProject?.EndDownload(client, true);
+            client.ProxyClientContext.PatchProjectMap.TryGetValue(request.ProjectId, out var project);
+            
+            return project.EndDownload(client, true);
+        }
+
+        internal ProjectProxyStartFileResponseModel StartFile(PublisherNetworkClient client, ProjectProxyStartFileRequestModel request)
+        {
+            client.ProxyClientContext.PatchProjectMap.TryGetValue(request.ProjectId, out var project);
+            
+            return project.StartDownloadFile(client, request.RelativePath);
         }
 
         public async Task<PatchClientNetwork> ConnectProxyClient(ServerProjectInfo project)
@@ -50,7 +60,7 @@ namespace ServerPublisher.Server.Managers
 
         internal void SignOut(PublisherNetworkClient client, string projectId)
         {
-            if (client.PatchProjectMap.TryGetValue(projectId, out var project))
+            if (client.ProxyClientContext.PatchProjectMap.TryGetValue(projectId, out var project))
                 project.SignOutPatchClient(client);
         }
     }

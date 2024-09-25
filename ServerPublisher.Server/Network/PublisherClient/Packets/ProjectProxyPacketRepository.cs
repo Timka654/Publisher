@@ -14,18 +14,35 @@ namespace ServerPublisher.Server.Network.PublisherClient.Packets
         {
             var request = ProjectProxyDownloadBytesRequestModel.ReadFullFrom(data);
 
-            if (request.BufferLength > client.CurrentFile.IO.Length - client.CurrentFile.IO.Position)
-                request.BufferLength = (int)(client.CurrentFile.IO.Length - client.CurrentFile.IO.Position);
+            var result = new ProjectProxyDownloadBytesResponseModel();
 
-            var result = new ProjectProxyDownloadBytesResponseModel()
+            if (client.ProxyClientContext.TempFileMap.TryGetValue(request.FileId, out var fs))
             {
-                Bytes = new byte[request.BufferLength],
-                EOF = client.CurrentFile.IO.Position + request.BufferLength == client.CurrentFile.IO.Length
-            };
+                if (request.BufferLength > fs.Length - fs.Position)
+                    request.BufferLength = (int)(fs.Length - fs.Position);
 
-            client.CurrentFile.IO.Read(result.Bytes, 0, request.BufferLength);
+                result.Bytes = new byte[request.BufferLength];
+                result.EOF = fs.Position + request.BufferLength == fs.Length;
+
+                fs.Read(result.Bytes, 0, request.BufferLength);
+
+                if (result.EOF)
+                {
+                    client.ProxyClientContext.TempFileMap.TryRemove(request.FileId, out _);
+                    fs.Close();
+                }
+            }
 
             result.WriteFullTo(response);
+
+            return true;
+        }
+
+        public static async Task<bool> ProjectProxyStartFileReceive(PublisherNetworkClient client, InputPacketBuffer data, OutputPacketBuffer response)
+        {
+            var request = ProjectProxyStartFileRequestModel.ReadFullFrom(data);
+
+            PublisherServer.ProjectProxyManager.StartFile(client, request).WriteFullTo(response);
 
             return true;
         }
@@ -34,7 +51,7 @@ namespace ServerPublisher.Server.Network.PublisherClient.Packets
         {
             var request = ProjectProxyEndDownloadRequestModel.ReadFullFrom(data);
 
-            PublisherServer.ProjectProxyManager.FinishDownload(client, request);
+            PublisherServer.ProjectProxyManager.FinishDownload(client, request).WriteFullTo(response);
 
             return true;
         }

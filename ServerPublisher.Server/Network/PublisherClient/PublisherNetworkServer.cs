@@ -53,6 +53,7 @@ namespace ServerPublisher.Server.Network.PublisherClient
                         options.AddAsyncRequestPacketHandle(PublisherPacketEnum.PublishProjectUploadFilePart, ProjectPacketRepository.PublishProjectUploadFilePartReceive);
 
 
+                        options.AddAsyncRequestPacketHandle(PublisherPacketEnum.ProjectProxyStartFile, ProjectProxyPacketRepository.ProjectProxyStartFileReceive);
                         options.AddAsyncRequestPacketHandle(PublisherPacketEnum.ProjectProxyDownloadBytes, ProjectProxyPacketRepository.ProjectProxyDownloadBytesReceive);
 
                         options.AddAsyncRequestPacketHandle(PublisherPacketEnum.ProjectProxyFinishDownload, ProjectProxyPacketRepository.ProjectProxyFinishDownloadReceive);
@@ -77,7 +78,8 @@ namespace ServerPublisher.Server.Network.PublisherClient
 
                         builder.AddDisconnectHandle(client =>
                         {
-                            PublisherServer.SessionManager.DisconnectClient(client);
+                            client.ProxyClientContext?.Dispose();
+                            client.PublishContext?.Dispose();
                         });
 
                         builder.AddExceptionHandle((ex, client) =>

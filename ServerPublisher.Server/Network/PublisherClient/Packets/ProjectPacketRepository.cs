@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using ServerPublisher.Shared.Models.ResponseModel;
 using ServerPublisher.Shared.Enums;
 using ServerPublisher.Shared.Info;
+using System;
 
 namespace ServerPublisher.Server.Network.PublisherClient.Packets.PacketRepository
 {
@@ -18,7 +19,13 @@ namespace ServerPublisher.Server.Network.PublisherClient.Packets.PacketRepositor
 
             var project = context?.ProjectInfo;
 
-            response.WriteGuid(project.StartPublishFile(context, request));
+            var id = project?.StartPublishFile(context, request);
+
+            new PublishProjectFileStartResponseModel()
+            {
+                Result = id.HasValue,
+                FileId = id ?? Guid.Empty
+            }.WriteFullTo(response);
 
             return true;
         }

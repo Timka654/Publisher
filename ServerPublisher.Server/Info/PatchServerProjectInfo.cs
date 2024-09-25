@@ -16,6 +16,9 @@ using NSL.Utils;
 using ServerPublisher.Shared.Models.RequestModels;
 using ServerPublisher.Shared.Models.ResponseModel;
 using ServerPublisher.Shared.Info;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
+using ServerPublisher.Shared.Models;
+using System;
 
 namespace ServerPublisher.Server.Info
 {
@@ -88,12 +91,12 @@ namespace ServerPublisher.Server.Info
             return SignStateEnum.Ok;
         }
 
-        //public void SignOutPatchClient(PublisherNetworkClient client)
-        //{
-        //    patchClients = new ConcurrentBag<PublisherNetworkClient>(patchClients.Where(x => x != client));
+        public void SignOutPatchClient(PublisherNetworkClient client)
+        {
+            patchClients = new ConcurrentBag<PublisherNetworkClient>(patchClients.Where(x => x != client));
 
-        //    EndDownload(client, true);
-        //}
+            EndDownload(client, true);
+        }
 
         public void StartDownload(PublisherNetworkClient client, TransportModeEnum transportMode)
         {
@@ -117,52 +120,38 @@ namespace ServerPublisher.Server.Info
             client.Send(message);
         }
 
-        //public bool NextDownloadFile(PublisherNetworkClient client, string relativePath)
-        //{
-        //    client.CurrentFile = FileInfoList.FirstOrDefault(x => x.RelativePath == relativePath);
+        public ProjectProxyStartFileResponseModel StartDownloadFile(PublisherNetworkClient client, string relativePath)
+        {
+            var file = FileInfoList.FirstOrDefault(x => x.RelativePath == relativePath);
 
-        //    if (client.CurrentFile != null && !client.CurrentFile.FileInfo.Exists)
-        //    {
-        //        FileInfoList.Remove(client.CurrentFile);
-        //        client.CurrentFile = null;
-        //    }
+            if (file == null)
+                return new ProjectProxyStartFileResponseModel() { Result = false };
 
-        //    if (client.CurrentFile != null)
-        //        client.CurrentFile.OpenRead();
+            Guid fileId = default;
 
-        //    return true;
-        //}
+            while (!client.ProxyClientContext.TempFileMap.TryAdd(fileId = Guid.NewGuid(), file.OpenRead())) ;
 
-        //internal ProjectProxyEndDownloadResponseModel EndDownload<T>(T client, bool success = false)
-        //    where T : INetworkClient
-        //{
-        //    if (client.CurrentFile != null)
-        //    {
-        //        client.CurrentFile.CloseRead();
-        //        client.CurrentFile = null;
-        //    }
+            return new ProjectProxyStartFileResponseModel() { Result = true, FileId = fileId };
+        }
 
-        //    patchLocker.Set();
+        internal ProjectProxyEndDownloadResponseModel EndDownload(PublisherNetworkClient client, bool success = false)
+        {
+            patchLocker.Set();
 
-        //    if (success)
-        //    {
-        //        var packet = new OutputPacketBuffer();
+            var response = new ProjectProxyEndDownloadResponseModel() { Success = success };
 
-        //        packet.SetPacketId(PatchClientPacketEnum.FinishDownloadResult);
+            if (success)
+            {
+                response.FileList = Directory.GetFiles(ScriptsDirPath, "*.cs")
+                    .Select(d => new FileDownloadDataModel()
+                    {
+                        Data = File.ReadAllBytes(d),
+                        RelativePath = Path.GetRelativePath(ProjectDirPath, d)
+                    }).ToArray();
+            }
 
-        //        byte[] buf = null;
-
-        //        packet.WriteCollection(Directory.GetFiles(ScriptsDirPath, "*.cs"), (p, d) =>
-        //        {
-        //            buf = File.ReadAllBytes(d);
-        //            p.WritePath(Path.GetRelativePath(ProjectDirPath, d));
-        //            p.WriteInt32(buf.Length);
-        //            p.Write(buf);
-        //        });
-
-        //        client.Network?.Send(packet);
-        //    }
-        //}
+            return response;
+        }
 
         #endregion
 

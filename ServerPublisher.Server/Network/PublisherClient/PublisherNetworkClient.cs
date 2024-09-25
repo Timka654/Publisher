@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Threading;
 using ServerPublisher.Shared.Enums;
 using System.Collections.Concurrent;
+using System.IO;
 
 namespace ServerPublisher.Server.Network.PublisherClient
 {
@@ -79,13 +80,18 @@ namespace ServerPublisher.Server.Network.PublisherClient
         }
     }
 
-    public class ProxyClientContextDataModel
+    public class ProxyClientContextDataModel : IDisposable
     {
         public ConcurrentDictionary<string, ServerProjectInfo> PatchProjectMap { get; } = new();
 
-        public ConcurrentDictionary<Guid, ProjectFileInfo> TempFileMap { get; } = new();
+        public ConcurrentDictionary<Guid, Stream> TempFileMap { get; } = new();
 
 
         public ConcurrentBag<string> ProcessingProjects = new();
+
+        public void Dispose()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

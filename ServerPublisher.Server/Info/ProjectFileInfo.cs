@@ -85,16 +85,8 @@ namespace ServerPublisher.Server.Info
             return true;
         }
 
-        public void OpenRead()
-        {
-            WriteIO = FileInfo.OpenRead();
-        }
-
-        public void CloseRead()
-        {
-            WriteIO?.Dispose();
-            WriteIO = null;
-        }
+        public Stream OpenRead()
+            => FileInfo.OpenRead();
 
         public ProjectFileInfo()
         {
