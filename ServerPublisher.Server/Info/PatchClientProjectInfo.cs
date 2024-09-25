@@ -201,7 +201,7 @@ namespace ServerPublisher.Server.Info
 
             try { runScriptOnStart(); } catch (Exception ex) { BroadcastMessage(ex.ToString()); }
 
-            success = processTemp();
+            success = processTemp(context);
 
             if (!success)
                 recoveryBackup();

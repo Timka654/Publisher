@@ -8,15 +8,11 @@ using System.Collections.Concurrent;
 
 namespace ServerPublisher.Server.Network.PublisherClient
 {
-    public class PublisherNetworkClient : IServerNetworkClient, IProcessFileContainer, IDisposable
+    public class PublisherNetworkClient : IServerNetworkClient, IDisposable
     {
         public UserInfo UserInfo { get; set; }
 
-        public ServerProjectInfo ProjectInfo => UserInfo.CurrentProject;
-
-        public ProjectFileInfo CurrentFile { get; set; }
-
-        public bool Compressed { get; set; }
+        public ProjectPublishContext? PublishContext { get; set; }
 
         public ProxyClientContextDataModel? ProxyClientContext { get; set; }
 

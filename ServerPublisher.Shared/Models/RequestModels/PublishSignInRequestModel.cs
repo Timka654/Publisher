@@ -13,7 +13,5 @@ namespace ServerPublisher.Shared.Models.RequestModels
         public byte[] IdentityKey { get; set; }
 
         public OSTypeEnum OSType { get; set; }
-
-        public bool Compressing { get; set; }
     }
 }

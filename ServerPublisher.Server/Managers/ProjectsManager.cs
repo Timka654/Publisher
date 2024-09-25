@@ -39,14 +39,6 @@ namespace ServerPublisher.Server.Managers
 
         internal SignStateEnum SignIn(PublisherNetworkClient client, PublishSignInRequestModel request)
         {
-            //var session = StaticInstances.SessionManager.GetUser(user_id);
-
-            //if (session != null && session.CurrentNetwork != null && session.CurrentNetwork.AliveState)
-            //{
-            //    Network.Packets.Project.SignInPacket.Send(client, Basic.SignStateEnum.AlreadyConnected);
-            //    return;
-            //}
-
             var proj = GetProject(request.ProjectId);
 
             if (proj == null) return SignStateEnum.ProjectNotFound;
@@ -55,9 +47,6 @@ namespace ServerPublisher.Server.Managers
             var user = proj.GetUser(request.UserId) ?? PublisherServer.UserManager.GetUser(request.UserId);
 
             if (user == null) return SignStateEnum.UserNotFound;
-
-            if (user.CurrentNetwork != null && user.CurrentNetwork.AliveState && user.CurrentNetwork.Network.GetState())
-                return SignStateEnum.AlreadyConnected;
 
             if (user.Cipher == null)
             {
@@ -71,12 +60,8 @@ namespace ServerPublisher.Server.Managers
             if (Encoding.ASCII.GetString(data) == request.UserId)
             {
                 client.UserInfo = user;
-                user.CurrentNetwork = client;
-                client.Compressed = request.Compressing;
 
-                //StaticInstances.SessionManager.AddUser(client.UserInfo);
-
-                proj.StartProcess(user.CurrentNetwork);
+                proj.StartPublishProcess(client);
 
                 return SignStateEnum.Ok;
             }

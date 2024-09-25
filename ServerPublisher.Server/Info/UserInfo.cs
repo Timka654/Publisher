@@ -15,9 +15,9 @@ namespace ServerPublisher.Server.Info
 
         public RSACipher Cipher { get; set; }
 
-        public ServerProjectInfo CurrentProject { get; set; }
+        //public ServerProjectInfo CurrentProject { get; set; }
 
-        public PublisherNetworkClient CurrentNetwork { get; set; }
+        //public PublisherNetworkClient CurrentNetwork { get; set; }
 
         public UserInfo(string fileName)
         {

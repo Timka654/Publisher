@@ -10,31 +10,13 @@ namespace ServerPublisher.Server.Network.PublisherClient.Packets.PacketRepositor
     {
         public static async Task<bool> PublishProjectFileStartReceive(PublisherNetworkClient client, InputPacketBuffer data, OutputPacketBuffer response)
         {
-            client.ProjectInfo.StartFile(client, PublishFileStartRequestModel.ReadFullFrom(data));
+            var request = PublishFileStartRequestModel.ReadFullFrom(data);
 
-            return true;
-        }
+            var context = client.PublishContext;
 
-        public static async Task<bool> PublishProjectFileListReceive(PublisherNetworkClient client, InputPacketBuffer data, OutputPacketBuffer response)
-        {
-            var project = client.UserInfo.CurrentProject;
-
-            if (client.UserInfo == null || project == null)
-            {
-                client.Network.Disconnect();
-                return false;
-            }
-
-            if (project.ProcessUser != client.UserInfo)
-            {
-                if (!project.StartProcess(client))
-                    return true;
-            }
-
-            new ProjectFileListResponseModel()
-            {
-                FileList = project.FileInfoList.Where(x => x.FileInfo.Exists).ToArray()
-            }.WriteDefaultTo(response);
+            var project = context?.ProjectInfo;
+            
+            project.StartPublishFile(context, request);
 
             return true;
         }
@@ -43,7 +25,11 @@ namespace ServerPublisher.Server.Network.PublisherClient.Packets.PacketRepositor
         {
             var request = PublishProjectFinishRequestModel.ReadFullFrom(data);
 
-            client.ProjectInfo.StopProcess(client, true, request.Args);
+            var context = client.PublishContext;
+
+            var project = context?.ProjectInfo;
+
+            project.FinishPublishProcess(context, true, request.Args);
 
             return true;
         }
@@ -52,7 +38,13 @@ namespace ServerPublisher.Server.Network.PublisherClient.Packets.PacketRepositor
         {
             var request = PublishSignInRequestModel.ReadFullFrom(data);
 
-            response.WriteByte((byte)PublisherServer.ProjectsManager.SignIn(client, request));
+            var result = PublisherServer.ProjectsManager.SignIn(client, request);
+
+            new PublishSignInResponseModel
+            {
+                Result = result,
+                IgnoreFilePatterns = client.PublishContext?.ProjectInfo.Info.IgnoreFilePaths
+            }.WriteFullTo(response);
 
             return true;
         }

@@ -20,6 +20,8 @@ using ServerPublisher.Shared.Enums;
 using ServerPublisher.Shared.Info;
 using ServerPublisher.Shared.Models.RequestModels;
 using Microsoft.Extensions.Configuration;
+using NSL.SocketCore;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 
 namespace ServerPublisher.Server.Info
 {
@@ -288,13 +290,13 @@ namespace ServerPublisher.Server.Info
         public void BroadcastMessage(string log)
         {
             var packet = OutputPacketBuffer.Create(PublisherPacketEnum.ServerLog);
-            CurrentLogger?.AppendLog(log);
+
             packet.WriteString16(log);
 
 
             foreach (var item in users)
             {
-                item.CurrentNetwork?.Send(packet);
+                item.ne.Send(packet);
             }
         }
 
@@ -398,6 +400,18 @@ namespace ServerPublisher.Server.Info
 
         #endregion
 
+        #region Logger
+
+        private void initializePublishLogger(ProjectPublishContext context)
+        {
+            var uid = context.Network.UserInfo.Id ?? "Unknown";
+
+            context.Logger = new FileLogger(LogsDirPath, $"{DateTime.Now:yyyy-MM-dd_HH.mm.ss} - upload - {uid}");
+        }
+
+        #endregion
+
+
         #region Temp
 
         private string initializeTempPath()
@@ -410,12 +424,8 @@ namespace ServerPublisher.Server.Info
             return di.CreateSubdirectory($"{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid()}").FullName;
         }
 
-        private bool processCompressedTemp(PublisherNetworkClient client)
+        private bool processCompressedTemp(ProjectPublishContext context)
         {
-            var archives = processFileList;
-
-            processFileList = new List<ProjectFileInfo>();
-
             foreach (var archiveFile in archives)
             {
                 var archivePath = Path.Combine(TempDirPath, archiveFile.RelativePath);
@@ -424,8 +434,8 @@ namespace ServerPublisher.Server.Info
                 {
                     foreach (var archiveEntry in archive.Entries)
                     {
-                        StartFile(
-                            client,
+                        StartPublishFile(
+                            context,
                             CorrectCompressedPath(client, archiveEntry.FullName),
                             archiveEntry.LastWriteTime.DateTime,
                             archiveEntry.LastWriteTime.DateTime);
@@ -435,18 +445,20 @@ namespace ServerPublisher.Server.Info
                             ex.CopyTo(client.CurrentFile.IO);
                         }
 
-                        EndFile(client);
+                        EndPublishFile(context);
                     }
                 }
 
                 File.Delete(archivePath);
             }
 
-            return processTemp();
+            return processTemp(context);
         }
 
-        private string CorrectCompressedPath(PublisherNetworkClient client, string path)
+        private string CorrectCompressedPath(ProjectPublishContext context, string path)
         {
+            var client = context.Network;
+
             if (client.Platform == CurrentOS)
                 return path;
 
@@ -456,7 +468,7 @@ namespace ServerPublisher.Server.Info
             return path.Replace('/', '\\');
         }
 
-        private bool processTemp()
+        private bool processTemp(ProjectPublishContext context)
         {
             initializeBackup();
             foreach (var item in processFileList)
@@ -532,124 +544,139 @@ namespace ServerPublisher.Server.Info
 
         #region Publish
 
-        public bool StartProcess(PublisherNetworkClient client)
+        private ProjectPublishContext? CurrentPublishContext { get; set; }
+
+        public bool StartPublishProcess(PublisherNetworkClient client)
         {
-            if (client?.UserInfo == null)
+            client.PublishContext ??= new ProjectPublishContext() { ProjectInfo = this, Network = client, Actual = false };
+
+            var context = client.PublishContext;
+
+            if (context.ProjectInfo != this)
                 return false;
 
-            client.UserInfo.CurrentProject = this;
-
-            patchLocker.WaitOne();
-
-            if (ProcessUser != null && ProcessUser != client.UserInfo)
+            if (!patchLocker.WaitOne(0))
             {
-                if (!WaitQueue.Contains(client.UserInfo))
-                    WaitQueue.Enqueue(client.UserInfo);
+                if (!WaitPublishQueue.Contains(client))
+                    WaitPublishQueue.Enqueue(client);
 
-                if (ProcessUser.CurrentNetwork?.AliveState == true && ProcessUser.CurrentNetwork?.Network?.GetState() == true)
-                {
-                    return false;
-                }
-                else
-                {
-                    if (StopProcess(client.UserInfo.CurrentNetwork, false))
-                        patchLocker.WaitOne();
-                }
+                return false;
             }
 
-            ProcessUser = client.UserInfo;
+            return StartPublishProcess(context);
+        }
 
-            initializeLogger();
-            initializeTemp();
-
-            var packet = new OutputPacketBuffer();
-
-            packet.SetPacketId(PublisherPacketEnum.ProjectPublishStart);
-
-            packet.WriteInt32(Info.IgnoreFilePaths.Count);
-
-            foreach (var item in Info.IgnoreFilePaths)
+        public bool StartPublishProcess(ProjectPublishContext context)
+        {
+            if (context.ProjectInfo != this)
             {
-                packet.WriteString16(item);
+                NextPublisherOrUnlock();
+                return false;
             }
 
-            client.UserInfo.CurrentNetwork.Send(packet);
+            CurrentPublishContext = context;
+
+            context.Actual = context.Network?.GetState(true) == true;
+
+            if (context.Actual == false)
+            {
+                NextPublisherOrUnlock();
+                return false;
+            }
+
+            context.TempPath = initializeTempPath();
+
+            initializePublishLogger(context);
+
+            if (context.Network?.GetState(true) != true )
+            {
+                context.Actual = false;
+                NextPublisherOrUnlock();
+                return false;
+            }
+
+            var packet = OutputPacketBuffer.Create(PublisherPacketEnum.PublishProjectUnlockMessage);
+
+            context.Network?.Send(packet);
 
             return true;
         }
 
-        public bool StopProcess(PublisherNetworkClient client, bool success, Dictionary<string, string> args = null)
+        private void NextPublisherOrUnlock()
         {
-            if (ProcessUser == client.UserInfo)
+            while (WaitPublishQueue.TryDequeue(out var newUser))
             {
-                if (client.CurrentFile != null)
-                    EndFile(client);
-
-                if (success)
+                if (newUser?.GetState(true) == true)
                 {
-                    try { runScriptOnStart(); } catch (Exception ex) { BroadcastMessage(ex.ToString()); success = false; }
-
-                    if (success)
-                    {
-                        try
-                        {
-                            success = client.Compressed ? processCompressedTemp(client) : processTemp();
-                        }
-                        catch (Exception ex)
-                        {
-                            success = false;
-                            BroadcastMessage(ex.ToString());
-                        }
-
-                        if (!success)
-                        {
-                            recoveryBackup();
-                            ProcessFolder();
-                        }
-                    }
-
-                    try { runScriptOnEnd(); } catch (Exception ex) { BroadcastMessage(ex.ToString()); }
-
+                    StartPublishProcess(newUser);
+                    return;
                 }
-
-                processFileList.Clear();
-
-                if (success)
-                {
-                    DumpFileList();
-
-                    try { runScriptOnSuccessEnd(args ?? new Dictionary<string, string>()); } catch (Exception ex) { BroadcastMessage(ex.ToString()); }
-
-                    Info.LatestUpdate = DateTime.UtcNow;
-
-                    SaveProjectInfo();
-
-                    broadcastUpdateTime();
-                }
-                else
-                    try { runScriptOnFailedEnd(); } catch (Exception ex) { BroadcastMessage(ex.ToString()); }
-
-                ProcessUser = null;
-
-                patchLocker.Set();
-
-                while (WaitQueue.TryDequeue(out var newUser))
-                {
-                    if (newUser.CurrentNetwork?.AliveState == true && newUser.CurrentNetwork?.Network?.GetState() == true)
-                    {
-                        StartProcess(newUser.CurrentNetwork);
-                        break;
-                    }
-                }
-                return true;
             }
 
-            return false;
+            patchLocker.Set();
         }
 
-        internal void StartFile(IProcessFileContainer client, PublishFileStartRequestModel data)
+
+        public bool FinishPublishProcess(ProjectPublishContext context, bool success, Dictionary<string, string> args = null)
         {
-            EndFile(client);
+            if (success)
+            {
+                try { runScriptOnStart(); } catch (Exception ex) { BroadcastMessage(ex.ToString()); success = false; }
+
+                if (success)
+                {
+                    try
+                    {
+                        success = context.UseCompression ? processCompressedTemp(context) : processTemp(context);
+                    }
+                    catch (Exception ex)
+                    {
+                        success = false;
+                        BroadcastMessage(ex.ToString());
+                    }
+
+                    if (!success)
+                    {
+                        recoveryBackup();
+                        ProcessFolder();
+                    }
+                }
+
+                try { runScriptOnEnd(); } catch (Exception ex) { BroadcastMessage(ex.ToString()); }
+
+            }
+
+            if (success)
+            {
+                DumpFileList();
+
+                try { runScriptOnSuccessEnd(args ?? new Dictionary<string, string>()); } catch (Exception ex) { BroadcastMessage(ex.ToString()); }
+
+                Info.LatestUpdate = DateTime.UtcNow;
+
+                SaveProjectInfo();
+
+                broadcastUpdateTime();
+            }
+            else
+                try { runScriptOnFailedEnd(); } catch (Exception ex) { BroadcastMessage(ex.ToString()); }
+
+            patchLocker.Set();
+
+            while (WaitPublishQueue.TryDequeue(out var newUser))
+            {
+                if (newUser?.AliveState == true && newUser?.Network?.GetState() == true)
+                {
+                    StartPublishProcess(newUser);
+                    break;
+                }
+            }
+            return true;
+        }
+
+        internal void StartPublishFile(ProjectPublishContext context, PublishFileStartRequestModel data)
+        {
+            EndPublishFile(client);
 
             client.CurrentFile = FileInfoList.FirstOrDefault(x => x.RelativePath == data.RelativePath);
 
@@ -668,7 +695,7 @@ namespace ServerPublisher.Server.Info
             client.CurrentFile.StartFile(data.CreateTime, data.UpdateTime);
         }
 
-        internal void EndFile(IProcessFileContainer client)
+        internal void EndPublishFile(ProjectPublishContext context)
         {
             if (client.CurrentFile == null)
                 return;
@@ -909,9 +936,9 @@ namespace ServerPublisher.Server.Info
 
         public List<ProjectFileInfo> FileInfoList { get; private set; }
 
-        public UserInfo ProcessUser { get; private set; }
+        private ConcurrentQueue<PublisherNetworkClient> WaitPublishQueue { get; set; }
 
-        public ConcurrentQueue<UserInfo> WaitQueue { get; set; }
+        private ConcurrentDictionary<Guid, PublisherNetworkClient> ConnectedPublishers { get; } = new ConcurrentDictionary<Guid, PublisherNetworkClient>();
 
 
         private readonly List<UserInfo> users = new List<UserInfo>();
@@ -977,7 +1004,7 @@ namespace ServerPublisher.Server.Info
             CreateWatchers();
             LoadUsers();
 
-            WaitQueue = new ConcurrentQueue<UserInfo>();
+            WaitPublishQueue = new();
 
             LoadProjectInfo();
 
@@ -1099,7 +1126,14 @@ namespace ServerPublisher.Server.Info
 
         public IEnumerable<DownloadFileInfo> FileList { get; set; }
 
-        public FileLogger Logger { get; set; }
+        public FileLogger? Logger { get; set; }
+
+        public void Log(string text)
+        {
+            Logger?.AppendLog(text);
+
+            ProjectInfo.BroadcastMessage(text);
+        }
 
         public async void Reload()
         {
@@ -1107,6 +1141,35 @@ namespace ServerPublisher.Server.Info
 
             await ProjectInfo.Download(this);
 
+        }
+
+        public void Dispose()
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class ProjectPublishContext : IDisposable
+    {
+        public Guid Id { get; } = Guid.NewGuid();
+
+        public bool Actual { get; set; }
+
+        public string TempPath { get; set; }
+
+        public ServerProjectInfo ProjectInfo { get; set; }
+
+        public PublisherNetworkClient Network { get; set; }
+
+        public FileLogger? Logger { get; set; }
+
+        public bool UseCompression { get; set; }
+
+        public void Log(string text)
+        {
+            Logger?.AppendLog(text);
+
+            ProjectInfo.BroadcastMessage(text);
         }
 
         public void Dispose()

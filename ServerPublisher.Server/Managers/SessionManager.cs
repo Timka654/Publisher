@@ -30,7 +30,7 @@ namespace ServerPublisher.Server.Managers
                 if (client.ProjectInfo != null)
                 {
                     client.CurrentFile?.EndFile();
-                    client.ProjectInfo.StopProcess(client, false);
+                    client.ProjectInfo.FinishPublishProcess(client, false);
                 }
             }
             if (client.IsPatchClient)

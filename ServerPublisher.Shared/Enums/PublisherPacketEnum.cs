@@ -7,10 +7,10 @@
         ServerLog,
 
         PublishProjectSignIn,
-        PublishProjectFileList,
         PublishProjectFinish,
         PublishProjectFileStart,
         PublishProjectUploadFilePart,
+        PublishProjectPublishStartMessage,
 
 
 
