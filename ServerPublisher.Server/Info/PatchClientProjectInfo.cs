@@ -98,12 +98,14 @@ namespace ServerPublisher.Server.Info
 
             var waitLockerSource = new CancellationTokenSource();
 
+            DownloadFileInfo[] fileList = null;
+
             downloadUnlockAction = (data) =>
             {
                 downloadUnlockAction = null;
 
-                context.FileList = data.FileList;
-                
+                fileList = data.FileList;
+
                 waitLockerSource.Cancel();
 
                 return Task.CompletedTask;
@@ -115,19 +117,17 @@ namespace ServerPublisher.Server.Info
                 return;
             }
 
-            context.FileList = context.FileList
+            try { await Task.Delay(-1, waitLockerSource.Token); } catch { }
+
+            context.FileList = fileList
                 .Where(x => !Info.IgnoreFilePaths.Any(ig => Regex.IsMatch(x.RelativePath, ig)))
                 .Where(x =>
                 {
-                    x.FileInfo = new FileInfo(Path.Combine(ProjectDirPath, x.RelativePath));
+                    var ex = FileInfoList.FirstOrDefault(b => b.RelativePath == x.RelativePath);
 
-                    if (x.FileInfo.Exists == false)
-                        return true;
-                    string remote = x.Hash;
-                    x.CalculateHash();
-                    return x.Hash != remote;
+                    return ex == null || x.Hash != ex.Hash;
                 })
-                .Reverse()
+                .Select(x => new ProjectFileInfo(ProjectDirPath, new FileInfo(Path.Combine(ProjectDirPath, x.RelativePath)), this))
                 .ToList();
 
             int offset = 0;
@@ -168,7 +168,7 @@ namespace ServerPublisher.Server.Info
             patchLocker.Set();
         }
 
-        private async Task<bool> downloadFile(ProjectDownloadContext context, DownloadFileInfo file)
+        private async Task<bool> downloadFile(ProjectDownloadContext context, ProjectFileInfo file)
         {
             bool EOF = false;
 
