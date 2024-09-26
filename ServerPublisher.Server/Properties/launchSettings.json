@@ -2,13 +2,22 @@
   "profiles": {
     "ServerPublisher.Server": {
       "commandName": "Project",
-      "commandLineArgs": "/action:service /webService",
-      "workingDirectory": "D:\\Temp\\publisher\\server"
+      "commandLineArgs": "/action:service",
+      "workingDirectory": "D:\\Temp\\publisher2\\server"
     },
     "WSL": {
       "commandName": "WSL2",
-      "environmentVariables": {},
       "distributionName": ""
+    },
+    "create_project_command": {
+      "commandName": "Project",
+      "commandLineArgs": "/action:create_project /name:devProject1 /directory:D:\\Temp\\publisher2\\server_dev_projects\\project1 /full_replace:false /backup:true /project_id:273a2073-5a66-43aa-ac08-c2e6e7838bb7",
+      "workingDirectory": "D:\\Temp\\publisher2\\server"
+    },
+    "create_user_command": {
+      "commandName": "Project",
+      "commandLineArgs": "/action:create_user /name:dev_user2 /project_id:273a2073-5a66-43aa-ac08-c2e6e7838bb7",
+      "workingDirectory": "D:\\Temp\\publisher2\\server"
     }
   }
 }

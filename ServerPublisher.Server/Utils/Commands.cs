@@ -60,7 +60,7 @@ namespace ServerPublisher.Server.Utils
             {
                 if (flags.Contains("y", StringComparison.OrdinalIgnoreCase))
                 {
-                    Console.WriteLine($"Flags contains 'y' - confirm action");
+                    PublisherServer.ServerLogger.AppendInfo($"Flags contains 'y' - confirm action");
                     return true;
                 }
             }
@@ -78,7 +78,7 @@ namespace ServerPublisher.Server.Utils
                 else if (latestInput.Equals("n", StringComparison.OrdinalIgnoreCase))
                     return false;
                 else
-                    Console.WriteLine($"Value cannot be {latestInput}. Try again or press Ctrl+C for cancel");
+                    PublisherServer.ServerLogger.AppendError($"Value cannot be {latestInput}. Try again or press Ctrl+C for cancel");
 
             } while (true);
         }
@@ -205,7 +205,7 @@ namespace ServerPublisher.Server.Utils
                     return;
                 else if (exists != null)
                 {
-                    Console.WriteLine($"Already exist: {exists.ProjectDirPath}");
+                    PublisherServer.ServerLogger.AppendInfo($"Already exist: {exists.ProjectDirPath}");
 
                     if (!ConfirmAction(args))
                         return;
@@ -308,14 +308,14 @@ namespace ServerPublisher.Server.Utils
 
             if (!args.TryGetOutValue("input_cipher_key", out string input_cipher_key))
             {
-                input_cipher_key = PublisherServer.Configuration.GetValue<string>("server.io.output.key");
+                input_cipher_key = PublisherServer.Configuration.Publisher.Server.Cipher.OutputKey;
 
                 PublisherServer.ServerLogger.AppendInfo($"Not contains \"input_cipher_key\" parameter. Set from configuration {input_cipher_key}");
             }
 
             if (!args.TryGetOutValue("output_cipher_key", out string output_cipher_key))
             {
-                output_cipher_key = PublisherServer.Configuration.GetValue<string>("server.io.input.key");
+                output_cipher_key = PublisherServer.Configuration.Publisher.Server.Cipher.InputKey;
 
                 PublisherServer.ServerLogger.AppendInfo($"Not contains \"output_cipher_key\" parameter. Set from configuration {output_cipher_key}");
             }

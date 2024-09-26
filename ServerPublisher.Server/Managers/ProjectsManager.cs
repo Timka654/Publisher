@@ -22,7 +22,7 @@ namespace ServerPublisher.Server.Managers
     {
         public static ProjectsManager Instance { get; private set; }
 
-        public static string ProjectsFilePath => Path.Combine(Application.Directory, PublisherServer.Configuration.GetValue<string>("paths:projects_library", Path.Combine("data", "projects.json")));
+        public static string ProjectsFilePath => PublisherServer.Configuration.Publisher.ProjectConfiguration.Server.LibraryFilePath;
 
         private FileSystemWatcher projectsLibraryWatcher;
 
@@ -59,10 +59,17 @@ namespace ServerPublisher.Server.Managers
             {
                 client.UserInfo = user;
 
+                client.PublishContext = new ProjectPublishContext()
+                {
+                    ProjectInfo = proj,
+                    Network = client,
+                    Actual = false,
+                    Platform = request.OSType,
+                    UploadMethod = request.UploadMethod
+                };
+
                 proj.StartPublishProcess(client);
 
-                client.PublishContext.Platform = request.OSType;
-                client.PublishContext.UploadMethod = request.UploadMethod;
 
                 return SignStateEnum.Ok;
             }
@@ -184,8 +191,8 @@ namespace ServerPublisher.Server.Managers
         {
             var result = base.AddProject(project);
 
-            if (result)
-                PublisherServer.ServiceManager.TryRegisterService(project);
+            //if (result)
+            //    PublisherServer.ServiceManager.TryRegisterService(project);
 
             return result;
         }
@@ -194,8 +201,8 @@ namespace ServerPublisher.Server.Managers
         {
             var result = base.RemoveProject(project);
 
-            if (result && fullRemove)
-                PublisherServer.ServiceManager.UnregisterService(project);
+            //if (result && fullRemove)
+            //    PublisherServer.ServiceManager.UnregisterService(project);
 
             return result;
         }

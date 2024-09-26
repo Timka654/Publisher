@@ -14,7 +14,7 @@ namespace ServerPublisher.Server.Managers
     {
         public static ServiceManager Instance { get; private set; }
 
-        static IConfiguration configuration => PublisherServer.Configuration;
+        static ConfigurationSettingsInfo configuration => PublisherServer.Configuration;
 
         public ISystemServiceProvider Provider { get; }
 
@@ -23,7 +23,7 @@ namespace ServerPublisher.Server.Managers
             Instance = this;
 
             // linux first
-            if (configuration.GetValue<bool>("service.use_integrate"))
+            if (configuration.Publisher.Service.UseIntegrate)
                 Provider = null; // new IntegratedServiceProvider(this);
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 Provider = new LinuxServiceProvider(this);

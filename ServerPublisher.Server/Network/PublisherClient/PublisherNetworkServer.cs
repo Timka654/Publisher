@@ -10,6 +10,7 @@ using ServerPublisher.Shared.Enums;
 using NSL.SocketCore.Extensions.Buffer;
 using ServerPublisher.Server.Network.PublisherClient.Packets.PacketRepository;
 using NSL.SocketCore.Utils.Logger;
+using ServerPublisher.Server.Info;
 
 namespace ServerPublisher.Server.Network.PublisherClient
 {
@@ -17,18 +18,22 @@ namespace ServerPublisher.Server.Network.PublisherClient
     {
         static TCPServerListener<PublisherNetworkClient> listener;
 
-        static IConfiguration Configuration => PublisherServer.Configuration;
+        static ConfigurationSettingsInfo Configuration => PublisherServer.Configuration;
+
+        static ConfigurationSettingsInfo__Publisher__Server ServerSettings => Configuration.Publisher.Server;
+        static ConfigurationSettingsInfo__Publisher__Server__IO IOSettings => ServerSettings.IO;
+        static ConfigurationSettingsInfo__Publisher__Server__Cipher CipherSettings => ServerSettings.Cipher;
 
         static IBasicLogger Logger => PublisherServer.AppLogger;
 
 
-        static int BindingPort => Configuration.GetValue<int>("publisher:network:binding_port", 6583);
+        static int BindingPort => IOSettings.Port;
 
-        static int Backlog => Configuration.GetValue<int>("publisher:network:backlog", 100);
+        static int Backlog => IOSettings.Backlog;
 
-        static string TransportInputCipherKey => Configuration.GetValue("publisher:network:transport:input_cipher_key", "!{b1HX11R**");
+        static string CipherInputKey => CipherSettings.InputKey;
 
-        static string TransportOutputCipherKey => Configuration.GetValue("publisher:network:transport:output_cipher_key", "!{b1HX11R**");
+        static string CipherOutputKey => CipherSettings.OutputKey;
 
         public static void Initialize()
         {
@@ -71,9 +76,9 @@ namespace ServerPublisher.Server.Network.PublisherClient
                             , pid => Enum.GetName((PublisherPacketEnum)pid)
                             , pid => Enum.GetName((PublisherPacketEnum)pid));
 
-                        builder.WithOutputCipher(new XRC4Cipher(TransportOutputCipherKey));
+                        builder.WithOutputCipher(new XRC4Cipher(CipherOutputKey));
 
-                        builder.WithInputCipher(new XRC4Cipher(TransportInputCipherKey));
+                        builder.WithInputCipher(new XRC4Cipher(CipherInputKey));
 
                         builder.AddDisconnectHandle(client =>
                         {

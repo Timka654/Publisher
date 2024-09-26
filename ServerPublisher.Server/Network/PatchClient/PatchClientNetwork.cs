@@ -62,7 +62,7 @@ namespace ServerPublisher.Server.Network
                     builder.WithInputCipher(new XRC4Cipher(patchInfo.InputCipherKey));
                     builder.WithOutputCipher(new XRC4Cipher(patchInfo.OutputCipherKey));
 
-                    builder.WithBufferSize(PublisherServer.Configuration.GetValue<int>("patch:io:buffer_size"));
+                    builder.WithBufferSize(PublisherServer.Configuration.Publisher.Proxy.BufferSize);
 
                     builder.AddConnectHandle(Options_OnClientConnectEvent);
                     builder.AddConnectHandle(Options_OnClientDisconnectEvent);
@@ -165,7 +165,7 @@ namespace ServerPublisher.Server.Network
             return response;
         }
 
-        private static int BufferSize => PublisherServer.Configuration.GetValue<int>("patch:io:buffer_size");
+        private static int BufferSize => PublisherServer.Configuration.Publisher.Proxy.BufferSize;
 
         private static int GetMaxReceiveSize() => BufferSize - 32;
 

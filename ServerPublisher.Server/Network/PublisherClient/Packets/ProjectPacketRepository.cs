@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using ServerPublisher.Shared.Models.ResponseModel;
 using ServerPublisher.Shared.Enums;
 using System;
+using System.Linq;
 
 namespace ServerPublisher.Server.Network.PublisherClient.Packets.PacketRepository
 {
@@ -53,7 +54,7 @@ namespace ServerPublisher.Server.Network.PublisherClient.Packets.PacketRepositor
             new PublishSignInResponseModel
             {
                 Result = result,
-                IgnoreFilePatterns = client.PublishContext?.ProjectInfo.Info.IgnoreFilePaths
+                IgnoreFilePatterns = client.PublishContext?.ProjectInfo.IgnorePathsPatters.ToList()
             }.WriteFullTo(response);
 
             return true;

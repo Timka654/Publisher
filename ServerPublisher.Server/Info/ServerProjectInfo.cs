@@ -49,7 +49,7 @@ namespace ServerPublisher.Server.Info
 
         #region Scripts
 
-        public static string GlobalScriptsDirPath => Path.Combine(Application.Directory, "Data", "Global", "scripts");
+        public static string GlobalScriptsDirPath => PublisherServer.Configuration.Publisher.ProjectConfiguration.Server.GlobalScriptsFolderPath;
 
         public string ScriptsDirPath => Path.Combine(PublisherDirPath, "scripts");
 
@@ -559,13 +559,10 @@ namespace ServerPublisher.Server.Info
 
         public bool StartPublishProcess(PublisherNetworkClient client)
         {
-            client.PublishContext ??= new ProjectPublishContext() { ProjectInfo = this, Network = client, Actual = false };
-
             var context = client.PublishContext;
 
             if (context.ProjectInfo != this)
                 return false;
-
 
 
             if (!patchLocker.WaitOne(0))
@@ -782,7 +779,7 @@ namespace ServerPublisher.Server.Info
             foreach (var file in files)
             {
                 filePath = file.FullName.Remove(0, ProjectDirPath.Length);
-                if (Info.IgnoreFilePaths.Any(x => Regex.IsMatch(filePath, x)))
+                if (IgnorePathsPatters.Any(x => Regex.IsMatch(filePath, x)))
                     continue;
                 var pfi = new ProjectFileInfo(ProjectDirPath, file, this);
 
@@ -827,7 +824,7 @@ namespace ServerPublisher.Server.Info
             {
                 filePath = Path.GetRelativePath(ProjectDirPath, file.FullName);
 
-                if (Info.IgnoreFilePaths.Any(x => Regex.IsMatch(filePath, x)))
+                if (IgnorePathsPatters.Any(x => Regex.IsMatch(filePath, x)))
                     continue;
 
                 if (FileInfoList.Any(x => x.RelativePath == filePath))
@@ -942,16 +939,6 @@ namespace ServerPublisher.Server.Info
         internal void Reload(ProjectInfoData info)
         {
             Info = info;
-
-            if (info.IgnoreFilePaths == null)
-                info.IgnoreFilePaths = new List<string>();
-
-            if (!info.IgnoreFilePaths.Contains(Path.Combine("Publisher", "[\\s|\\S]")))
-                info.IgnoreFilePaths.Add(Path.Combine("Publisher", "[\\s|\\S]"));
-
-            if (info.IgnoreFilePaths.RemoveAll(x => x.Contains("**")) > 0)
-                SaveProjectInfo();
-
             ProcessFolder();
         }
 
@@ -1019,6 +1006,9 @@ namespace ServerPublisher.Server.Info
             }
         }
 
+        public string[] IgnorePathsPatters
+            => Info.IgnoreFilePaths.Concat(PublisherServer.Configuration.Publisher.ProjectConfiguration.Base.IgnoreFilePaths).ToArray();
+
         public ServerProjectInfo(string projectPath)
         {
             ProjectDirPath = projectPath;
@@ -1049,10 +1039,8 @@ namespace ServerPublisher.Server.Info
                 Name = args["name"],
                 FullReplace = args.ContainsKey("full_replace") && Convert.ToBoolean(args["full_replace"]),
                 Backup = (args.ContainsKey("backup") && Convert.ToBoolean(args["backup"])) || !args.ContainsKey("backup"),
-                IgnoreFilePaths = new List<string>() { $"Publisher{Path.DirectorySeparatorChar}[\\s|\\S]*" }
+                IgnoreFilePaths = PublisherServer.Configuration.Publisher.ProjectConfiguration.Default.IgnoreFilePaths.ToList()
             };
-
-            Info.IgnoreFilePaths.AddRange(PublisherServer.Configuration.GetValue<string[]>("default.IgnoreFilePaths"));
 
             ProjectDirPath = directory;
 

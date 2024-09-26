@@ -119,7 +119,7 @@ namespace ServerPublisher.Server.Info
             try { await Task.Delay(-1, waitLockerSource.Token); } catch { }
 
             context.FileList = fileList
-                .Where(x => !Info.IgnoreFilePaths.Any(ig => Regex.IsMatch(x.RelativePath, ig)))
+                .Where(x => !IgnorePathsPatters.Any(ig => Regex.IsMatch(x.RelativePath, ig)))
                 .Where(x =>
                 {
                     var ex = FileInfoList.FirstOrDefault(b => b.RelativePath == x.RelativePath);

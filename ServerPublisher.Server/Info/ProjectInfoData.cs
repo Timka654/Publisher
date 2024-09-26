@@ -16,7 +16,7 @@ namespace ServerPublisher.Server.Info
 
         public bool PreventScriptExecution { get; set; } = false;
 
-        public List<string> IgnoreFilePaths { get; set; }
+        public List<string> IgnoreFilePaths { get; set; } = [];
 
         public DateTime? LatestUpdate { get; set; }
 
