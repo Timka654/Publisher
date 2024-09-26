@@ -5,6 +5,7 @@ using NSL.SocketCore.Utils.Logger;
 using ServerPublisher.Server.Info;
 using ServerPublisher.Server.Managers;
 using ServerPublisher.Server.Network.PublisherClient;
+using ServerPublisher.Shared.Utils;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -25,7 +26,7 @@ namespace ServerPublisher.Server
 #if RELEASE
         public static FileLogger ServerLogger { get; } = new FileLogger(Path.Combine(Application.Directory, "logs", "server"), handleUnhandledThrow: true);
 #else
-        public static FileLogger ServerLogger { get; } = new FileLogger(Path.Combine("logs", "server"), handleUnhandledThrow: true);
+        public static FileLogger ServerLogger { get; } = new FileLogger(Path.Combine("logs", "server").GetNormalizedPath(), handleUnhandledThrow: true);
 #endif
 
 

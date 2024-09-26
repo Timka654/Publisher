@@ -1,4 +1,5 @@
 ﻿using NSL.Generators.BinaryTypeIOGenerator.Attributes;
+using ServerPublisher.Shared.Utils;
 using System;
 using System.IO;
 using System.Linq;
@@ -23,7 +24,7 @@ namespace ServerPublisher.Shared.Info
         {
             FileInfo = finfo;
 
-            RelativePath = Path.GetRelativePath(dir, finfo.FullName);
+            RelativePath = finfo.GetNormalizedRelativePath(dir);
         }
 
         public void CalculateHash()
@@ -36,7 +37,7 @@ namespace ServerPublisher.Shared.Info
 
             using MD5 md5 = MD5.Create();
 
-            Hash = string.Join("", md5.ComputeHash(File.ReadAllBytes(FileInfo.FullName)).Select(x => x.ToString("X2")));
+            Hash = string.Join("", md5.ComputeHash(File.ReadAllBytes(FileInfo.GetNormalizedFilePath())).Select(x => x.ToString("X2")));
         }
 
         public BasicFileInfo()

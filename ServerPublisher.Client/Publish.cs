@@ -17,6 +17,7 @@ using ServerPublisher.Shared.Models.ResponseModel;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 using ServerPublisher.Shared.Models.RequestModels;
+using ServerPublisher.Shared.Utils;
 
 namespace ServerPublisher.Client
 {
@@ -283,7 +284,7 @@ namespace ServerPublisher.Client
 
                     var archiveFileInfo = new FileInfo(archivePath);
 
-                    await UploadFile(new BasicFileInfo(archiveFileInfo.Directory.FullName, archiveFileInfo), true);
+                    await UploadFile(new BasicFileInfo(archiveFileInfo.Directory.GetNormalizedDirectoryPath(), archiveFileInfo), true);
                 }
                 else
                 {
@@ -347,7 +348,7 @@ namespace ServerPublisher.Client
             Parallel.ForEach(fileList,
                 item =>
             {
-                if (ignorePatternList.Any(x => Regex.IsMatch(Path.GetRelativePath(dir, item), x)))
+                if (ignorePatternList.Any(x => Regex.IsMatch(Path.GetRelativePath(dir, item).GetNormalizedPath(), x)))
                     return;
 
                 BasicFileInfo temp = new BasicFileInfo(dir, new FileInfo(item));

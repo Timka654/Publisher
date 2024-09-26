@@ -8,6 +8,7 @@ using ServerPublisher.Server.Managers.Storages;
 using ServerPublisher.Server.Network.PublisherClient;
 using ServerPublisher.Shared.Enums;
 using ServerPublisher.Shared.Models.RequestModels;
+using ServerPublisher.Shared.Utils;
 using System;
 using System.IO;
 using System.Linq;
@@ -84,7 +85,7 @@ namespace ServerPublisher.Server.Managers
 
             var fi = new FileInfo(ProjectsFilePath);
 
-            projectsLibraryWatcher = new FileSystemWatcher(fi.Directory.FullName, fi.Name);
+            projectsLibraryWatcher = new FileSystemWatcher(fi.Directory.GetNormalizedDirectoryPath(), fi.Name);
             projectsLibraryWatcher.Deleted += DirectoryWatcher_Deleted;
             projectsLibraryWatcher.Changed += DirectoryWatcher_Changed;
             projectsLibraryWatcher.Created += DirectoryWatcher_Changed;
@@ -157,7 +158,7 @@ namespace ServerPublisher.Server.Managers
                 return;
             }
 
-            var projectPathes = JsonConvert.DeserializeObject<string[]>(File.ReadAllText(fileInfo.FullName));
+            var projectPathes = JsonConvert.DeserializeObject<string[]>(File.ReadAllText(fileInfo.GetNormalizedFilePath()));
 
             if (projectPathes == null)
                 return;

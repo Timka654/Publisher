@@ -14,6 +14,7 @@ using ServerPublisher.Shared.Models.ResponseModel;
 using ServerPublisher.Shared.Info;
 using ServerPublisher.Shared.Models;
 using System;
+using ServerPublisher.Shared.Utils;
 
 namespace ServerPublisher.Server.Info
 {
@@ -141,7 +142,7 @@ namespace ServerPublisher.Server.Info
                     .Select(d => new FileDownloadDataModel()
                     {
                         Data = File.ReadAllBytes(d),
-                        RelativePath = Path.GetRelativePath(ProjectDirPath, d)
+                        RelativePath = Path.GetRelativePath(ProjectDirPath, d).GetNormalizedPath()
                     }).ToArray();
             }
 

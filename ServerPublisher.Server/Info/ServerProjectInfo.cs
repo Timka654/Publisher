@@ -21,6 +21,7 @@ using ServerPublisher.Shared.Info;
 using ServerPublisher.Shared.Models.RequestModels;
 using Microsoft.Extensions.Configuration;
 using ServerPublisher.Shared.Models.ResponseModel;
+using ServerPublisher.Shared.Utils;
 
 namespace ServerPublisher.Server.Info
 {
@@ -73,8 +74,10 @@ namespace ServerPublisher.Server.Info
 
         private void CheckScriptsExists(NSL.Extensions.NetScript.Script script = null)
         {
-            if (File.Exists(Path.Combine(ScriptsDirPath, "ScriptCore.cs")) == false)
-                File.WriteAllText(Path.Combine(ScriptsDirPath, "ScriptCore.cs"), (script ?? new NSL.Extensions.NetScript.Script()).DumpCoreCode());
+            var corePath = Path.Combine(ScriptsDirPath, "ScriptCore.cs").GetNormalizedPath();
+
+            if (File.Exists(corePath) == false)
+                File.WriteAllText(corePath, (script ?? new NSL.Extensions.NetScript.Script()).DumpCoreCode());
 
             if (File.Exists(OnStartScriptPath) == false)
             {
@@ -423,7 +426,7 @@ namespace ServerPublisher.Server.Info
             if (!di.Exists)
                 di.Create();
 
-            return di.CreateSubdirectory($"{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid()}").FullName;
+            return di.CreateSubdirectory($"{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid()}").GetNormalizedDirectoryPath();
         }
 
         private bool processCompressedTemp(ProjectPublishContext context)
@@ -432,7 +435,7 @@ namespace ServerPublisher.Server.Info
 
             context.FileMap.Clear();
 
-            var archivePath = Path.Combine(TempDirPath, archiveFile.RelativePath);
+            var archivePath = Path.Combine(TempDirPath, archiveFile.RelativePath).GetNormalizedPath();
 
             using (var archive = ZipFile.OpenRead(archivePath))
             {
@@ -511,7 +514,7 @@ namespace ServerPublisher.Server.Info
             if (Info.Backup == false)
                 return;
 
-            currentBackupDirPath = Path.Combine(ProjectBackupPath, DateTime.UtcNow.ToString("yyyy-MM-ddTHH_mm_ss"));
+            currentBackupDirPath = Path.Combine(ProjectBackupPath, DateTime.UtcNow.ToString("yyyy-MM-ddTHH_mm_ss")).GetNormalizedPath();
         }
 
         private void createFileBackup(ProjectFileInfo file)
@@ -522,12 +525,12 @@ namespace ServerPublisher.Server.Info
             if (file.FileInfo.Exists == false)
                 return;
 
-            var fi = new FileInfo(Path.Combine(currentBackupDirPath, file.RelativePath));
+            var fi = new FileInfo(Path.Combine(currentBackupDirPath, file.RelativePath).GetNormalizedPath());
 
             if (fi.Directory.Exists == false)
                 fi.Directory.Create();
 
-            file.FileInfo.CopyTo(fi.FullName);
+            file.FileInfo.CopyTo(fi.GetNormalizedFilePath());
         }
 
         private bool recoveryBackup()
@@ -541,7 +544,7 @@ namespace ServerPublisher.Server.Info
 
             foreach (var item in dir.GetFiles("*", SearchOption.AllDirectories))
             {
-                item.CopyTo(Path.Combine(ProjectDirPath, Path.GetRelativePath(dir.FullName, item.FullName)), true);
+                item.CopyTo(Path.Combine(ProjectDirPath, item.GetNormalizedRelativePath(dir).GetNormalizedPath()).GetNormalizedPath(), true);
             }
 
             dir.Delete(true);
@@ -693,7 +696,7 @@ namespace ServerPublisher.Server.Info
 
         internal Guid? StartPublishFile(ProjectPublishContext context, PublishProjectFileStartRequestModel data)
         {
-            var file = new ProjectFileInfo(ProjectDirPath, new FileInfo(Path.Combine(ProjectDirPath, data.RelativePath)), this);
+            var file = new ProjectFileInfo(ProjectDirPath, new FileInfo(Path.Combine(ProjectDirPath, data.RelativePath).GetNormalizedPath()), this);
 
             Guid id = default;
 
@@ -754,7 +757,7 @@ namespace ServerPublisher.Server.Info
 
                 foreach (var item in FileInfoList)
                 {
-                    item.FileInfo = new FileInfo(Path.Combine(ProjectDirPath, item.RelativePath));
+                    item.FileInfo = new FileInfo(Path.Combine(ProjectDirPath, item.RelativePath).GetNormalizedPath());
                     item.Project = this;
                     if (!item.FileInfo.Exists)
                         removed.Add(item);
@@ -778,7 +781,7 @@ namespace ServerPublisher.Server.Info
 
             foreach (var file in files)
             {
-                filePath = file.FullName.Remove(0, ProjectDirPath.Length);
+                filePath = Path.GetRelativePath(ProjectDirPath, file.GetNormalizedFilePath()).GetNormalizedPath();
                 if (IgnorePathsPatters.Any(x => Regex.IsMatch(filePath, x)))
                     continue;
                 var pfi = new ProjectFileInfo(ProjectDirPath, file, this);
@@ -822,7 +825,7 @@ namespace ServerPublisher.Server.Info
 
             foreach (var file in RecurciveFiles(di))
             {
-                filePath = Path.GetRelativePath(ProjectDirPath, file.FullName);
+                filePath = Path.GetRelativePath(ProjectDirPath, file.GetNormalizedFilePath()).GetNormalizedPath();
 
                 if (IgnorePathsPatters.Any(x => Regex.IsMatch(filePath, x)))
                     continue;
@@ -902,14 +905,14 @@ namespace ServerPublisher.Server.Info
                 return false;
             }
 
-            File.WriteAllText(Path.Combine(UsersPublicksDirPath, $"{user.Name}_{user.Id}.pubuk"), JsonConvert.SerializeObject(new
+            File.WriteAllText(Path.Combine(UsersPublicksDirPath, $"{user.Name}_{user.Id}.pubuk").GetNormalizedPath(), JsonConvert.SerializeObject(new
             {
                 user.Id,
                 user.Name,
                 user.RSAPublicKey
             }, jsonSettings));
 
-            File.WriteAllText(Path.Combine(UsersDirPath, $"{user.Name}_{user.Id}.priuk"), JsonConvert.SerializeObject(new
+            File.WriteAllText(Path.Combine(UsersDirPath, $"{user.Name}_{user.Id}.priuk").GetNormalizedPath(), JsonConvert.SerializeObject(new
             {
                 user.Id,
                 user.Name,
@@ -967,8 +970,10 @@ namespace ServerPublisher.Server.Info
             {
                 Directory.CreateDirectory(PublisherDirPath);
 
-                if (Directory.Exists(Path.Combine(Application.Directory, "Data", "ProjectTemplate")))
-                    DirectoryCopy(Path.Combine(Application.Directory, "Data", "ProjectTemplate"), PublisherDirPath, true);
+                var templatePath = Path.Combine(Application.Directory, "Data", "ProjectTemplate").GetNormalizedPath();
+
+                if (Directory.Exists(templatePath))
+                    DirectoryCopy(templatePath, PublisherDirPath, true);
             }
 
             if (!Directory.Exists(UsersDirPath))
@@ -1100,7 +1105,7 @@ namespace ServerPublisher.Server.Info
             FileInfo[] files = dir.GetFiles();
             foreach (FileInfo file in files)
             {
-                string tempPath = Path.Combine(destDirName, file.Name);
+                string tempPath = Path.Combine(destDirName, file.Name).GetNormalizedPath();
                 file.CopyTo(tempPath, false);
             }
 
@@ -1109,7 +1114,7 @@ namespace ServerPublisher.Server.Info
             {
                 foreach (DirectoryInfo subdir in dirs)
                 {
-                    string tempPath = Path.Combine(destDirName, subdir.Name);
+                    string tempPath = Path.Combine(destDirName, subdir.Name).GetNormalizedPath();
                     DirectoryCopy(subdir.FullName, tempPath, copySubDirs);
                 }
             }

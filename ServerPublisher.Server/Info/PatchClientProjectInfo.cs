@@ -8,12 +8,13 @@ using System.Text.RegularExpressions;
 using ServerPublisher.Shared.Info;
 using System.Threading;
 using ServerPublisher.Shared.Models.ResponseModel;
+using ServerPublisher.Shared.Utils;
 
 namespace ServerPublisher.Server.Info
 {
     public partial class ServerProjectInfo
     {
-        private string PatchSignFilePath => Info.PatchInfo == null ? Guid.NewGuid().ToString() : Path.Combine(UsersPublicksDirPath, Info.PatchInfo.SignName + ".pubuk");
+        private string PatchSignFilePath => Info.PatchInfo == null ? Guid.NewGuid().ToString() : Path.Combine(UsersPublicksDirPath, Info.PatchInfo.SignName + ".pubuk").GetNormalizedPath();
 
         public byte[] GetPatchSignData()
         {
@@ -126,7 +127,7 @@ namespace ServerPublisher.Server.Info
 
                     return ex == null || x.Hash != ex.Hash;
                 })
-                .Select(x => new ProjectFileInfo(ProjectDirPath, new FileInfo(Path.Combine(ProjectDirPath, x.RelativePath)), this))
+                .Select(x => new ProjectFileInfo(ProjectDirPath, new FileInfo(Path.Combine(ProjectDirPath, x.RelativePath).GetNormalizedPath()), this))
                 .ToList();
 
             int offset = 0;
@@ -155,7 +156,7 @@ namespace ServerPublisher.Server.Info
 
             foreach (var item in result.FileList)
             {
-                File.WriteAllBytes(Path.Combine(ProjectDirPath, item.RelativePath), item.Data);
+                File.WriteAllBytes(Path.Combine(ProjectDirPath, item.RelativePath).GetNormalizedPath(), item.Data);
             }
 
             Info.LatestUpdate = context.UpdateTime;
@@ -178,7 +179,7 @@ namespace ServerPublisher.Server.Info
             if (startResponse?.Result != true)
                 return false;
 
-            var fileInfo = new FileInfo(Path.Combine(context.TempPath, file.RelativePath));
+            var fileInfo = new FileInfo(Path.Combine(context.TempPath, file.RelativePath).GetNormalizedPath());
 
             using var fs = fileInfo.Create();
 

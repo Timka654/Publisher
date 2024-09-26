@@ -1,4 +1,5 @@
 ﻿using ServerPublisher.Shared.Info;
+using ServerPublisher.Shared.Utils;
 using System;
 using System.IO;
 
@@ -6,7 +7,7 @@ namespace ServerPublisher.Server.Info
 {
     public class ProjectFileInfo : BasicFileInfo
     {
-        public string Path => FileInfo.FullName;
+        public string Path => FileInfo.GetNormalizedFilePath();
 
         public override DateTime LastChanged => FileInfo.LastWriteTimeUtc;
 
@@ -24,7 +25,7 @@ namespace ServerPublisher.Server.Info
         private FileInfo fi;
 
         public string GetTempPath()
-            => System.IO.Path.Combine(Project.TempDirPath, RelativePath);
+            => System.IO.Path.Combine(Project.TempDirPath, RelativePath).GetNormalizedPath();
 
         public void StartFile(DateTime createTime, DateTime updateTime)
         {
@@ -66,17 +67,17 @@ namespace ServerPublisher.Server.Info
 
             if (fi.Exists == false)
             {
-                Project.BroadcastMessage($"Error!! {fi.FullName} not exists!!");
+                Project.BroadcastMessage($"Error!! {fi.GetNormalizedFilePath()} not exists!!");
                 return false;
             }
 
             if (FileInfo.Directory.Exists == false)
                 FileInfo.Directory.Create();
 
-            fi.MoveTo(FileInfo.FullName, true);
+            fi.MoveTo(FileInfo.GetNormalizedFilePath(), true);
 
             if (!FileInfo.Exists)
-                FileInfo = new FileInfo(FileInfo.FullName);
+                FileInfo = new FileInfo(FileInfo.GetNormalizedFilePath());
 
             CalculateHash();
 

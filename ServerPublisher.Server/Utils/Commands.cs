@@ -11,6 +11,7 @@ using System.Runtime.InteropServices;
 using NSL.Logger;
 using ServerPublisher.Shared.Info;
 using Microsoft.Extensions.Configuration;
+using ServerPublisher.Shared.Utils;
 
 namespace ServerPublisher.Server.Utils
 {
@@ -271,13 +272,13 @@ namespace ServerPublisher.Server.Utils
 
                 if (!fileInfo.Exists)
                 {
-                    PublisherServer.ServerLogger.AppendError($"{fileInfo.FullName} not exists");
+                    PublisherServer.ServerLogger.AppendError($"{fileInfo.GetNormalizedFilePath()} not exists");
 
                     return;
                 }
                 if (fileInfo.Extension != "priuk")
                 {
-                    PublisherServer.ServerLogger.AppendError($"{fileInfo.FullName} must have .priuk extension");
+                    PublisherServer.ServerLogger.AppendError($"{fileInfo.GetNormalizedFilePath()} must have .priuk extension");
 
                     return;
                 }
@@ -286,7 +287,7 @@ namespace ServerPublisher.Server.Utils
 
                 File.Copy(path, dest, true);
 
-                PublisherServer.ServerLogger.AppendError($"{fileInfo.FullName} private key copied to {projectInfo.Info.Name} project ({dest})");
+                PublisherServer.ServerLogger.AppendError($"{fileInfo.GetNormalizedFilePath()} private key copied to {projectInfo.Info.Name} project ({dest})");
             }
         }
 
@@ -378,7 +379,7 @@ namespace ServerPublisher.Server.Utils
 
                 foreach (var item in files)
                 {
-                    item.CopyTo(Path.Combine(pidest.UsersDirPath, item.Name), true);
+                    item.CopyTo(Path.Combine(pidest.UsersDirPath, item.Name).GetNormalizedPath(), true);
                 }
 
                 if (!args.ContainsKey("only_private"))
@@ -389,7 +390,7 @@ namespace ServerPublisher.Server.Utils
 
                     foreach (var item in files)
                     {
-                        item.CopyTo(Path.Combine(pidest.UsersPublicksDirPath, item.Name), true);
+                        item.CopyTo(Path.Combine(pidest.UsersPublicksDirPath, item.Name).GetNormalizedPath(), true);
                     }
 
                     PublisherServer.ServerLogger.AppendError($"{priKeyCount} private and {pubKeyCount} public keys copied from  {pisrc.Info.Name} to {pidest.Info.Name}");
