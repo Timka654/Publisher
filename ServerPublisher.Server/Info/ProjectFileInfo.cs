@@ -24,12 +24,9 @@ namespace ServerPublisher.Server.Info
         private DateTime? updateTime;
         private FileInfo fi;
 
-        public string GetTempPath()
-            => System.IO.Path.Combine(Project.TempDirPath, RelativePath).GetNormalizedPath();
-
-        public void StartFile(DateTime createTime, DateTime updateTime)
+        public void StartFile(ProjectPublishContext context, DateTime createTime, DateTime updateTime)
         {
-            fi = new FileInfo(GetTempPath());
+            fi = new FileInfo(System.IO.Path.Combine(context.TempPath, RelativePath).GetNormalizedPath());
 
             if (fi.Directory.Exists == false)
                 fi.Directory.Create();
@@ -61,9 +58,9 @@ namespace ServerPublisher.Server.Info
             return true;
         }
 
-        public bool TempRelease()
+        public bool TempRelease(IProcessingFilesContext context)
         {
-            var fi = new FileInfo(GetTempPath());
+            var fi = new FileInfo(System.IO.Path.Combine(context.TempPath, RelativePath).GetNormalizedPath());
 
             if (fi.Exists == false)
             {

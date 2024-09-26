@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
+using NSL.Extensions.NetScript;
 using System.IO;
 
 namespace ServerPublisher.Server.Info
@@ -75,6 +76,16 @@ namespace ServerPublisher.Server.Info
 
         [ConfigurationKeyName("global.scripts.folder.path")]
         public string GlobalScriptsFolderPath { get; set; } = Path.Combine("data", "global", "scripts");
+
+        [ConfigurationKeyName("scripts.default.usings")]
+        public string[] ScriptsDefaultUsings { get; set; } = [
+            "System",
+            "System.IO",
+            "System.Collections",
+            "System.Collections.Generic",
+            "ServerPublisher.Server.Info",
+            "ServerPublisher.Server.Scripts"
+            ];
     }
 
     public class ConfigurationSettingsInfo__Project_Configuration__Values

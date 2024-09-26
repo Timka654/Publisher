@@ -15,7 +15,7 @@ if ([System.IO.File]::Exists("$currLocation/Publisher.Client.deps.json") -eq $fa
 
 $setupPath = ""
 do {
-    $setupPath = GetValue -text "Install path"
+    $setupPath = GetValue -text "Install path" -defaultValue "C:\Program Files\Publisher.Client"
     if (([System.IO.Directory]::Exists($setupPath) -eq $true) -and ([System.IO.Directory]::GetFiles($setupPath).Count -ne 0) -and (([System.IO.File]::Exists("$setupPath/Publisher.Client.deps.json") -eq $false))) {
         Write-Host "Install path ""$setupPath"" must be empty"
         continue

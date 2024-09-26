@@ -270,8 +270,11 @@ namespace ServerPublisher.Client
         {
             if (uploadFileList.Any())
             {
+                SemaphoreSlim ss;
                 if (publishInfo.HasCompression)
                 {
+                    ss = new SemaphoreSlim(0, 1);
+
                     var archivePath = Path.GetTempFileName();
 
                     using (var archive = ZipFile.Open(archivePath, ZipArchiveMode.Update))
@@ -284,14 +287,22 @@ namespace ServerPublisher.Client
 
                     var archiveFileInfo = new FileInfo(archivePath);
 
-                    await UploadFile(new BasicFileInfo(archiveFileInfo.Directory.GetNormalizedDirectoryPath(), archiveFileInfo), true);
+                    UploadFile(new BasicFileInfo(archiveFileInfo.Directory.GetNormalizedDirectoryPath(), archiveFileInfo), ss, true);
+
+                    while (ss.CurrentCount < 1)
+                        await Task.Delay(500);
                 }
                 else
                 {
+                    ss = new SemaphoreSlim(0, uploadFileList.Count);
+
                     foreach (var item in uploadFileList)
                     {
-                        await UploadFile(item);
+                        UploadFile(item, ss);
                     }
+
+                    while (ss.CurrentCount < uploadFileList.Count)
+                        await Task.Delay(500);
                 }
             }
 
@@ -305,8 +316,13 @@ namespace ServerPublisher.Client
             Environment.Exit(0);
         }
 
-        private async Task UploadFile(BasicFileInfo file, bool compressed = false)
+        private int uploadBufferLen => publishInfo.BufferLen - 50;
+
+        private async void UploadFile(BasicFileInfo file, SemaphoreSlim ss, bool compressed = false)
         {
+            //if (file.RelativePath != "n1.bin")
+            //    return;
+
             var fsr = await network.FileStart(new PublishProjectFileStartRequestModel()
             {
                 RelativePath = file.RelativePath,
@@ -316,7 +332,9 @@ namespace ServerPublisher.Client
 
             var fs = file.FileInfo.OpenRead();
 
-            byte[] buf = new byte[publishInfo.BufferLen - 20];
+            int len = uploadBufferLen;
+
+            byte[] buf = new byte[len];
 
             int currLen = default;
 
@@ -324,19 +342,18 @@ namespace ServerPublisher.Client
             {
                 currLen = fs.Read(buf, 0, buf.Length);
 
-                if (currLen == 0)
-                    break;
-
-                if(currLen < buf.Length)
+                if (currLen < buf.Length)
                     Array.Resize(ref buf, currLen);
 
-                Console.WriteLine($"Uploading: {100.0 / fs.Length * fs.Position}%");
+                Console.WriteLine($"Uploading {file.RelativePath}: {100.0 / fs.Length * fs.Position}%");
 
                 await network.UploadFilePart(new PublishProjectUploadFileBytesRequestModel() { Bytes = buf, EOF = fs.Length == fs.Position, FileId = fsr.FileId });
 
-            } while (currLen == publishInfo.BufferLen);
+            } while (buf.Length == len);
 
             fs.Close();
+
+            ss.Release();
         }
 
         private List<BasicFileInfo> GetFiles(string dir)

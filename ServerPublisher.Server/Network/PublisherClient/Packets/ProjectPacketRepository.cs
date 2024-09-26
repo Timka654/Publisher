@@ -64,7 +64,7 @@ namespace ServerPublisher.Server.Network.PublisherClient.Packets.PacketRepositor
         {
             var context = client.PublishContext;
 
-            if (context != null)
+            if (context == null)
                 return false;
 
             var request = PublishProjectUploadFileBytesRequestModel.ReadFullFrom(data);

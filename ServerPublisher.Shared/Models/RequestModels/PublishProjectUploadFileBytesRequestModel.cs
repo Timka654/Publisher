@@ -8,7 +8,7 @@ namespace ServerPublisher.Shared.Models.RequestModels
     {
         public Guid FileId { get; set; }
 
-        public byte[] Bytes { get; set; }
+        public byte[]? Bytes { get; set; }
 
         public bool EOF { get; set; }
     }

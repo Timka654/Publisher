@@ -11,6 +11,7 @@ using NSL.SocketCore.Extensions.Buffer;
 using ServerPublisher.Server.Network.PublisherClient.Packets.PacketRepository;
 using NSL.SocketCore.Utils.Logger;
 using ServerPublisher.Server.Info;
+using NSL.SocketCore.Utils.Exceptions;
 
 namespace ServerPublisher.Server.Network.PublisherClient
 {
@@ -88,17 +89,19 @@ namespace ServerPublisher.Server.Network.PublisherClient
 
                         builder.AddExceptionHandle((ex, client) =>
                         {
+                            if (ex is ConnectionLostException)
+                                return;
+
                             var context = client?.PublishContext;
 
-                            if (client != null)
+                            if (context != null)
                             {
-                                context?.Log(ex.ToString());
+                                context.Log(ex.ToString());
 
-                                if (client.Network?.GetState() == true)
-                                {
-                                    client.Network.Disconnect();
-                                }
+                                context.Dispose();
                             }
+
+                            client?.Network?.Disconnect();
                         });
                     })
                     .WithBindingPoint(BindingPort)

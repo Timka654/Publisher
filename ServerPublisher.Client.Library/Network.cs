@@ -31,6 +31,8 @@ namespace ServerPublisher.Client.Library
             {
                 builder.WithBufferSize(bufferSize);
 
+                builder.AddConnectHandle(c => c.InitializeObjectBag());
+
                 builder.GetOptions().ConfigureRequestProcessor();
 
                 builder.AddPacketHandle(PublisherPacketEnum.PublishProjectStartMessage, (c, d) => OnPublishProjectStartMessage(ProjectFileListResponseModel.ReadDefaultFrom(d)));
@@ -40,6 +42,10 @@ namespace ServerPublisher.Client.Library
                 builder.WithOutputCipher(new XRC4Cipher(outputKey));
 
                 builder.AddDisconnectHandle(c => disconnectedEvent?.Invoke(c));
+
+                builder.AddExceptionHandle((ex, c) =>
+                Console.WriteLine(ex.ToString())
+                );
             })
             .Build();
         }
@@ -86,7 +92,7 @@ namespace ServerPublisher.Client.Library
             => await Request(PublisherPacketEnum.PublishProjectSignIn, request.WriteFullTo, PublishSignInResponseModel.ReadFullFrom);
 
         public async Task ProjectFinish(PublishProjectFinishRequestModel request)
-            => await Message(PublisherPacketEnum.PublishProjectFinish, request.WriteFullTo);
+            => await Request(PublisherPacketEnum.PublishProjectFinish, request.WriteFullTo, r => true);
 
         public async Task<PublishProjectFileStartResponseModel> FileStart(PublishProjectFileStartRequestModel request)
             => await Request(PublisherPacketEnum.PublishProjectFileStart, request.WriteFullTo, PublishProjectFileStartResponseModel.ReadFullFrom);

@@ -219,28 +219,28 @@ namespace ServerPublisher.Server.Info
         {
             bool success = false;
 
-            try { runScriptOnStart(); } catch (Exception ex) { BroadcastMessage(ex.ToString()); }
+            finishPublishProcessOnStartScript(true, ref success);
 
-            success = processTemp(context);
+            if (success)
+            {
+                success = processTemp(context);
 
-            if (!success)
-                recoveryBackup();
+                if (!success)
+                    recoveryBackup();
+            }
 
-            try { runScriptOnEnd(); } catch (Exception ex) { BroadcastMessage(ex.ToString()); }
+            FinishPublishProcessOnEndScript(true, ref success, new Dictionary<string, string>());
 
             if (success)
             {
                 DumpFileList();
 
-                try { runScriptOnSuccessEnd(new Dictionary<string, string>()); } catch (Exception ex) { BroadcastMessage(ex.ToString()); }
-
                 Info.LatestUpdate = context.UpdateTime;
+
                 SaveProjectInfo();
 
                 broadcastUpdateTime();
             }
-            else
-                try { runScriptOnFailedEnd(); } catch (Exception ex) { BroadcastMessage(ex.ToString()); }
 
             patchLocker.Set();
         }
