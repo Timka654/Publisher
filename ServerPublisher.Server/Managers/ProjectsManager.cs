@@ -22,9 +22,7 @@ namespace ServerPublisher.Server.Managers
     {
         public static ProjectsManager Instance { get; private set; }
 
-        public static string ProjectsFilePath => Path.Combine(Application.Directory, PublisherServer.Configuration.GetValue<string>("paths.projects_library"));
-
-        public static string ProjectsBackupDirPath => PublisherServer.Configuration.GetValue<string>("paths.projects_backup.dir");
+        public static string ProjectsFilePath => Path.Combine(Application.Directory, PublisherServer.Configuration.GetValue<string>("paths:projects_library", Path.Combine("data", "projects.json")));
 
         private FileSystemWatcher projectsLibraryWatcher;
 

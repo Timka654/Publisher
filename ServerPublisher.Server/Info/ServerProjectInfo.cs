@@ -227,8 +227,6 @@ namespace ServerPublisher.Server.Info
 
             script.SetGlobalVariable("CurrentProject", this);
 
-            scriptLatestBuilded = DateTime.UtcNow;
-
             OnStartMethod = script.GetMethod("PublisherScript", "OnStart");
 
             OnEndMethod = script.GetMethod("PublisherScript", "OnEnd");
@@ -240,6 +238,8 @@ namespace ServerPublisher.Server.Info
             OnSuccessEndMethod = script.GetMethod("PublisherScript", "OnSuccessEnd");
 
             OnFailedMethod = script.GetMethod("PublisherScript", "OnFailed");
+
+            scriptLatestBuilded = DateTime.UtcNow;
             //}
             //catch (Exception ex)
             //{

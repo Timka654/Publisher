@@ -12,8 +12,12 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<Compile Remove="Data\**" />
 		<Compile Remove="publish\**" />
+		<Content Remove="Data\**" />
+		<EmbeddedResource Remove="Data\**" />
 		<EmbeddedResource Remove="publish\**" />
+		<None Remove="Data\**" />
 		<None Remove="publish\**" />
 	</ItemGroup>
 	
@@ -85,9 +89,6 @@
 		<None Update="tools\utils.psm1">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
-	</ItemGroup>
-	<ItemGroup>
-	  <Folder Include="Data\Users\" />
 	</ItemGroup>
 
 </Project>
