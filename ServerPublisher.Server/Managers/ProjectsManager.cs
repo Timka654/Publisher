@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using NSL.Cipher.RSA;
 using NSL.Logger;
 using NSL.ServerOptions.Extensions.Manager;
+using ServerPublisher.Server.Dev.Test.Utils;
 using ServerPublisher.Server.Info;
 using ServerPublisher.Server.Managers.Storages;
 using ServerPublisher.Server.Network.PublisherClient;
@@ -25,7 +26,7 @@ namespace ServerPublisher.Server.Managers
 
         public static string ProjectsFilePath => PublisherServer.Configuration.Publisher.ProjectConfiguration.Server.LibraryFilePath;
 
-        private FileSystemWatcher projectsLibraryWatcher;
+        private FSWatcher projectsLibraryWatcher;
 
         public ProjectsManager()
         {
@@ -85,59 +86,45 @@ namespace ServerPublisher.Server.Managers
 
             var fi = new FileInfo(ProjectsFilePath);
 
-            projectsLibraryWatcher = new FileSystemWatcher(fi.Directory.GetNormalizedDirectoryPath(), fi.Name);
-            projectsLibraryWatcher.Deleted += DirectoryWatcher_Deleted;
-            projectsLibraryWatcher.Changed += DirectoryWatcher_Changed;
-            projectsLibraryWatcher.Created += DirectoryWatcher_Changed;
-            projectsLibraryWatcher.EnableRaisingEvents = true;
+            projectsLibraryWatcher = new FSWatcher(fi.Directory.GetNormalizedDirectoryPath(), fi.Name
+                , onDeleted: DirectoryWatcher_Deleted
+                , onChanged: DirectoryWatcher_Changed
+                , onCreated: DirectoryWatcher_Changed);
         }
 
-        private SemaphoreSlim projectsLibraryReadLocker = new SemaphoreSlim(1);
-
-        private async void DirectoryWatcher_Changed(object sender, FileSystemEventArgs e)
+        private void DirectoryWatcher_Changed(FileSystemEventArgs e)
         {
-            if (e.ChangeType != WatcherChangeTypes.Changed && e.ChangeType != WatcherChangeTypes.Created)
-                return;
-
-            await projectsLibraryReadLocker.WaitAsync();
-
-            await Task.Delay(2_000);
-
             string json = null;
 
-            try
+            PublisherServer.ServerLogger.AppendInfo($"{ProjectsFilePath} changed. Reloading");
+
+            json = File.ReadAllText(e.FullPath);
+
+
+            var projPathes = JsonConvert.DeserializeObject<string[]>(json);
+
+
+            foreach (var item in storage.Where(x => !projPathes.Contains(x.Value.ProjectDirPath)))
             {
-                PublisherServer.ServerLogger.AppendInfo($"{ProjectsFilePath} changed. Reloading");
-
-                json = File.ReadAllText(e.FullPath);
-
-
-                var projPathes = JsonConvert.DeserializeObject<string[]>(json);
-
-
-                foreach (var item in storage.Where(x => !projPathes.Contains(x.Value.ProjectDirPath)))
-                {
-                    RemoveProject(item.Value);
-                    PublisherServer.ServerLogger.AppendInfo($"Project {item.Value.Info.Name}({item.Value.Info.Id}) removed");
-                }
-
-                foreach (var item in projPathes)
-                {
-                    var exist = storage.Values.FirstOrDefault(x => x.ProjectDirPath == item);
-
-                    if (exist == null)
-                    {
-                        exist = new ServerProjectInfo(item);
-                        AddProject(exist);
-                        PublisherServer.ServerLogger.AppendInfo($"Project {exist.Info.Name}({exist.Info.Id}) appended");
-                    }
-                }
-                PublisherServer.ServerLogger.AppendInfo($"{ProjectsFilePath} changed. Success reloading");
+                RemoveProject(item.Value);
+                PublisherServer.ServerLogger.AppendInfo($"Project {item.Value.Info.Name}({item.Value.Info.Id}) removed");
             }
-            catch (Exception ex) { PublisherServer.ServerLogger.AppendError(ex.ToString()); }
+
+            foreach (var item in projPathes)
+            {
+                var exist = storage.Values.FirstOrDefault(x => x.ProjectDirPath == item);
+
+                if (exist == null)
+                {
+                    exist = new ServerProjectInfo(item);
+                    AddProject(exist);
+                    PublisherServer.ServerLogger.AppendInfo($"Project {exist.Info.Name}({exist.Info.Id}) appended");
+                }
+            }
+            PublisherServer.ServerLogger.AppendInfo($"{ProjectsFilePath} changed. Success reloading");
         }
 
-        private void DirectoryWatcher_Deleted(object sender, FileSystemEventArgs e)
+        private void DirectoryWatcher_Deleted(FileSystemEventArgs e)
         {
             foreach (var item in storage.Values)
             {

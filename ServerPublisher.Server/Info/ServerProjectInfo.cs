@@ -25,6 +25,7 @@ using ServerPublisher.Shared.Utils;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis;
 using ServerPublisher.Server.Utils;
+using ServerPublisher.Server.Dev.Test.Utils;
 
 namespace ServerPublisher.Server.Info
 {
@@ -180,7 +181,7 @@ public partial class PublisherScript {
                 var result = compilation.Emit(ms);
                 if (!result.Success)
                 {
-                    PublisherServer.AppLogger.AppendError($"Project ({Info.Id}) script compilation errors");
+                    PublisherServer.ServerLogger.AppendError($"Project ({Info.Id}) script compilation errors");
 
                     foreach (var item in result.Diagnostics)
                     {
@@ -195,7 +196,7 @@ public partial class PublisherScript {
 
                         var err = $"-{loc.SourceTree.FilePath}({line},{start}) {item.GetMessage()}";
 
-                        PublisherServer.AppLogger.AppendError(err);
+                        PublisherServer.ServerLogger.AppendError(err);
                         BroadcastMessage(err);
                     }
 
@@ -241,52 +242,41 @@ public partial class PublisherScript {
 
         private void CreateWatchers()
         {
-            UsersWatch = new FileSystemWatcher(UsersDirPath, "*.priuk");
-            UsersWatch.Changed += UsersWatch_Changed;
-            UsersWatch.Deleted += UsersWatch_Deleted;
-            UsersWatch.EnableRaisingEvents = true;
+            PubUsersWatch = new FSWatcher(UsersPublicksDirPath, "*.pubuk"
+                , onCreated: PubUsersWatch_Changed
+                , onChanged: PubUsersWatch_Changed
+                , onDeleted: PubUsersWatch_Deleted);
 
-            SettingsWatch = new FileSystemWatcher(PublisherDirPath, new FileInfo(ProjectFilePath).Name);
+            UsersWatch = new FSWatcher(UsersDirPath, "*.priuk"
+                , onChanged: UsersWatch_Changed
+                , onDeleted: UsersWatch_Deleted);
 
-            SettingsWatch.Changed += SettingsWatch_Changed;
-            SettingsWatch.Deleted += SettingsWatch_Deleted;
-            SettingsWatch.EnableRaisingEvents = true;
+            SettingsWatch = new FSWatcher(PublisherDirPath, new FileInfo(ProjectFilePath).Name
+                , onChanged: SettingsWatch_Changed
+                , onDeleted: SettingsWatch_Deleted);
 
-            ScriptsWatch = new FileSystemWatcher(ScriptsDirPath, "*.cs");
+            ScriptsWatch = new FSWatcher(ScriptsDirPath, "*.cs"
+                , onAnyChanges: ScriptsWatch_Changed);
 
-            ScriptsWatch.Created += ScriptsWatch_Changed;
-            ScriptsWatch.Changed += ScriptsWatch_Changed;
-            ScriptsWatch.Deleted += ScriptsWatch_Changed;
-            ScriptsWatch.EnableRaisingEvents = true;
-
-            GlobalScriptsWatch = new FileSystemWatcher(GlobalScriptsDirPath, "*.cs");
-
-            GlobalScriptsWatch.Created += ScriptsWatch_Changed;
-            GlobalScriptsWatch.Changed += ScriptsWatch_Changed;
-            GlobalScriptsWatch.Deleted += ScriptsWatch_Changed;
-            GlobalScriptsWatch.EnableRaisingEvents = true;
+            GlobalScriptsWatch = new FSWatcher(GlobalScriptsDirPath, "*.cs"
+                , onAnyChanges: ScriptsWatch_Changed);
         }
 
-        private async void ScriptsWatch_Changed(object sender, FileSystemEventArgs e)
+        private void ScriptsWatch_Changed(FileSystemEventArgs e)
         {
-            await Task.Delay(1_500);
             scriptLatestChanged = DateTime.UtcNow;
         }
 
-        private void SettingsWatch_Deleted(object sender, FileSystemEventArgs e)
+        private void SettingsWatch_Deleted(FileSystemEventArgs e)
         {
             ProjectsManager.Instance.RemoveProject(this);
         }
 
-        private async void SettingsWatch_Changed(object sender, FileSystemEventArgs e)
+        private void SettingsWatch_Changed(FileSystemEventArgs e)
         {
-            await Task.Delay(1500);
             var oldInfo = Info;
-            try
-            {
-                LoadProjectInfo();
-            }
-            catch { return; }
+
+            LoadProjectInfo();
 
             PublisherServer.ServerLogger.AppendInfo($"{ProjectFilePath} changed \r\nold {JsonConvert.SerializeObject(oldInfo)}\r\nnew {JsonConvert.SerializeObject(Info)}");
 
@@ -304,33 +294,48 @@ public partial class PublisherScript {
                     PatchClient = null;
                 }
             }
-            else if (oldInfo.PatchInfo != null && Info.PatchInfo != null &&
-                (oldInfo.PatchInfo.IpAddress != Info.PatchInfo.IpAddress ||
+            else if (oldInfo.PatchInfo != null && Info.PatchInfo != null)
+            {
+                if (oldInfo.PatchInfo.IpAddress != Info.PatchInfo.IpAddress ||
                 oldInfo.PatchInfo.Port != Info.PatchInfo.Port ||
                 oldInfo.PatchInfo.SignName != Info.PatchInfo.SignName ||
                 oldInfo.PatchInfo.InputCipherKey != Info.PatchInfo.InputCipherKey ||
-                oldInfo.PatchInfo.OutputCipherKey != Info.PatchInfo.OutputCipherKey))
+                oldInfo.PatchInfo.OutputCipherKey != Info.PatchInfo.OutputCipherKey)
+                {
+
+                    PatchClient?.SignOutProject(this);
+
+                    LoadPatch();
+                }
+            }
+        }
+
+        private void PubUsersWatch_Deleted(FileSystemEventArgs e)
+        {
+            if (e.FullPath.GetNormalizedPath() == PatchSignFilePath)
             {
-                if (PatchClient != null)
-                    PatchClient.SignOutProject(this);
+                PatchClient?.SignOutProject(this);
+            }
+        }
+
+        private void PubUsersWatch_Changed(FileSystemEventArgs e)
+        {
+            if (e.FullPath.GetNormalizedPath() == PatchSignFilePath)
+            {
+                PatchClient?.SignOutProject(this);
                 LoadPatch();
             }
         }
 
-        private void UsersWatch_Deleted(object sender, FileSystemEventArgs e)
+        private void UsersWatch_Deleted(FileSystemEventArgs e)
         {
             users.RemoveAll(x => x.FileName == e.FullPath);
         }
 
-        private async void UsersWatch_Changed(object sender, FileSystemEventArgs e)
+        private void UsersWatch_Changed(FileSystemEventArgs e)
         {
-            await Task.Delay(1500);
-            try
-            {
-                var user = new UserInfo(e.FullPath);
-                AddOrUpdateUser(user);
-            }
-            catch { }
+            var user = new UserInfo(e.FullPath);
+            AddOrUpdateUser(user);
         }
 
         #endregion
@@ -959,13 +964,15 @@ public partial class PublisherScript {
 
         private readonly List<UserInfo> users = new List<UserInfo>();
 
-        public FileSystemWatcher UsersWatch;
+        public FSWatcher PubUsersWatch;
 
-        public FileSystemWatcher SettingsWatch;
+        public FSWatcher UsersWatch;
 
-        public FileSystemWatcher ScriptsWatch;
+        public FSWatcher SettingsWatch;
 
-        public FileSystemWatcher GlobalScriptsWatch;
+        public FSWatcher ScriptsWatch;
+
+        public FSWatcher GlobalScriptsWatch;
 
         private void CreateDefault()
         {
@@ -993,8 +1000,6 @@ public partial class PublisherScript {
 
             if (!Directory.Exists(LogsDirPath))
                 Directory.CreateDirectory(LogsDirPath);
-
-
 
             CheckScriptsExists();
         }
@@ -1080,10 +1085,11 @@ public partial class PublisherScript {
 
         public void Dispose()
         {
+            PubUsersWatch.Dispose();
+            UsersWatch.Dispose();
+            SettingsWatch.Dispose();
             ScriptsWatch.Dispose();
             GlobalScriptsWatch.Dispose();
-            SettingsWatch.Dispose();
-            UsersWatch.Dispose();
 
             if (PatchClient != null)
                 PatchClient.SignOutProject(this);
@@ -1152,7 +1158,7 @@ public partial class PublisherScript {
         public void Log(string text, bool appLog = false)
         {
             if (appLog)
-                PublisherServer.AppLogger.Append(NSL.SocketCore.Utils.Logger.Enums.LoggerLevel.Info, text);
+                PublisherServer.ServerLogger.Append(NSL.SocketCore.Utils.Logger.Enums.LoggerLevel.Info, text);
 
             Logger?.AppendLog(text);
 
@@ -1200,11 +1206,11 @@ public partial class PublisherScript {
 
         public void Log(string text, bool appLog = false)
         {
-
             if (!Actual)
                 return;
+
             if (appLog)
-                PublisherServer.AppLogger.Append(NSL.SocketCore.Utils.Logger.Enums.LoggerLevel.Info, text);
+                PublisherServer.ServerLogger.Append(NSL.SocketCore.Utils.Logger.Enums.LoggerLevel.Info, text);
 
             Logger?.AppendLog(text);
 

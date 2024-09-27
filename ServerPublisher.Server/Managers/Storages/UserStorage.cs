@@ -1,4 +1,5 @@
-﻿using ServerPublisher.Server.Info;
+﻿using ServerPublisher.Server.Dev.Test.Utils;
+using ServerPublisher.Server.Info;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -32,40 +33,29 @@ namespace ServerPublisher.Server.Managers.Storages
             }
         }
 
-        private FileSystemWatcher UsersWatch;
+        private FSWatcher UsersWatch;
 
         private void CreateWather()
         {
             string path = UsersDirPath;
-            
+
             if (!Directory.Exists(path))
                 path = DataDirPath;
 
             if (!Directory.Exists(path))
                 path = Application.Directory;
 
-            UsersWatch = new FileSystemWatcher(path, "*.priuk");
-
-            UsersWatch.Changed += UsersWatch_Changed;
-            UsersWatch.Deleted += UsersWatch_Deleted;
-
-            UsersWatch.EnableRaisingEvents = true;
+            UsersWatch = new FSWatcher(path, "*.priuk", onChanged: UsersWatch_Changed, onDeleted: UsersWatch_Deleted);
         }
 
-        private void UsersWatch_Deleted(object sender, FileSystemEventArgs e)
+        private void UsersWatch_Deleted(FileSystemEventArgs e)
         {
             userList.RemoveAll(x => x.FileName == e.FullPath);
         }
 
-        private async void UsersWatch_Changed(object sender, FileSystemEventArgs e)
+        private void UsersWatch_Changed(FileSystemEventArgs e)
         {
-            await Task.Delay(1500);
-
-            try
-            {
-                AddOrUpdateUser(new UserInfo(e.FullPath));
-            }
-            catch { }
+            AddOrUpdateUser(new UserInfo(e.FullPath));
         }
 
         private void AddOrUpdateUser(UserInfo user)

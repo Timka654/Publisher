@@ -15,7 +15,7 @@ namespace ServerPublisher.Server.Info
 {
     public partial class ServerProjectInfo
     {
-        private string PatchSignFilePath => Info.PatchInfo == null ? Guid.NewGuid().ToString() : Path.Combine(UsersPublicksDirPath, Info.PatchInfo.SignName + ".pubuk").GetNormalizedPath();
+        private string? PatchSignFilePath => Info.PatchInfo == null ? default : Path.Combine(UsersPublicksDirPath, Info.PatchInfo.SignName + ".pubuk").GetNormalizedPath();
 
         public byte[] GetPatchSignData()
         {
@@ -34,8 +34,21 @@ namespace ServerPublisher.Server.Info
 
         private async Task<bool> LoadPatchAsync()
         {
-            if (Info.PatchInfo == null || !File.Exists(PatchSignFilePath))
+            if (PatchClient != null)
+                return true;
+        
+            if (PatchSignFilePath == default)
                 return false;
+
+            if (Info.PatchInfo == null)
+                return false;
+
+            if (!File.Exists(PatchSignFilePath))
+            {
+                PublisherServer.ServerLogger.AppendError($"Project {Info.Name}({Info.Id}) not have identity file {PatchSignFilePath} for initialize proxy");
+
+                return false;
+            }
 
             PatchClient = await PublisherServer.ProjectProxyManager.ConnectProxyClient(this);
 
@@ -45,6 +58,9 @@ namespace ServerPublisher.Server.Info
         public async void ClearPatchClient()
         {
             PatchClient = null;
+
+            if (Info.PatchInfo == null)
+                return;
 
             await Task.Delay(120_000);
 

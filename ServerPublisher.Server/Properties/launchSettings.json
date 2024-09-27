@@ -5,6 +5,14 @@
       "commandLineArgs": "/action:service",
       "workingDirectory": "D:\\Temp\\publisher2\\server"
     },
+    "ServerPublisher.Server.Dev.Test": {
+      "commandName": "Project",
+      "commandLineArgs": "/action:service",
+      "workingDirectory": "D:\\Temp\\publisher2\\server2",
+      "environmentVariables": {
+        "publisher__server__io__port": "6588"
+      }
+    },
     "WSL": {
       "commandName": "WSL2",
       "distributionName": ""
@@ -18,6 +26,16 @@
       "commandName": "Project",
       "commandLineArgs": "/action:create_user /name:dev_user2 /project_id:273a2073-5a66-43aa-ac08-c2e6e7838bb7",
       "workingDirectory": "D:\\Temp\\publisher2\\server"
+    },
+    "create_project_2_command": {
+      "commandName": "Project",
+      "commandLineArgs": "/action:create_project /name:devProject2 /directory:D:\\Temp\\publisher2\\server_dev_projects\\project2 /full_replace:false /backup:true /project_id:273a2073-5a66-43aa-ac08-c2e6e7838bb7",
+      "workingDirectory": "D:\\Temp\\publisher2\\server2"
+    },
+    "add_patch_connection_project2_command": {
+      "commandName": "Project",
+      "commandLineArgs": "/action:add_patch_connection /project_id:273a2073-5a66-43aa-ac08-c2e6e7838bb7 /ip_address:127.0.0.1 /port:6583 /input_cipher_key:!{b1HX11R** /output_cipher_key:!{b1HX11R** /identity_name:dev_user_78d92859-cfe5-432d-9643-5c2e1f5f056e",
+      "workingDirectory": "D:\\Temp\\publisher2\\server2"
     }
   }
 }

@@ -21,6 +21,8 @@ using ServerPublisher.Shared.Models.RequestModels;
 using ServerPublisher.Shared.Models.ResponseModel;
 using NSL.SocketCore.Utils.Logger;
 using NSL.SocketClient;
+using NSL.SocketCore.Utils.Logger.Enums;
+using NSL.BuilderExtensions.Buffer;
 
 namespace ServerPublisher.Server.Network
 {
@@ -36,7 +38,7 @@ namespace ServerPublisher.Server.Network
 
         public PatchClientNetwork(ProjectPatchInfo patchInfo)// : base(options)
         {
-            Logger ??= new PrefixableLoggerProxy(PublisherServer.AppLogger, $"[Project Proxy({patchInfo.IpAddress}:{patchInfo.Port})]");
+            Logger = new PrefixableLoggerProxy(PublisherServer.ServerLogger, $"[Project Proxy({patchInfo.IpAddress}:{patchInfo.Port})]");
 
             IpAddress = patchInfo.IpAddress;
             Port = patchInfo.Port;
@@ -49,6 +51,13 @@ namespace ServerPublisher.Server.Network
                 {
                     builder.SetLogger(Logger);
 
+                    builder.AddClientObjectBag();
+                    builder.ConfigureRequestProcessor();
+
+                    builder.AddConnectHandle(Options_OnClientConnectEvent);
+                    builder.AddDisconnectHandle(Options_OnClientDisconnectEvent);
+                    builder.AddExceptionHandle(Options_OnExceptionEvent);
+
 
                     builder.AddDefaultEventHandlers(Logger, handleOptions: DefaultEventHandlersEnum.All
 #if RELEASE
@@ -57,20 +66,16 @@ namespace ServerPublisher.Server.Network
                         , pid => Enum.GetName((PublisherPacketEnum)pid)
                         , pid => Enum.GetName((PublisherPacketEnum)pid));
 
-                    builder.GetOptions().ConfigureRequestProcessor();
-
                     builder.WithInputCipher(new XRC4Cipher(patchInfo.InputCipherKey));
                     builder.WithOutputCipher(new XRC4Cipher(patchInfo.OutputCipherKey));
 
                     builder.WithBufferSize(PublisherServer.Configuration.Publisher.Proxy.BufferSize);
 
-                    builder.AddConnectHandle(Options_OnClientConnectEvent);
-                    builder.AddConnectHandle(Options_OnClientDisconnectEvent);
-                    builder.AddExceptionHandle(Options_OnExceptionEvent);
-
                     builder.AddAsyncPacketHandle(PublisherPacketEnum.ProjectProxyStartMessage, StartMessageHandle);
                 })
                 .Build();
+
+            Connect();
         }
 
         private async Task StartMessageHandle(NetworkProjectProxyClient client, InputPacketBuffer data)
@@ -183,29 +188,36 @@ namespace ServerPublisher.Server.Network
             await proj.Download(value.UpdateTime);
         }
 
+        private int connectionIter = 0;
 
-        private async void Connect(int currentTry, bool result)
+        private async void Connect()
         {
-            if (currentTry == int.MaxValue)
+            if (connectionIter > 0)
             {
 #if DEBUG
                 await Task.Delay(10_000);
 #else
                 await Task.Delay(60_000);
-
 #endif
-                await client.ConnectAsync();
-
-                return;
             }
 
-            Logger.AppendDebug($"Reconnection try: {currentTry} with result = {result}");
+            var result = await client.ConnectAsync();
+
+            Logger.Append(result ? LoggerLevel.Info : LoggerLevel.Error, $"{(connectionIter > 0 ? "Rec" : "C")}onnection try: {connectionIter} with result = {result}");
+
+            if (result)
+                connectionIter = 0;
+            else
+            {
+                ++connectionIter;
+                Connect();
+            }
         }
 
 
         private void Options_OnExceptionEvent(Exception ex, NetworkProjectProxyClient client)
         {
-            Logger.AppendError(ex.ToString());
+
         }
 
         private ManualResetEvent readyLocker = new ManualResetEvent(false);
@@ -216,7 +228,7 @@ namespace ServerPublisher.Server.Network
 
             foreach (var item in ProjectMap.Values.ToArray())
             {
-                await SignProject(item);
+                await _signProject(item);
             }
 
             readyLocker.Set();
@@ -225,12 +237,24 @@ namespace ServerPublisher.Server.Network
         private void Options_OnClientDisconnectEvent(NetworkProjectProxyClient client)
         {
             readyLocker.Reset();
+
+            Connect();
         }
 
         public async Task<SignStateEnum> SignProject(ServerProjectInfo item)
         {
-            var packet = RequestPacketBuffer.Create(PublisherPacketEnum.ProjectProxySignIn);
+            if (!ProjectMap.TryAdd(item.Info.Id, item))
+                return SignStateEnum.Ok;
 
+            if (!readyLocker.WaitOne())
+                return SignStateEnum.CannotConnected;
+
+            return await _signProject(item);
+        }
+
+        private async Task<SignStateEnum> _signProject(ServerProjectInfo item)
+        {
+            var packet = RequestPacketBuffer.Create(PublisherPacketEnum.ProjectProxySignIn);
 
             var userInfo = JsonSerializer.Deserialize<BasicUserInfo>(item.GetPatchSignData(), options: new JsonSerializerOptions() { IgnoreNullValues = true, IgnoreReadOnlyProperties = true, });
 
@@ -281,6 +305,8 @@ namespace ServerPublisher.Server.Network
 
         public void SignOutProject(string projectId)
         {
+            readyLocker.WaitOne();
+
             var packet = OutputPacketBuffer.Create(PublisherPacketEnum.ProjectProxySignOut);
 
             new ProjectProxySignOutResponseModel()
@@ -295,6 +321,8 @@ namespace ServerPublisher.Server.Network
 
         public async Task<bool> StartDownload(ServerProjectInfo item)
         {
+            readyLocker.WaitOne();
+
             var packet = RequestPacketBuffer.Create(PublisherPacketEnum.ProjectProxyStartDownload);
 
             new ProjectProxyStartDownloadRequestModel()
@@ -318,6 +346,8 @@ namespace ServerPublisher.Server.Network
 
         public async Task<ProjectProxyEndDownloadResponseModel> FinishDownload(ServerProjectInfo project)
         {
+            readyLocker.WaitOne();
+
             var packet = RequestPacketBuffer.Create(PublisherPacketEnum.ProjectProxyFinishDownload);
 
             new ProjectProxyFileListRequestModel()

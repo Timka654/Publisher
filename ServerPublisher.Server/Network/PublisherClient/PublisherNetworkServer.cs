@@ -25,7 +25,7 @@ namespace ServerPublisher.Server.Network.PublisherClient
         static ConfigurationSettingsInfo__Publisher__Server__IO IOSettings => ServerSettings.IO;
         static ConfigurationSettingsInfo__Publisher__Server__Cipher CipherSettings => ServerSettings.Cipher;
 
-        static IBasicLogger Logger => PublisherServer.AppLogger;
+        static IBasicLogger Logger => PublisherServer.ServerLogger;
 
 
         static int BindingPort => IOSettings.Port;

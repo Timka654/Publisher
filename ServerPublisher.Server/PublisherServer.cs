@@ -6,6 +6,7 @@ using ServerPublisher.Server.Info;
 using ServerPublisher.Server.Managers;
 using ServerPublisher.Server.Network.PublisherClient;
 using ServerPublisher.Shared.Utils;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -19,8 +20,6 @@ namespace ServerPublisher.Server
         //public static IConfiguration Configuration { get; private set; }
 
         public static ConfigurationSettingsInfo Configuration { get; private set; }
-
-        public static IBasicLogger AppLogger { get; private set; }
 
 
 #if RELEASE
@@ -46,15 +45,17 @@ namespace ServerPublisher.Server
         {
             var cb = new ConfigurationBuilder()
                 .AddJsonFile("ServerSettings.json")
+                .AddCommandLine(Environment.GetCommandLineArgs())
+                .AddEnvironmentVariables()
                     .Build();
 
             Configuration = cb.Get<ConfigurationSettingsInfo>();
 
-            var loggerFactory = LoggerFactory.Create(b => b.AddConsole());
+            //var loggerFactory = LoggerFactory.Create(b => b.AddConsole());
 
-            var logger = loggerFactory.CreateLogger("Application");
+            //var logger = loggerFactory.CreateLogger("Application");
 
-            AppLogger = new NSL.Logger.AspNet.ILoggerWrapper(logger);
+            //AppLogger = new NSL.Logger.AspNet.ILoggerWrapper(logger);
 
 
             if (!Directory.Exists(Configuration.Publisher.ProjectConfiguration.Server.GlobalScriptsFolderPath))
