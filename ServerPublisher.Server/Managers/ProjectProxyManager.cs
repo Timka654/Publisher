@@ -23,20 +23,22 @@ namespace ServerPublisher.Server.Managers
         internal ProjectProxyEndDownloadResponseModel FinishDownload(PublisherNetworkClient client, ProjectProxyEndDownloadRequestModel request)
         {
             client.ProxyClientContext.PatchProjectMap.TryGetValue(request.ProjectId, out var project);
-            
+
             return project.EndDownload(client, true);
         }
 
-        internal ProjectProxyStartFileResponseModel StartFile(PublisherNetworkClient client, ProjectProxyStartFileRequestModel request)
+        internal ProjectProxyStartFileResponseModel? StartFile(PublisherNetworkClient client, ProjectProxyStartFileRequestModel request)
         {
-            client.ProxyClientContext.PatchProjectMap.TryGetValue(request.ProjectId, out var project);
-            
-            return project.StartDownloadFile(client, request.RelativePath);
+            if (client.ProxyClientContext.PatchProjectMap.TryGetValue(request.ProjectId, out var project))
+                return project.StartDownloadFile(client, request.RelativePath);
+
+            return default;
         }
 
         public async Task<PatchClientNetwork> ConnectProxyClient(ServerProjectInfo project)
         {
-            var client = GetClient(project.Info.PatchInfo.IpAddress, project.Info.PatchInfo.Port, () => {
+            var client = GetClient(project.Info.PatchInfo.IpAddress, project.Info.PatchInfo.Port, () =>
+            {
 
                 var c = new PatchClientNetwork(project.Info.PatchInfo);
 

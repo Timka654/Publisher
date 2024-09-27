@@ -176,12 +176,8 @@ namespace ServerPublisher.Server.Info
                 File.WriteAllBytes(Path.Combine(ProjectDirPath, item.RelativePath).GetNormalizedPath(), item.Data);
             }
 
-            Info.LatestUpdate = context.UpdateTime;
-
 
             EndPatchReceive(context);
-
-            patchLocker.Set();
         }
 
         private async Task<bool> downloadFile(ProjectDownloadContext context, ProjectFileInfo file)
@@ -202,7 +198,7 @@ namespace ServerPublisher.Server.Info
             do
             {
                 await Task.Delay(20);
-                var downloadProc = await PatchClient.DownloadAsync(startResponse.FileId);
+                var downloadProc = await PatchClient.DownloadAsync(Info.Id,startResponse.FileId);
 
                 if (downloadProc == default)
                     return false;
@@ -220,11 +216,6 @@ namespace ServerPublisher.Server.Info
                 }
             }
             while (EOF == false);
-
-            var stopResponse = await PatchClient.StopFileAsync(startResponse.FileId);
-
-            if (stopResponse?.Result != true)
-                return false;
 
             await Task.Delay(125);
 
@@ -263,6 +254,9 @@ namespace ServerPublisher.Server.Info
 
                 broadcastUpdateTime();
             }
+            else
+                recoveryBackup();
+
 
             patchLocker.Set();
         }

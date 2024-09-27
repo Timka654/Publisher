@@ -19,7 +19,6 @@
         ProjectProxyUpdateDataMessage,
         ProjectProxyStartFile,
         ProjectProxyDownloadBytes,
-        ProjectProxyFinishFile,
         ProjectProxyStartDownload,
         ProjectProxyFinishDownload,
         ProjectProxyStartMessage,

@@ -15,7 +15,9 @@ namespace ServerPublisher.Server.Network.PublisherClient.Packets
 
             var result = new ProjectProxyDownloadBytesResponseModel();
 
-            if (client.ProxyClientContext.TempFileMap.TryGetValue(request.FileId, out var fs))
+            var fs = client.ProxyClientContext.GetProcessingFile(request.ProjectId, request.FileId);
+
+            if (fs != null)
             {
                 if (request.BufferLength > fs.Length - fs.Position)
                     request.BufferLength = (int)(fs.Length - fs.Position);
@@ -27,7 +29,7 @@ namespace ServerPublisher.Server.Network.PublisherClient.Packets
 
                 if (result.EOF)
                 {
-                    client.ProxyClientContext.TempFileMap.TryRemove(request.FileId, out _);
+                    client.ProxyClientContext.DisposeProcessingFile(request.ProjectId, request.FileId);
                     fs.Close();
                 }
             }
@@ -41,7 +43,7 @@ namespace ServerPublisher.Server.Network.PublisherClient.Packets
         {
             var request = ProjectProxyStartFileRequestModel.ReadFullFrom(data);
 
-            PublisherServer.ProjectProxyManager.StartFile(client, request).WriteFullTo(response);
+            (PublisherServer.ProjectProxyManager.StartFile(client, request) ?? new ProjectProxyStartFileResponseModel()).WriteFullTo(response);
 
             return true;
         }

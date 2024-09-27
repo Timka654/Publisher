@@ -72,6 +72,7 @@ namespace ServerPublisher.Server.Network
                     builder.WithBufferSize(PublisherServer.Configuration.Publisher.Proxy.BufferSize);
 
                     builder.AddAsyncPacketHandle(PublisherPacketEnum.ProjectProxyStartMessage, StartMessageHandle);
+                    builder.AddAsyncPacketHandle(PublisherPacketEnum.ProjectProxyUpdateDataMessage, ChangeLatestUpdateDataMessageHandle);
                 })
                 .Build();
 
@@ -131,7 +132,7 @@ namespace ServerPublisher.Server.Network
             return response;
         }
 
-        public async Task<ProjectProxyDownloadBytesResponseModel?> DownloadAsync(Guid fileId, int? buffLength = null)
+        public async Task<ProjectProxyDownloadBytesResponseModel?> DownloadAsync(string projectId, Guid fileId, int? buffLength = null)
         {
             buffLength ??= GetMaxReceiveSize();
 
@@ -139,6 +140,7 @@ namespace ServerPublisher.Server.Network
 
             new ProjectProxyDownloadBytesRequestModel
             {
+                ProjectId = projectId,
                 FileId = fileId,
                 BufferLength = buffLength.Value
             }
@@ -152,29 +154,11 @@ namespace ServerPublisher.Server.Network
             return response;
         }
 
-        public async Task<ProjectProxyProjectProxyFinishFileResponseModel?> StopFileAsync(Guid fileId)
-        {
-            var packet = RequestPacketBuffer.Create(PublisherPacketEnum.ProjectProxyFinishFile);
-
-            new ProjectProxyProjectProxyFinishFileRequestModel
-            {
-                FileId = fileId,
-            }
-            .WriteFullTo(packet);
-
-            var response = await RequestAsync(packet, data =>
-            {
-                return Task.FromResult(ProjectProxyProjectProxyFinishFileResponseModel.ReadFullFrom(data));
-            });
-
-            return response;
-        }
-
         private static int BufferSize => PublisherServer.Configuration.Publisher.Proxy.BufferSize;
 
         private static int GetMaxReceiveSize() => BufferSize - 32;
 
-        private async Task ChangeLatestUpdateMessageHandle(NetworkProjectProxyClient client, InputPacketBuffer data)
+        private async Task ChangeLatestUpdateDataMessageHandle(NetworkProjectProxyClient client, InputPacketBuffer data)
         {
             //(string projectId, DateTime updateTime)
             var value = ProjectProxyUpdateDataRequestModel.ReadFullFrom(data);

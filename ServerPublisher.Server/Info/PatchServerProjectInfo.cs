@@ -47,15 +47,8 @@ namespace ServerPublisher.Server.Info
 
         public SignStateEnum SignPatchClient(PublisherNetworkClient client, ProjectProxySignInRequestModel request)
         {
-            client.ProxyClientContext ??= new ProxyClientContextDataModel();
-
-            if (client.ProxyClientContext.PatchProjectMap.ContainsKey(Info.Id))
-            {
-                if (Info.LatestUpdate.HasValue && Info.LatestUpdate.Value > request.LatestUpdate)
-                    broadcastUpdateTime(client);
-
+            if (client.ProxyClientContext?.PatchProjectMap?.ContainsKey(Info.Id) == true)
                 return SignStateEnum.Ok;
-            }
 
             var user = users.FirstOrDefault(x => x.Id == request.UserId);
 
@@ -73,6 +66,8 @@ namespace ServerPublisher.Server.Info
             if (Encoding.ASCII.GetString(data) != request.UserId) return SignStateEnum.UserNotFound;
 
             patchClients.Add(client);
+
+            client.ProxyClientContext ??= new ProxyClientContextDataModel() { Network = client };
 
             client.ProxyClientContext.PatchProjectMap.TryAdd(Info.Id, this);
 
@@ -98,6 +93,8 @@ namespace ServerPublisher.Server.Info
         {
             client.Lock(patchLocker);
 
+            client.ProxyClientContext?.ProcessingProjects.TryAdd(Info.Id, new ProxyClientDownloadContext() { Context = client.ProxyClientContext, ProjectInfo = this });
+
             var message = OutputPacketBuffer.Create(PublisherPacketEnum.ProjectProxyStartMessage);
 
             new ProjectProxyStartDownloadMessageModel()
@@ -116,23 +113,25 @@ namespace ServerPublisher.Server.Info
             client.Send(message);
         }
 
-        public ProjectProxyStartFileResponseModel StartDownloadFile(PublisherNetworkClient client, string relativePath)
+        public ProjectProxyStartFileResponseModel? StartDownloadFile(PublisherNetworkClient client, string relativePath)
         {
             var file = FileInfoList.FirstOrDefault(x => x.RelativePath == relativePath);
 
             if (file == null)
                 return new ProjectProxyStartFileResponseModel() { Result = false };
 
-            Guid fileId = default;
-
-            while (!client.ProxyClientContext.TempFileMap.TryAdd(fileId = Guid.NewGuid(), file.OpenRead())) ;
-
-            return new ProjectProxyStartFileResponseModel() { Result = true, FileId = fileId };
+            return new ProjectProxyStartFileResponseModel() { Result = true, FileId = client.ProxyClientContext.AddProcessingFile(this, file) };
         }
 
         internal ProjectProxyEndDownloadResponseModel EndDownload(PublisherNetworkClient client, bool success = false)
         {
             patchLocker.Set();
+
+            if (client?.ProxyClientContext?.ProcessingProjects.TryRemove(Info.Id, out var downloadContext) == true)
+            {
+                downloadContext.Dispose();
+            }
+
 
             var response = new ProjectProxyEndDownloadResponseModel() { Success = success };
 
