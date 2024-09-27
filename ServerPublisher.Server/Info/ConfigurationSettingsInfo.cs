@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Configuration;
-using NSL.Extensions.NetScript;
 using System.IO;
 
 namespace ServerPublisher.Server.Info

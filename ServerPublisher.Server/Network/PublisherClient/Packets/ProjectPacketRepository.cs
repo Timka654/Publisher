@@ -37,7 +37,7 @@ namespace ServerPublisher.Server.Network.PublisherClient.Packets.PacketRepositor
 
             var project = context?.ProjectInfo;
 
-            project.FinishPublishProcess(context, true, request.Args);
+            response.WriteBool(project?.FinishPublishProcess(context, true, request.Args) == true);
 
             return true;
         }

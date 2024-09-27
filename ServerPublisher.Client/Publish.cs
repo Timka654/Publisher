@@ -306,14 +306,17 @@ namespace ServerPublisher.Client
                 }
             }
 
-            await network.ProjectFinish(new PublishProjectFinishRequestModel()
+            var result = await network.ProjectFinish(new PublishProjectFinishRequestModel()
             {
                 Args = successArgs.GetArgs().ToDictionary(x => x.Key, x => x.Value)
             });
-            finished = true;
-            network.Disconnect();
 
-            Environment.Exit(0);
+            if (result)
+            {
+                finished = true;
+                network.Disconnect();
+                Environment.Exit(0);
+            }
         }
 
         private int uploadBufferLen => publishInfo.BufferLen - 50;

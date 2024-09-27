@@ -24,6 +24,7 @@ using ServerPublisher.Shared.Models.ResponseModel;
 using ServerPublisher.Shared.Utils;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis;
+using ServerPublisher.Server.Utils;
 
 namespace ServerPublisher.Server.Info
 {
@@ -71,13 +72,8 @@ namespace ServerPublisher.Server.Info
 
         #region Scripts
 
-        private void CheckScriptsExists(NSL.Extensions.NetScript.Script script = null)
+        private void CheckScriptsExists()
         {
-            var corePath = Path.Combine(ScriptsDirPath, "ScriptCore.cs").GetNormalizedPath();
-
-            if (File.Exists(corePath) == false)
-                File.WriteAllText(corePath, (script ?? new NSL.Extensions.NetScript.Script()).DumpCoreCode());
-
             if (File.Exists(OnStartScriptPath) == false)
             {
                 File.WriteAllText(OnStartScriptPath,
@@ -136,8 +132,6 @@ public partial class PublisherScript {
             }
         }
 
-        NSL.Extensions.NetScript.Script script;
-
         DateTime? scriptLatestBuilded;
 
         DateTime scriptLatestChanged = DateTime.UtcNow;
@@ -155,88 +149,78 @@ public partial class PublisherScript {
 
         private fileMethodDelegate OnFileEndMethod;
 
-        private NSL.Extensions.NetScript.Script getScript(bool ignoreCache = false)
+        private bool loadScripts(bool ignoreCache = false)
         {
             if (scriptLatestBuilded.HasValue && scriptLatestBuilded >= scriptLatestChanged && ignoreCache == false)
-                return script;
+                return true;
 
-            //if (script != null)
-            //    script.Disponse();
-            //try
-            //{
-            script = new NSL.Extensions.NetScript.Script();
+            string[] usings = ScriptsDefaultUsings;
 
-            script.RegisterExecutableReference();
-
+            var scriptUsings = string.Join("\n", usings.Select(x => $"using {x};")) + "\n";
 
             var privateCoreLibPath = typeof(Object).GetTypeInfo().Assembly.Location;
 
             var coreDir = Directory.GetParent(privateCoreLibPath);
+            var compilation = CSharpCompilation.Create("CustomAssembly",
+                options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary))
+            .AddReferences(MetadataReference.CreateFromFile(privateCoreLibPath))
+            .AddReferences(MetadataReference.CreateFromFile(Path.Combine(coreDir.FullName, "mscorlib.dll")))
+            .AddReferences(MetadataReference.CreateFromFile(Path.Combine(coreDir.FullName, "System.Runtime.dll")))
+            .AddReferences(MetadataReference.CreateFromFile(Path.Combine(coreDir.FullName, "System.Collections.dll")))
+            .AddReferences(MetadataReference.CreateFromFile(typeof(System.Runtime.CompilerServices.DynamicAttribute).Assembly.Location))
+            .AddReferences(MetadataReference.CreateFromFile(typeof(Microsoft.CSharp.RuntimeBinder.CSharpArgumentInfo).Assembly.Location))
+            .AddReferences(MetadataReference.CreateFromFile(typeof(IScriptableServerProjectInfo).Assembly.Location))
+            .AddReferences(MetadataReference.CreateFromFile(typeof(ServerProjectInfo).Assembly.Location))
+            .AddSyntaxTrees(Directory.GetFiles(ScriptsDirPath, "*.cs").Select(x => CSharpSyntaxTree.ParseText(scriptUsings + File.ReadAllText(x), path: x)))
+            .AddSyntaxTrees(Directory.GetFiles(GlobalScriptsDirPath, "*.cs").Select(x => CSharpSyntaxTree.ParseText(scriptUsings + File.ReadAllText(x), path: x)));
 
-            foreach (var item in ScriptsDefaultUsings)
+
+            using (var ms = new MemoryStream())
             {
-                script.RegistrationUsingDirective(item);
+                var result = compilation.Emit(ms);
+                if (!result.Success)
+                {
+                    PublisherServer.AppLogger.AppendError($"Project ({Info.Id}) script compilation errors");
+
+                    foreach (var item in result.Diagnostics)
+                    {
+                        var loc = item.Location;
+
+                        var srcText = item.Location.SourceTree.GetText().ToString();
+
+                        var line = srcText[..loc.SourceSpan.Start].Count(x => x == '\n') - usings.Length + 1;
+                        var start = srcText[..loc.SourceSpan.Start].LastIndexOf('\n');
+
+                        start = loc.SourceSpan.Start - start;
+
+                        var err = $"-{loc.SourceTree.FilePath}({line},{start}) {item.GetMessage()}";
+
+                        PublisherServer.AppLogger.AppendError(err);
+                        BroadcastMessage(err);
+                    }
+
+                    return false;
+                }
+
+                var asm = Assembly.Load(ms.ToArray());
+
+                OnStartMethod = asm.GetScriptMethod("OnStart").CreateDelegate<startMethodDelegate>();
+
+                OnEndMethod = asm.GetScriptMethod("OnEnd").CreateDelegate<endMethodDelegate>();
+
+                OnFileStartMethod = asm.GetScriptMethod("OnFileStart").CreateDelegate<fileMethodDelegate>();
+
+                OnFileEndMethod = asm.GetScriptMethod("OnFileEnd").CreateDelegate<fileMethodDelegate>();
             }
 
-            script.RegisterCoreReference(privateCoreLibPath);
-            script.RegisterCoreReference(Path.Combine(coreDir.FullName, "mscorlib.dll"));
-            script.RegisterCoreReference(Path.Combine(coreDir.FullName, "System.Runtime.dll"));
-            script.RegisterCoreReference(Path.Combine(coreDir.FullName, "System.Collections.dll"));
-            script.RegisterCoreReference(typeof(System.Runtime.CompilerServices.DynamicAttribute).Assembly.Location);
-            script.RegisterCoreReference(typeof(Microsoft.CSharp.RuntimeBinder.CSharpArgumentInfo).Assembly.Location);
-            script.RegisterCoreReference(typeof(IScriptableServerProjectInfo).Assembly.Location);
-
-
-
-            //script.RegisterCoreReference("System.dll");
-            //script.RegisterCoreReference("System.IO.dll");
-            //script.RegisterCoreReference("System.IO.FileSystem.dll");
-            //script.RegisterCoreReference("System.IO.FileSystem.Primitives.dll");
-            //script.RegisterCoreReference("System.Linq.dll");
-            //script.RegisterCoreReference("System.Collections.dll");
-            //script.RegisterCoreReference("Microsoft.CodeAnalysis.CSharp.dll");
-            //script.RegisterCoreReference("System.ComponentModel.Primitives.dll");
-            //script.RegisterCoreReference("System.Diagnostics.Process.dll");
-            //script.RegisterCoreReference("ServerPublisher.Server.Scripts.dll");
-
-            script.RegistrationGlobalVariable(new NSL.Extensions.NetScript.GlobalVariable("CurrentProject", typeof(IScriptableServerProjectInfo)));
-
-            CheckScriptsExists(script);
-
-            script.AddFolder(ScriptsDirPath, true);
-
-            if (Directory.Exists(GlobalScriptsDirPath))
-                script.AddFolder(GlobalScriptsDirPath, true);
-
-            script.Compile();
-
-            script.SetGlobalVariable("CurrentProject", this);
-
-            OnStartMethod = script.GetMethod("PublisherScript", "OnStart").CreateDelegate<startMethodDelegate>();
-
-            OnEndMethod = script.GetMethod("PublisherScript", "OnEnd").CreateDelegate<endMethodDelegate>();
-
-            OnFileStartMethod = script.GetMethod("PublisherScript", "OnFileStart").CreateDelegate<fileMethodDelegate>();
-
-            OnFileEndMethod = script.GetMethod("PublisherScript", "OnFileEnd").CreateDelegate<fileMethodDelegate>();
-
             scriptLatestBuilded = DateTime.UtcNow;
-            //}
-            //catch (Exception ex)
-            //{
-            //    BroadcastMessage(ex.ToString());
-            //    if (ProcessUser != null)
-            //    {
-            //        StopProcess(ProcessUser.CurrentNetwork, false);
-            //    }
-            //}
 
-            return script;
+            return true;
         }
 
         internal void CheckScripts()
         {
-            getScript();
+            loadScripts();
         }
 
         public void BroadcastMessage(string log)
@@ -379,7 +363,7 @@ public partial class PublisherScript {
             return di.CreateSubdirectory($"{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid()}").GetNormalizedDirectoryPath();
         }
 
-        private bool processCompressedTemp(ProjectPublishContext context)
+        private void processCompressedTemp(ProjectPublishContext context, ref bool success)
         {
             var archiveFile = context.FileMap.Values.First();
 
@@ -400,7 +384,10 @@ public partial class PublisherScript {
                          });
 
                     if (!id.HasValue)
-                        return false;
+                    {
+                        success = false;
+                        return;
+                    }
 
                     var file = context.FileMap[id.Value];
 
@@ -415,7 +402,7 @@ public partial class PublisherScript {
 
             File.Delete(archivePath);
 
-            return processTemp(context);
+            processTemp(context, ref success);
         }
 
         private string CorrectCompressedPath(ProjectPublishContext context, string path)
@@ -431,28 +418,35 @@ public partial class PublisherScript {
             return path.Replace('/', '\\');
         }
 
-        private bool processTemp(IProcessingFilesContext context)
+        private void processTemp(IProcessingFilesContext context, ref bool success)
         {
-            initializeBackup();
-
-            var updateFiles = context.GetFiles();
-
-            foreach (var item in updateFiles)
+            try
             {
-                createFileBackup(item);
+                initializeBackup();
 
-                OnFileStartMethod(this, item);
+                var updateFiles = context.GetFiles();
 
-                if (item.TempRelease(context) == false)
+                foreach (var item in updateFiles)
                 {
-                    BroadcastMessage($"Error!! cannot move file from temp {item.RelativePath}!!");
-                    return false;
+                    createFileBackup(item);
+
+                    OnFileStartMethod(this, item);
+
+                    if (item.TempRelease(context) == false)
+                    {
+                        context.Log($"Error!! cannot move file from temp {item.RelativePath}!!");
+                        success = false;
+                        return;
+                    }
+
+                    OnFileEndMethod(this, item);
                 }
-
-                OnFileEndMethod(this, item);
             }
-
-            return true;
+            catch (Exception ex)
+            {
+                success = false;
+                context.Log(ex.ToString(), true);
+            }
         }
 
         #endregion
@@ -602,23 +596,27 @@ public partial class PublisherScript {
             context.Actual = false;
             CurrentPublishContext = null;
 
-            getScript(true);
+            if (!loadScripts())
+            {
+                context.Log($"Scripts have errors - lock update", true);
+
+                return false;
+            }
 
             bool successProcess = true;
 
-            finishPublishProcessOnStartScript(success, ref successProcess);
+            finishPublishProcessOnStartScript(context, success, ref successProcess);
 
             if (success && successProcess)
             {
-
                 finishPublishProcessProduceFiles(context, ref successProcess);
             }
 
-            FinishPublishProcessOnEndScript(success, ref successProcess, args);
+            FinishPublishProcessOnEndScript(context, success, ref successProcess, args);
 
-            if (success && !successProcess)
+            if (success && successProcess)
             {
-                DumpFileList();
+                ReleaseUpdateContext(context);
 
                 Info.LatestUpdate = DateTime.UtcNow;
 
@@ -630,29 +628,31 @@ public partial class PublisherScript {
             {
                 FinishPublishProcessRecoveryBackup();
 
-                FinishPublishProcessOnEndScript(success, ref successProcess, args);
+                FinishPublishProcessOnEndScript(context, success, ref successProcess, args);
             }
 
             NextPublisherOrUnlock();
 
-            return true;
+            return successProcess;
         }
 
-        private void finishPublishProcessOnStartScript(bool success, ref bool successProcess)
+        private void finishPublishProcessOnStartScript(IProcessingFilesContext context, bool success, ref bool successProcess)
         {
-            try { OnStartMethod(this, success, false); } catch (Exception ex) { BroadcastMessage(ex.ToString()); successProcess = false; }
+            try { OnStartMethod(this, success, false); } catch (Exception ex) { context.Log(ex.ToString()); successProcess = false; }
         }
 
         private void finishPublishProcessProduceFiles(ProjectPublishContext context, ref bool successProcess)
         {
             try
             {
-                if (!(context.UseCompression ? processCompressedTemp(context) : processTemp(context)))
-                    successProcess = false;
+                if (context.UseCompression)
+                    processCompressedTemp(context, ref successProcess);
+                else
+                    processTemp(context, ref successProcess);
             }
             catch (Exception ex)
             {
-                BroadcastMessage(ex.ToString());
+                context.Log(ex.ToString());
                 successProcess = false;
             }
         }
@@ -662,9 +662,9 @@ public partial class PublisherScript {
             recoveryBackup();
         }
 
-        private void FinishPublishProcessOnEndScript(bool success, ref bool postProcessingSuccess, Dictionary<string, string> args)
+        private void FinishPublishProcessOnEndScript(IProcessingFilesContext context, bool success, ref bool postProcessingSuccess, Dictionary<string, string> args)
         {
-            try { OnEndMethod(this, success, postProcessingSuccess, args); } catch (Exception ex) { BroadcastMessage(ex.ToString()); postProcessingSuccess = false; }
+            try { OnEndMethod(this, success, postProcessingSuccess, args); } catch (Exception ex) { context.Log(ex.ToString()); postProcessingSuccess = false; }
         }
 
         internal Guid? StartPublishFile(ProjectPublishContext context, PublishProjectFileStartRequestModel data)
@@ -716,7 +716,7 @@ public partial class PublisherScript {
                 return;
             }
 
-            file.EndFile();
+            file.EndFile(context);
         }
 
         #endregion
@@ -780,6 +780,19 @@ public partial class PublisherScript {
 
                 FileInfoList.Add(pfi);
             }
+        }
+
+        public void ReleaseUpdateContext(IProcessingFilesContext context)
+        {
+            var updatedPaths = context.GetFiles().Select(x => x.RelativePath).ToArray();
+
+            var newFileList = FileInfoList.Where(x => !updatedPaths.Contains(x.RelativePath)).ToList();
+
+            newFileList.AddRange(context.GetFiles());
+
+            FileInfoList = newFileList;
+
+            DumpFileList();
         }
 
         public void DumpFileList()
@@ -983,7 +996,7 @@ public partial class PublisherScript {
 
 
 
-            CheckScriptsExists(script);
+            CheckScriptsExists();
         }
 
         private void LoadUsers()
@@ -1017,6 +1030,8 @@ public partial class PublisherScript {
             LoadProjectInfo();
 
             LoadPatch();
+
+            loadScripts();
         }
 
         public ServerProjectInfo(ProjectInfoData pid)
@@ -1134,8 +1149,11 @@ public partial class PublisherScript {
 
         public FileLogger? Logger { get; set; }
 
-        public void Log(string text)
+        public void Log(string text, bool appLog = false)
         {
+            if (appLog)
+                PublisherServer.AppLogger.Append(NSL.SocketCore.Utils.Logger.Enums.LoggerLevel.Info, text);
+
             Logger?.AppendLog(text);
 
             ProjectInfo.BroadcastMessage(text);
@@ -1180,10 +1198,13 @@ public partial class PublisherScript {
 
         public ConcurrentDictionary<Guid, ProjectFileInfo> FileMap { get; } = new();
 
-        public void Log(string text)
+        public void Log(string text, bool appLog = false)
         {
+
             if (!Actual)
                 return;
+            if (appLog)
+                PublisherServer.AppLogger.Append(NSL.SocketCore.Utils.Logger.Enums.LoggerLevel.Info, text);
 
             Logger?.AppendLog(text);
 
@@ -1215,5 +1236,7 @@ public partial class PublisherScript {
         string? TempPath { get; }
 
         IEnumerable<ProjectFileInfo> GetFiles();
+
+        void Log(string content, bool appLog = false);
     }
 }

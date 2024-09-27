@@ -9,6 +9,7 @@ using ServerPublisher.Shared.Info;
 using System.Threading;
 using ServerPublisher.Shared.Models.ResponseModel;
 using ServerPublisher.Shared.Utils;
+using NSL.Logger;
 
 namespace ServerPublisher.Server.Info
 {
@@ -161,7 +162,6 @@ namespace ServerPublisher.Server.Info
 
             Info.LatestUpdate = context.UpdateTime;
 
-            getScript(true);
 
             EndPatchReceive(context);
 
@@ -217,23 +217,29 @@ namespace ServerPublisher.Server.Info
 
         private void EndPatchReceive(ProjectDownloadContext context)
         {
-            bool success = false;
+            bool success = true;
 
-            finishPublishProcessOnStartScript(true, ref success);
+            if (!loadScripts())
+            {
+                context.Log($"Scripts have errors - lock update", true);
+                return;
+            }
+
+            finishPublishProcessOnStartScript(context, true, ref success);
 
             if (success)
             {
-                success = processTemp(context);
+                processTemp(context, ref success);
 
                 if (!success)
                     recoveryBackup();
             }
 
-            FinishPublishProcessOnEndScript(true, ref success, new Dictionary<string, string>());
+            FinishPublishProcessOnEndScript(context, true, ref success, new Dictionary<string, string>());
 
             if (success)
             {
-                DumpFileList();
+                ReleaseUpdateContext(context);
 
                 Info.LatestUpdate = context.UpdateTime;
 

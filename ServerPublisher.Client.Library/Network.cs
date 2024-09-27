@@ -91,8 +91,8 @@ namespace ServerPublisher.Client.Library
         public async Task<PublishSignInResponseModel> SignIn(PublishSignInRequestModel request)
             => await Request(PublisherPacketEnum.PublishProjectSignIn, request.WriteFullTo, PublishSignInResponseModel.ReadFullFrom);
 
-        public async Task ProjectFinish(PublishProjectFinishRequestModel request)
-            => await Request(PublisherPacketEnum.PublishProjectFinish, request.WriteFullTo, r => true);
+        public async Task<bool> ProjectFinish(PublishProjectFinishRequestModel request)
+            => await Request(PublisherPacketEnum.PublishProjectFinish, request.WriteFullTo, r => r?.ReadBool() ?? false);
 
         public async Task<PublishProjectFileStartResponseModel> FileStart(PublishProjectFileStartRequestModel request)
             => await Request(PublisherPacketEnum.PublishProjectFileStart, request.WriteFullTo, PublishProjectFileStartResponseModel.ReadFullFrom);

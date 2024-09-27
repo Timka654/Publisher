@@ -36,24 +36,24 @@ namespace ServerPublisher.Server.Info
             this.createTime = createTime;
             this.updateTime = updateTime;
 
-            Project.BroadcastMessage($"starting -> {RelativePath}");
+            context.Log($"starting -> {RelativePath}");
         }
 
-        public bool EndFile()
+        public bool EndFile(ProjectPublishContext context)
         {
             if (WriteIO == null)
                 return false;
             WriteIO.Flush();
             WriteIO.Dispose();
             WriteIO = null;
-            try { fi.CreationTimeUtc = createTime.Value; } catch (Exception ex) { Project.BroadcastMessage($"finishing error -> {ex}"); }
+            try { fi.CreationTimeUtc = createTime.Value; } catch (Exception ex) { context.Log($"finishing error -> {ex}"); }
             createTime = null;
-            try { fi.LastWriteTimeUtc = updateTime.Value; } catch (Exception ex) { Project.BroadcastMessage($"finishing error -> {ex}"); }
+            try { fi.LastWriteTimeUtc = updateTime.Value; } catch (Exception ex) { context.Log($"finishing error -> {ex}"); }
             updateTime = null;
 
             fi = null;
 
-            Project.BroadcastMessage($"uploaded -> {RelativePath}");
+            context?.Log($"uploaded -> {RelativePath}");
 
             return true;
         }
@@ -64,7 +64,8 @@ namespace ServerPublisher.Server.Info
 
             if (fi.Exists == false)
             {
-                Project.BroadcastMessage($"Error!! {fi.GetNormalizedFilePath()} not exists!!");
+                context.Log($"Error!! {fi.GetNormalizedFilePath()} not exists!!");
+
                 return false;
             }
 
@@ -78,7 +79,7 @@ namespace ServerPublisher.Server.Info
 
             CalculateHash();
 
-            Project.BroadcastMessage($"{RelativePath} new hash -> {Hash}");
+            context.Log($"{RelativePath} new hash -> {Hash}");
 
             return true;
         }
