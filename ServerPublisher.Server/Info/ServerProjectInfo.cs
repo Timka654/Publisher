@@ -928,7 +928,6 @@ public partial class PublisherScript {
         {
             if (users.Any(x => x.Name.Equals(user.Name, StringComparison.OrdinalIgnoreCase)))
             {
-                PublisherServer.ServerLogger.AppendError($"{user.Name} already exist in project {Info.Name}");
                 return false;
             }
 

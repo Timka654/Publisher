@@ -326,7 +326,9 @@ namespace ServerPublisher.Server.Utils
                 if (projectInfo.AddUser(user))
                     Logger.AppendInfo($"user {user.Name} by id {user.Id} created");
                 else
-                    Logger.AppendError($"user {user.Name} already exists");
+                {
+                    PublisherServer.ServerLogger.AppendError($"{user.Name} already exist in project {user.Name}");
+                }
             }
         }
 
