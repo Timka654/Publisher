@@ -6,13 +6,17 @@
 	</PropertyGroup>
 
 	<ItemGroup Condition="'$(Configuration)' != 'ScriptsDebugging'">
-		<None Include="Data\**" CopyToOutputDirectory="PreserveNewest"></None>
+		<None Include="data\**" CopyToOutputDirectory="PreserveNewest"></None>
 
-		<Compile Remove="Data\**" />
+		<Compile Remove="data\**" />
 
 		<None Include="Fake\**" CopyToOutputDirectory="Never"></None>
 
 		<Compile Remove="Fake\**" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Fake\" />
 	</ItemGroup>
 	
 </Project>

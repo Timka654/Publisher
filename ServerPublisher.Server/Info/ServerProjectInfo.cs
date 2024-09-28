@@ -995,7 +995,7 @@ public partial class PublisherScript {
             {
                 Directory.CreateDirectory(PublisherDirPath);
 
-                var templatePath = Path.Combine(Application.Directory, "Data", "ProjectTemplate").GetNormalizedPath();
+                var templatePath = Path.Combine(Application.Directory, "data", "project_template").GetNormalizedPath();
 
                 if (Directory.Exists(templatePath))
                     DirectoryCopy(templatePath, PublisherDirPath, true);
