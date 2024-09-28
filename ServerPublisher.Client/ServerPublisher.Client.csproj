@@ -1,43 +1,33 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
-    <Configurations>Debug;Release;ScriptsDebugging</Configurations>
-  </PropertyGroup>
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net8.0</TargetFramework>
+		<Configurations>Debug;Release;ScriptsDebugging</Configurations>
+		<AssemblyName>publisherclient</AssemblyName>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <Compile Remove="publish\**" />
-    <EmbeddedResource Remove="publish\**" />
-    <None Remove="publish\**" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="NSL.Cipher" Version="2024.9.28.107" />
+		<PackageReference Include="NSL.Utils" Version="2024.9.28.107" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <None Remove="run_debug.ps1" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\ServerPublisher.Client.Library\ServerPublisher.Client.Library.csproj" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="NSL.Cipher" Version="2024.9.28.107" />
-    <PackageReference Include="NSL.Utils" Version="2024.9.28.107" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\ServerPublisher.Client.Library\ServerPublisher.Client.Library.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="key_storage\dev_user_78d92859-cfe5-432d-9643-5c2e1f5f056e.pubuk">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Templates\dotnet\Publish.ps1">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="tools\setup.ps1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="tools\utils.psm1">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
+	<ItemGroup>
+		<None Update="key_storage\dev_user_78d92859-cfe5-432d-9643-5c2e1f5f056e.pubuk" Condition="'$(Configuration)'=='Debug'">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Templates\dotnet\Publish.ps1">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="tools\setup.ps1">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="tools\utils.psm1">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
 </Project>

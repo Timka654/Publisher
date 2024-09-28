@@ -3,6 +3,12 @@ function GetValue {
 	$answer = ""
 	$value = ""
 	$tryValue = $null;
+
+	if($defaultValue -ne $null)
+	{
+		$text = "$text (default: $defaultValue)"
+	}
+
 	while($true)
 	{
 		$value = Read-Host $text

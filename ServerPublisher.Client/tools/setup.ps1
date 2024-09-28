@@ -1,3 +1,4 @@
+#Requires -RunAsAdministrator
 Import-Module "./utils.psm1"
 
 $backLocation = (Get-Location).Path
@@ -8,15 +9,20 @@ $currLocation = (Get-Location).Path
 
 Set-Location $backLocation
 
-if ([System.IO.File]::Exists("$currLocation/Publisher.Client.deps.json") -eq $false) {
+if ([System.IO.File]::Exists("$currLocation/publisherclient.pdb") -eq $false) {
     Write-Error "Client files not found in current path $currLocation"
+    exit
+}
+
+if ([System.IO.File]::Exists("$currLocation/installed") -eq $true) {
+    Write-Error "Client files already installed! No need more actions"
     exit
 }
 
 $setupPath = ""
 do {
     $setupPath = GetValue -text "Install path" -defaultValue "C:\Program Files\Publisher.Client"
-    if (([System.IO.Directory]::Exists($setupPath) -eq $true) -and ([System.IO.Directory]::GetFiles($setupPath).Count -ne 0) -and (([System.IO.File]::Exists("$setupPath/Publisher.Client.deps.json") -eq $false))) {
+    if (([System.IO.Directory]::Exists($setupPath) -eq $true) -and ([System.IO.Directory]::GetFiles($setupPath).Count -ne 0) -and (([System.IO.File]::Exists("$setupPath/publisherclient.pdb") -eq $false))) {
         Write-Host "Install path ""$setupPath"" must be empty"
         continue
     }
@@ -37,9 +43,13 @@ if([System.IO.Directory]::Exists([System.IO.Path]::Combine($setupPath, "key_stor
     New-Item -Path $setupPath -Name "key_storage" -ItemType "directory"
 }
 
+if([System.IO.File]::Exists([System.IO.Path]::Combine($setupPath, "..", "installed")) -eq $false) {
+    New-Item -Path $setupPath -Name "installed" -ItemType "file"
+}
+
 Set-Location $setupPath
 
-Write-Host "Invoke Publisher.Client with args"
+Write-Host "Invoke ""publisherclient"" with args for produce project file to remote server"
 
 if ($IsWindows) {
 
