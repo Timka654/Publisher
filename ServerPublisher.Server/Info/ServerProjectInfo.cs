@@ -26,6 +26,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis;
 using ServerPublisher.Server.Utils;
 using ServerPublisher.Server.Dev.Test.Utils;
+using System.ComponentModel;
 
 namespace ServerPublisher.Server.Info
 {
@@ -172,6 +173,7 @@ public partial class PublisherScript {
             .AddReferences(MetadataReference.CreateFromFile(typeof(Microsoft.CSharp.RuntimeBinder.CSharpArgumentInfo).Assembly.Location))
             .AddReferences(MetadataReference.CreateFromFile(typeof(System.Diagnostics.Process).Assembly.Location))
             .AddReferences(MetadataReference.CreateFromFile(typeof(System.Net.Http.HttpClient).Assembly.Location))
+            .AddReferences(MetadataReference.CreateFromFile(typeof(Component).Assembly.Location))
             .AddReferences(MetadataReference.CreateFromFile(typeof(IScriptableServerProjectInfo).Assembly.Location))
             .AddReferences(MetadataReference.CreateFromFile(typeof(ServerProjectInfo).Assembly.Location))
             .AddSyntaxTrees(Directory.GetFiles(ScriptsDirPath, "*.cs").Select(x => CSharpSyntaxTree.ParseText(scriptUsings + File.ReadAllText(x), path: x)))
