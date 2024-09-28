@@ -77,6 +77,7 @@ namespace ServerPublisher.Server
             else
             {
                 PublisherNetworkServer.Initialize();
+                PublisherNetworkServer.Run();
 
                 Thread.Sleep(Timeout.Infinite);
             }
