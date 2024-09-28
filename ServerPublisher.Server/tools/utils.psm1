@@ -1,11 +1,22 @@
 function GetValue {
-	param([string] $text, [string] $type = "string")
+	param([string] $text, [string] $type = "string", [string] $defaultValue = $null)
 	$answer = ""
 	$value = ""
 	$tryValue = $null;
+
+	if($defaultValue -ne $null)
+	{
+		$text = "$text (default: $defaultValue)"
+	}
+
 	while($true)
 	{
 		$value = Read-Host $text
+
+		if(([string]::IsNullOrEmpty($value) -eq $true) -and ($defaultValue -ne $null))
+		{
+			$value = $defaultValue
+		}
 
 		if(($type -eq "int") -and ([int]::TryParse($value, [ref]$tryValue) -eq $false))
 		{

@@ -13,10 +13,10 @@ $identity_name = GetValue -text "Введите название публичн�
 $project_id = GetValue -text "Введите идентификатор проекта"
 
 if ($IsWindows) {
-    $execFile = "./ServerPublisher.Server.exe"
+    $execFile = "./publisherserver.exe"
 }
 else {
-    $execFile = "./ServerPublisher.Server"
+    $execFile = "./publisherserver"
 }
 
 & $execFile /action:add_patch_connection /project_id:$project_id /ip_address:$ip_addr /port:$port /input_cipher_key:$input_cipher_key /output_cipher_key:$output_cipher_key /identity_name:$identity_name

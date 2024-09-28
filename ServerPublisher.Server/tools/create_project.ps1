@@ -13,10 +13,10 @@ $fullReplace = GetValue -text "Перезаписывать при публик�
 $backup = GetValue -text "Резервное копирование при публикации(true/false)" -type "bool"
 
 if ($IsWindows) {
-    $execFile = "./ServerPublisher.Server.exe"
+    $execFile = "./publisherserver.exe"
 }
 else {
-    $execFile = "./ServerPublisher.Server"
+    $execFile = "./publisherserver"
 }
 
 & $execFile /action:create_project /name:$name /directory:$directory /full_replace:$fullReplace /backup:$backup

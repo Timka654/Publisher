@@ -31,7 +31,7 @@ if($args.Contains("default") -eq $false)
 
 $setupPath=Get-Location
 
-$execFile = [System.IO.Path]::Combine($setupPath,"ServerPublisher.Server")
+$execFile = [System.IO.Path]::Combine($setupPath,"publisherserver")
 $dir = Split-Path -Path $execFile
 if((Test-Path -Path $execFile) -eq $false)
 {
@@ -57,6 +57,6 @@ WantedBy=multi-user.target
 
 sudo systemctl enable $serviceFileName
 
-Write-Host "Enabled service $serviceFileName, print ""systemctl start $serviceFileName"" for start now"
+Write-Host "Service ""$serviceFileName"" enabled, print ""systemctl start $serviceFileName"" for start now"
 
 Set-Location $currdir

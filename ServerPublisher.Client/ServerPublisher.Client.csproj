@@ -20,7 +20,7 @@
 		<None Update="key_storage\dev_user_78d92859-cfe5-432d-9643-5c2e1f5f056e.pubuk" Condition="'$(Configuration)'=='Debug'">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
-		<None Update="Templates\dotnet\Publish.ps1">
+		<None Update="templates\dotnet\Publish.ps1">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="tools\setup.ps1">

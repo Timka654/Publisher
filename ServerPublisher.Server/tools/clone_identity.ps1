@@ -9,10 +9,10 @@ $source_project_id = GetValue -text "Введите идентификатор �
 $dest_project_id = GetValue -text "Введите идентификатор проекта (конечный)"
 
 if ($IsWindows) {
-    $execFile = "./ServerPublisher.Server.exe"
+    $execFile = "./publisherserver.exe"
 }
 else {
-    $execFile = "./ServerPublisher.Server"
+    $execFile = "./publisherserver"
 }
 
 & $execFile /action:clone_identity /source_project_id:$source_project_id /destination_project_id:$dest_project_id

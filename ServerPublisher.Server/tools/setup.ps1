@@ -4,7 +4,7 @@ Set-Location ..
 
 $currLocation = (Get-Location).Path
 
-if ([System.IO.File]::Exists([System.IO.Path]::Combine($currLocation,"ServerPublisher.Server.deps.json")) -eq $false) {
+if ([System.IO.File]::Exists([System.IO.Path]::Combine($currLocation,"publisherserver.deps.json")) -eq $false) {
 	Write-Error "Server files not found in current path $currLocation"
 	exit
 }
@@ -68,7 +68,7 @@ else {
 	if ($PathEnv.Contains($setupPath, [StringComparison]::OrdinalIgnoreCase) -eq $false) {
 		[System.Environment]::SetEnvironmentVariable("PATH", "$setupPath;$PathEnv", [System.EnvironmentVariableTarget]::Machine)
 	}
-	$execFilePath = [System.IO.Path]::Combine($setupPath, "ServerPublisher.Server")
+	$execFilePath = [System.IO.Path]::Combine($setupPath, "publisherserver")
 	chmod +x $execFilePath
 	ln -sf $execFilePath /bin/publs
 

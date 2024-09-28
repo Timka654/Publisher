@@ -20,7 +20,7 @@ if($args.Contains("default") -eq $false)
 
 $setupPath=Get-Location
 
-$execFile = [System.IO.Path]::Combine($setupPath,"ServerPublisher.Server.exe")
+$execFile = [System.IO.Path]::Combine($setupPath,"publisherserver.exe")
 
 if((Test-Path -Path $execFile) -eq $false)
 {

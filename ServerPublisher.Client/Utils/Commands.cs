@@ -24,7 +24,7 @@ namespace ServerPublisher.Client.Utils
         {
             var appPath = AppDomain.CurrentDomain.BaseDirectory;
 
-            string templatesPath = Path.Combine(appPath, "Templates");
+            string templatesPath = Path.Combine(appPath, "templates");
 
             string name = default;
 

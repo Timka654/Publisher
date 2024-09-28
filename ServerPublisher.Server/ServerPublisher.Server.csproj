@@ -5,6 +5,7 @@
 		<TargetFramework>net8.0</TargetFramework>
 		<Configurations>Debug;Release;ScriptsDebugging</Configurations>
 		<Nullable>enable</Nullable>
+		<AssemblyName>publisherserver</AssemblyName>
 	</PropertyGroup>
 
 	<PropertyGroup>
