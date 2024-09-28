@@ -58,6 +58,17 @@ namespace ServerPublisher.Server.Info
             return true;
         }
 
+        public void ReleaseIO()
+        {
+            if (WriteIO == null)
+                return;
+
+            WriteIO.Flush();
+            WriteIO.Dispose();
+            WriteIO = null;
+        }
+
+
         public bool TempRelease(IProcessingFilesContext context)
         {
             var fi = new FileInfo(System.IO.Path.Combine(context.TempPath, RelativePath).GetNormalizedPath());

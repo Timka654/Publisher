@@ -393,13 +393,13 @@ public partial class PublisherScript {
 
             context.FileMap.Clear();
 
-            var archivePath = Path.Combine(TempDirPath, archiveFile.RelativePath).GetNormalizedPath();
+            var archivePath = Path.Combine(context.TempPath, archiveFile.RelativePath).GetNormalizedPath();
 
             using (var archive = ZipFile.OpenRead(archivePath))
             {
                 foreach (var archiveEntry in archive.Entries)
                 {
-                    var id = StartPublishFile(
+                    var id = startPublishFile(
                          context, new PublishProjectFileStartRequestModel()
                          {
                              RelativePath = CorrectCompressedPath(context, archiveEntry.FullName),
@@ -420,7 +420,7 @@ public partial class PublisherScript {
                         ex.CopyTo(file.WriteIO);
                     }
 
-                    EndPublishFile(context, file);
+                    endPublishFile(context, file);
                 }
             }
 
@@ -477,7 +477,7 @@ public partial class PublisherScript {
 
         #region Backup
 
-        private string currentBackupDirPath = "";
+        private string? currentBackupDirPath = null;
 
         private void initializeBackup()
         {
@@ -495,6 +495,9 @@ public partial class PublisherScript {
             if (file.FileInfo.Exists == false)
                 return;
 
+            if (currentBackupDirPath == null)
+                throw new Exception($"Cannot create backup - {nameof(initializeBackup)} not be executed before process");
+
             var fi = new FileInfo(Path.Combine(currentBackupDirPath, file.RelativePath).GetNormalizedPath());
 
             if (fi.Directory.Exists == false)
@@ -508,6 +511,9 @@ public partial class PublisherScript {
             if (Info.Backup == false)
                 return false;
 
+            if (currentBackupDirPath == null)
+                return true;
+
             var dir = new DirectoryInfo(currentBackupDirPath);
 
             if (dir.Exists == false)
@@ -520,7 +526,7 @@ public partial class PublisherScript {
 
             dir.Delete(true);
 
-            currentBackupDirPath = string.Empty;
+            currentBackupDirPath = null;
 
             return true;
         }
@@ -669,7 +675,7 @@ public partial class PublisherScript {
         {
             try
             {
-                if (context.UseCompression)
+                if (context.UploadMethod == UploadMethodEnum.SingleArchive)
                     processCompressedTemp(context, ref successProcess);
                 else
                     processTemp(context, ref successProcess);
@@ -699,6 +705,11 @@ public partial class PublisherScript {
                 return default;
             }
 
+            return startPublishFile(context, data);
+        }
+
+        private Guid? startPublishFile(ProjectPublishContext context, PublishProjectFileStartRequestModel data)
+        {
             var file = new ProjectFileInfo(ProjectDirPath, new FileInfo(Path.Combine(ProjectDirPath, data.RelativePath).GetNormalizedPath()), this);
 
             Guid id = default;
@@ -740,6 +751,11 @@ public partial class PublisherScript {
                 return;
             }
 
+            endPublishFile(context, file);
+        }
+
+        internal void endPublishFile(ProjectPublishContext context, ProjectFileInfo file)
+        {
             file.EndFile(context);
         }
 
@@ -1220,8 +1236,6 @@ public partial class PublisherScript {
 
         public FileLogger? Logger { get; set; }
 
-        public bool UseCompression { get; set; }
-
         public OSTypeEnum Platform { get; set; }
 
         public UploadMethodEnum UploadMethod { get; set; }
@@ -1245,10 +1259,15 @@ public partial class PublisherScript {
         {
             ProjectInfo.ConnectedPublishers.TryRemove(Id, out _);
 
-            if (TempPath != default)
-                Directory.Delete(TempPath, true);
+            foreach (var item in FileMap.Values)
+            {
+                item.ReleaseIO();
+            }
 
             FileMap.Clear();
+
+            if (TempPath != default)
+                Directory.Delete(TempPath, true);
 
             ProjectInfo?.FinishPublishProcess(this, false);
 
