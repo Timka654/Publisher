@@ -5,6 +5,10 @@ namespace ServerPublisher.Server.Scripts
     {
         string ProjectDirPath { get; }
 
-        void BroadcastMessage(string log);
+        bool IsLinux();
+
+        bool IsWindows();
+
+        bool IsMacOS();
     }
 }

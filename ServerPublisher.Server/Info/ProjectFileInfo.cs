@@ -1,11 +1,12 @@
-﻿using ServerPublisher.Shared.Info;
+﻿using ServerPublisher.Server.Scripts;
+using ServerPublisher.Shared.Info;
 using ServerPublisher.Shared.Utils;
 using System;
 using System.IO;
 
 namespace ServerPublisher.Server.Info
 {
-    public class ProjectFileInfo : BasicFileInfo
+    public class ProjectFileInfo : BasicFileInfo, IScriptableFileInfo
     {
         public string Path => FileInfo.GetNormalizedFilePath();
 

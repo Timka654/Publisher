@@ -6,7 +6,7 @@
       "io": {
         "port": 6583,
         "buffer_size": 409600,
-        "backlog": 10
+        "backlog": 100
       },
 
       "cipher": {
@@ -24,6 +24,19 @@
 
       "default": {
         "ignore.file.paths": [ "appsettings.[\\s|\\S]*" ]
+      },
+
+      "server": {
+        "scripts.default.usings": [
+          "System",
+          "System.IO",
+          "System.Collections",
+          "System.Collections.Generic",
+          "System.Linq",
+          "System.Diagnostics",
+          "ServerPublisher.Server.Info",
+          "ServerPublisher.Server.Scripts"
+        ]
       }
     }
   }

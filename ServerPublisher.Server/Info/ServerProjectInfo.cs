@@ -74,6 +74,12 @@ namespace ServerPublisher.Server.Info
 
         #region Scripts
 
+        public bool IsLinux() => RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
+
+        public bool IsWindows() => RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+
+        public bool IsMacOS() => RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
+
         private void CheckScriptsExists()
         {
             if (File.Exists(OnStartScriptPath) == false)
@@ -138,10 +144,10 @@ public partial class PublisherScript {
 
         DateTime scriptLatestChanged = DateTime.UtcNow;
 
-        private delegate void startMethodDelegate(IScriptableServerProjectInfo project, bool success, bool postProcessingSuccess);
-        private delegate void endMethodDelegate(IScriptableServerProjectInfo project, bool success, bool postProcessingSuccess, Dictionary<string, string> args);
+        private delegate void startMethodDelegate(ScriptInvokingContext context, bool success, bool postProcessingSuccess);
+        private delegate void endMethodDelegate(ScriptInvokingContext context, bool success, bool postProcessingSuccess, Dictionary<string, string> args);
 
-        private delegate void fileMethodDelegate(IScriptableServerProjectInfo project, ProjectFileInfo file);
+        private delegate void fileMethodDelegate(ScriptInvokingContext context, IScriptableFileInfo file);
 
         private startMethodDelegate OnStartMethod;
 
@@ -174,6 +180,7 @@ public partial class PublisherScript {
             .AddReferences(MetadataReference.CreateFromFile(typeof(System.Diagnostics.Process).Assembly.Location))
             .AddReferences(MetadataReference.CreateFromFile(typeof(System.Net.Http.HttpClient).Assembly.Location))
             .AddReferences(MetadataReference.CreateFromFile(typeof(Component).Assembly.Location))
+            .AddReferences(MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location))
             .AddReferences(MetadataReference.CreateFromFile(typeof(IScriptableServerProjectInfo).Assembly.Location))
             .AddReferences(MetadataReference.CreateFromFile(typeof(ServerProjectInfo).Assembly.Location))
             .AddSyntaxTrees(Directory.GetFiles(ScriptsDirPath, "*.cs").Select(x => CSharpSyntaxTree.ParseText(scriptUsings + File.ReadAllText(x), path: x)))
@@ -393,6 +400,8 @@ public partial class PublisherScript {
 
             context.FileMap.Clear();
 
+            context.Log("-> Start Archive processing");
+
             var archivePath = Path.Combine(context.TempPath, archiveFile.RelativePath).GetNormalizedPath();
 
             using (var archive = ZipFile.OpenRead(archivePath))
@@ -426,6 +435,8 @@ public partial class PublisherScript {
 
             File.Delete(archivePath);
 
+            context.Log("-> Finish Archive processing");
+
             processTemp(context, ref success);
         }
 
@@ -446,15 +457,19 @@ public partial class PublisherScript {
         {
             try
             {
+                var execContext = new ScriptInvokingContext(this, context);
+
                 initializeBackup();
 
                 var updateFiles = context.GetFiles();
 
                 foreach (var item in updateFiles)
                 {
+                    context.Log($"-> Start file processing");
+
                     createFileBackup(item);
 
-                    OnFileStartMethod(this, item);
+                    OnFileStartMethod(execContext, item);
 
                     if (item.TempRelease(context) == false)
                     {
@@ -463,7 +478,9 @@ public partial class PublisherScript {
                         return;
                     }
 
-                    OnFileEndMethod(this, item);
+                    OnFileEndMethod(execContext, item); 
+
+                    context.Log($"-> Finish file processing");
                 }
             }
             catch (Exception ex)
@@ -668,11 +685,14 @@ public partial class PublisherScript {
 
         private void finishPublishProcessOnStartScript(IProcessingFilesContext context, bool success, ref bool successProcess)
         {
-            try { OnStartMethod(this, success, false); } catch (Exception ex) { context.Log(ex.ToString()); successProcess = false; }
+            try { OnStartMethod(new ScriptInvokingContext(this, context), success, false); } catch (Exception ex) { context.Log(ex.ToString()); successProcess = false; }
         }
 
         private void finishPublishProcessProduceFiles(ProjectPublishContext context, ref bool successProcess)
         {
+            if (!context.FileMap.Any())
+                return;
+
             try
             {
                 if (context.UploadMethod == UploadMethodEnum.SingleArchive)
@@ -694,7 +714,7 @@ public partial class PublisherScript {
 
         private void FinishPublishProcessOnEndScript(IProcessingFilesContext context, bool success, ref bool postProcessingSuccess, Dictionary<string, string> args)
         {
-            try { OnEndMethod(this, success, postProcessingSuccess, args); } catch (Exception ex) { context.Log(ex.ToString()); postProcessingSuccess = false; }
+            try { OnEndMethod(new ScriptInvokingContext(this, context), success, postProcessingSuccess, args); } catch (Exception ex) { context.Log(ex.ToString()); postProcessingSuccess = false; }
         }
 
         internal Guid? StartPublishFile(ProjectPublishContext context, PublishProjectFileStartRequestModel data)
@@ -1220,6 +1240,9 @@ public partial class PublisherScript {
 
         public IEnumerable<ProjectFileInfo> GetFiles()
             => FileList;
+
+        public bool AnyFiles()
+            => FileList.Any();
     }
 
     public class ProjectPublishContext : IProcessingFilesContext, IDisposable
@@ -1244,9 +1267,6 @@ public partial class PublisherScript {
 
         public void Log(string text, bool appLog = false)
         {
-            if (!Actual)
-                return;
-
             if (appLog)
                 PublisherServer.ServerLogger.Append(NSL.SocketCore.Utils.Logger.Enums.LoggerLevel.Info, text);
 
@@ -1278,9 +1298,12 @@ public partial class PublisherScript {
 
         public IEnumerable<ProjectFileInfo> GetFiles()
             => FileMap.Values;
+
+        public bool AnyFiles()
+            => FileMap.Any();
     }
 
-    public interface IProcessingFilesContext
+    public interface IProcessingFilesContext : IScriptableExecutorContext
     {
         string? TempPath { get; }
 
