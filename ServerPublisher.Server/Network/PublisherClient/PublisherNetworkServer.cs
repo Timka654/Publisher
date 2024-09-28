@@ -12,6 +12,7 @@ using ServerPublisher.Server.Network.PublisherClient.Packets.PacketRepository;
 using NSL.SocketCore.Utils.Logger;
 using ServerPublisher.Server.Info;
 using NSL.SocketCore.Utils.Exceptions;
+using System.Net;
 
 namespace ServerPublisher.Server.Network.PublisherClient
 {
@@ -28,6 +29,7 @@ namespace ServerPublisher.Server.Network.PublisherClient
         static IBasicLogger Logger => PublisherServer.ServerLogger;
 
 
+        static string BindingAddress => IOSettings.Address;
         static int BindingPort => IOSettings.Port;
 
         static int Backlog => IOSettings.Backlog;
@@ -38,6 +40,11 @@ namespace ServerPublisher.Server.Network.PublisherClient
 
         public static void Initialize()
         {
+            Logger.Append(NSL.SocketCore.Utils.Logger.Enums.LoggerLevel.Info, $"Publisher server initialize binding on {BindingAddress}:{BindingPort}");
+
+            var addr = IPAddress.Parse(BindingAddress == "*" ? "0.0.0.0" : BindingAddress);
+
+
             var logWrapper = new NSL.Logger.PrefixableLoggerProxy(Logger, "[Publisher]");
 
             listener = TCPServerEndPointBuilder.Create()
@@ -104,7 +111,7 @@ namespace ServerPublisher.Server.Network.PublisherClient
                             client?.Network?.Disconnect();
                         });
                     })
-                    .WithBindingPoint(BindingPort)
+                    .WithBindingPoint(addr, BindingPort)
                     .WithBacklog(Backlog)
                     .Build();
         }
@@ -112,11 +119,13 @@ namespace ServerPublisher.Server.Network.PublisherClient
         public static void Run()
         {
             listener.Start();
+            Logger.Append(NSL.SocketCore.Utils.Logger.Enums.LoggerLevel.Info, $"Publisher server listener started");
         }
 
         public static void Stop()
         {
             listener.Start();
+            Logger.Append(NSL.SocketCore.Utils.Logger.Enums.LoggerLevel.Info, $"Publisher server listener stopped");
         }
     }
 }

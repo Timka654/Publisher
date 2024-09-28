@@ -14,7 +14,7 @@ if($args.Contains("default") -eq $false)
     }
     else
     {
-        $serviceName = GetValue -text "Service name(default:Publisher Server)"
+        $serviceName = GetValue -text "Service name" -defaultValue "Publisher Server"
     }
 }
 
@@ -28,6 +28,6 @@ if((Test-Path -Path $execFile) -eq $false)
     exit
 }
 
-sc.exe create $serviceName binPath="""$execFile /service""" start=auto
+sc.exe create $serviceName binPath="""$execFile /action:service""" start=auto
 
 Set-Location $currdir

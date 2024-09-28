@@ -1,17 +1,20 @@
 ﻿Import-Module "./utils.psm1"
 
-Set-Location ..
-
-$currLocation = (Get-Location).Path
+$currLocation = [System.IO.Path]::Combine((Get-Location).Path, "..")
 
 if ([System.IO.File]::Exists([System.IO.Path]::Combine($currLocation,"publisherserver.deps.json")) -eq $false) {
 	Write-Error "Server files not found in current path $currLocation"
 	exit
 }
 
+if ([System.IO.File]::Exists("$currLocation/installed") -eq $true) {
+    Write-Error "Client files already installed! No need more actions"
+    exit
+}
+
 if($IsLinux)
 {
-	$setupPath = "/opt/Publisher";
+	$setupPath = "/etc/publisherserver";
 }
 elseif($IsWindows)
 {
@@ -25,7 +28,8 @@ elseif($IsMacOS)
 if($args.Contains("default") -eq $false)
 {
 	do {
-		$setupPath = GetValue -text "Install path"
+		$setupPath = GetValue -text "Install path" -defaultValue $setupPath
+
 		if (([System.IO.Directory]::Exists($setupPath) -eq $true) -and ([System.IO.Directory]::GetFiles($setupPath).Count -ne 0)) {
 			Write-Host "Install folder ""$setupPath"" must be empty"
 			continue
@@ -43,14 +47,19 @@ $serverPort = 6583;
 
 if($args.Contains("default") -eq $false)
 {
-	$serverPort = GetValue -text "Publisher port (default:6583)" -type "int"
+	$serverPort = GetValue -text "Publisher port" -type "int" -defaultValue "6583"
 }
 
 Move-Item -Path "$currLocation/*" -Destination $setupPath -Force
 
-$a = "{ ""server"": { ""io.port"": $serverPort } }"
+$a = "{ ""publisher"" : { ""server"": { ""io"": { ""port"": $serverPort } } } }"
 
 $a | set-content $configPath
+
+
+if([System.IO.File]::Exists([System.IO.Path]::Combine($setupPath, "..", "installed")) -eq $false) {
+    New-Item -Path $setupPath -Name "installed" -ItemType "file"
+}
 
 if ($IsWindows) {
 	$PathEnv = [System.Environment]::GetEnvironmentVariable("Path");

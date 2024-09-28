@@ -4,7 +4,7 @@ function GetValue {
 	$value = ""
 	$tryValue = $null;
 
-	if($defaultValue -ne $null)
+	if([string]::IsNullOrEmpty($defaultValue) -ne $true)
 	{
 		$text = "$text (default: $defaultValue)"
 	}

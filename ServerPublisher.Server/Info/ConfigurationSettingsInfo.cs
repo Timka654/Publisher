@@ -41,6 +41,8 @@ namespace ServerPublisher.Server.Info
 
     public class ConfigurationSettingsInfo__Publisher__Server__IO
     {
+        public string Address { get; set; } = "*";
+
         public int Port { get; set; } = 6583;
 
         [ConfigurationKeyName("buffer_size")]

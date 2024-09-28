@@ -24,7 +24,7 @@ namespace ServerPublisher.Server.Managers
     {
         public static ProjectsManager Instance { get; private set; }
 
-        public static string ProjectsFilePath => PublisherServer.Configuration.Publisher.ProjectConfiguration.Server.LibraryFilePath;
+        public static string ProjectsFilePath => Path.Combine(Application.Directory, PublisherServer.Configuration.Publisher.ProjectConfiguration.Server.LibraryFilePath);
 
         private FSWatcher projectsLibraryWatcher;
 
@@ -154,6 +154,19 @@ namespace ServerPublisher.Server.Managers
             {
                 try
                 {
+                    if (!Directory.Exists(Path.Combine(item, "Publisher")))
+                    {
+                        PublisherServer.ServerLogger.AppendError($"Have invalid project path - {item}. No exists Publisher dir");
+                        
+                        continue;
+                    }
+
+                    if (!File.Exists(Path.Combine(item, "Publisher", "project.json")))
+                    {
+                        PublisherServer.ServerLogger.AppendError($"Have invalid project path - {item}. No exists project.json file");
+
+                        continue;
+                    }
 
                     var proj = new ServerProjectInfo(item);
 

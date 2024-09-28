@@ -10,7 +10,7 @@ namespace ServerPublisher.Server
         {
             PublisherServer.InitializeApp();
 
-            if ((new Commands()).Process())
+            if (Commands.Process())
                 return;
 
             PublisherServer.ServerLogger.AppendError($"Unknown args {string.Join(" ", args)}");

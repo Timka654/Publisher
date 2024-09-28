@@ -15,7 +15,7 @@ if($args.Contains("default") -eq $false)
     }
     else
     {
-        $serviceName = GetValue -text "Service name(default:Publisher Server)"
+        $serviceName = GetValue -text "Service name" -defaultValue "Publisher Server"
     }
 
 
@@ -25,7 +25,7 @@ if($args.Contains("default") -eq $false)
     }
     else
     {
-        $serviceFileName = GetValue -text "Service file name(default:publisher.service)"
+        $serviceFileName = GetValue -text "Service file name" -defaultValue "publisher.service"
     }
 }
 
@@ -45,7 +45,7 @@ Description=$serviceName
 
 [Service]
 WorkingDirectory=$dir
-ExecStart=$execFile /service
+ExecStart=$execFile /action:service
 Restart=always
 # Restart service after 10 seconds if the dotnet service crashes:
 RestartSec=10

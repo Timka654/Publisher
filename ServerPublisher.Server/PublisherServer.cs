@@ -43,6 +43,8 @@ namespace ServerPublisher.Server
 
         public static void InitializeApp()
         {
+            ServerLogger.AppendInfo($"Initialize application");
+
             var cb = new ConfigurationBuilder()
                 .AddJsonFile("ServerSettings.json")
                 .AddCommandLine(Environment.GetCommandLineArgs())
@@ -57,9 +59,10 @@ namespace ServerPublisher.Server
 
             //AppLogger = new NSL.Logger.AspNet.ILoggerWrapper(logger);
 
+            var globalScriptsPath = Path.Combine(Application.Directory, Configuration.Publisher.ProjectConfiguration.Server.GlobalScriptsFolderPath);
 
-            if (!Directory.Exists(Configuration.Publisher.ProjectConfiguration.Server.GlobalScriptsFolderPath))
-                Directory.CreateDirectory(Configuration.Publisher.ProjectConfiguration.Server.GlobalScriptsFolderPath);
+            if (!Directory.Exists(globalScriptsPath))
+                Directory.CreateDirectory(globalScriptsPath);
 
         }
 

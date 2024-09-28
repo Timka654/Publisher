@@ -54,7 +54,7 @@ namespace ServerPublisher.Server.Info
 
         #region Scripts
 
-        public static string GlobalScriptsDirPath => PublisherServer.Configuration.Publisher.ProjectConfiguration.Server.GlobalScriptsFolderPath;
+        public static string GlobalScriptsDirPath => Path.Combine(Application.Directory, PublisherServer.Configuration.Publisher.ProjectConfiguration.Server.GlobalScriptsFolderPath);
         public static string[] ScriptsDefaultUsings => PublisherServer.Configuration.Publisher.ProjectConfiguration.Server.ScriptsDefaultUsings;
 
         public string ScriptsDirPath => Path.Combine(PublisherDirPath, "scripts");
@@ -1039,9 +1039,15 @@ public partial class PublisherScript {
             loadScripts();
         }
 
-        public ServerProjectInfo(ProjectInfoData pid)
+        public ServerProjectInfo(ProjectInfoData pid, string directory)
         {
-            Reload(pid);
+            ProjectDirPath = directory;
+
+            Info = pid;
+
+            CreateDefault();
+
+            SaveProjectInfo();
         }
 
         public ServerProjectInfo(CommandLineArgs args, string directory)

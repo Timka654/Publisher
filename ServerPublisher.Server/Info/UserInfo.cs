@@ -24,18 +24,36 @@ namespace ServerPublisher.Server.Info
             Reload(JsonConvert.DeserializeObject<BasicUserInfo>(File.ReadAllText(fileName)));
         }
 
-        public UserInfo(CommandLineArgs args)
+        /// <summary>
+        /// Only for json deserialize
+        /// </summary>
+        public UserInfo()
         {
-            PublisherServer.ServerLogger.AppendInfo("user creating");
 
-            Id = Guid.NewGuid().ToString();
-            Name = args["name"];
-
-            Cipher = new RSACipher();
-
-            RSAPublicKey = Cipher.GetPublicKey();
-            RSAPrivateKey = Cipher.GetPrivateKey();
         }
+
+        public static UserInfo CreateUser(CommandLineArgs args)
+        {
+            return CreateUser(args["name"]);
+        }
+
+        public static UserInfo CreateUser(string name)
+        {
+            var u = new UserInfo();
+
+            PublisherServer.ServerLogger.AppendInfo($"user {name} creating");
+
+            u.Id = Guid.NewGuid().ToString();
+            u.Name = name;
+
+            u.Cipher = new RSACipher();
+
+            u.RSAPublicKey = u.Cipher.GetPublicKey();
+            u.RSAPrivateKey = u.Cipher.GetPrivateKey();
+
+            return u;
+        }
+
 
         internal void Reload(BasicUserInfo userInfo)
         {

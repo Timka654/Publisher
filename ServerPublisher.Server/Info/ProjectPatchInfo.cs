@@ -1,6 +1,9 @@
-﻿namespace ServerPublisher.Shared.Info
+﻿using NSL.Generators.FillTypeGenerator.Attributes;
+
+namespace ServerPublisher.Shared.Info
 {
-    public class ProjectPatchInfo
+    [FillTypeGenerate(typeof(ProjectPatchInfo))]
+    public partial class ProjectPatchInfo
     {
         public string IpAddress { get; set; }
 
