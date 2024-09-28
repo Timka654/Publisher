@@ -75,6 +75,15 @@ namespace ServerPublisher.Server.Info
         [ConfigurationKeyName("library.file.path")]
         public string LibraryFilePath { get; set; } = Path.Combine("data", "projects.json");
 
+        [ConfigurationKeyName("global.both.users.folder.path")]
+        public string GlobalBothUsersFolderPath { get; set; } = Path.Combine("data", "global", "users", "both");
+
+        [ConfigurationKeyName("global.publish.users.folder.path")]
+        public string GlobalPublishUsersFolderPath { get; set; } = Path.Combine("data", "global", "users", "publish");
+
+        [ConfigurationKeyName("global.proxy.users.folder.path")]
+        public string GlobalProxyUsersFolderPath { get; set; } = Path.Combine("data", "global", "users", "proxy");
+
         [ConfigurationKeyName("global.scripts.folder.path")]
         public string GlobalScriptsFolderPath { get; set; } = Path.Combine("data", "global", "scripts");
 

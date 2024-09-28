@@ -8,18 +8,29 @@ using System.IO;
 
 namespace ServerPublisher.Server.Info
 {
-    public class UserInfo : BasicUserInfo
+    public enum UserInfoTypeEnum
     {
+        PUBKEY,
+        PRIVKEY
+    }
+
+    public class UserInfo : BasicUserInfo, IDisposable
+    {
+        public UserInfoTypeEnum Type { get; set; }
+
         public string FileName { get; private set; }
 
         public RSACipher Cipher { get; set; }
 
-        //public ServerProjectInfo CurrentProject { get; set; }
+        public DateTime UpdateTime { get; set; }
 
-        //public PublisherNetworkClient CurrentNetwork { get; set; }
+        public event Action OnRemoved = () => { };
 
-        public UserInfo(string fileName)
+        public event Action OnUpdate = () => { };
+
+        public UserInfo(string fileName, UserInfoTypeEnum type = UserInfoTypeEnum.PRIVKEY)
         {
+            Type = type;
             FileName = fileName;
             Reload(JsonConvert.DeserializeObject<BasicUserInfo>(File.ReadAllText(fileName)));
         }
@@ -65,10 +76,28 @@ namespace ServerPublisher.Server.Info
             {
                 RSAPrivateKey = userInfo.RSAPrivateKey;
 
+                Cipher?.Dispose();
+
                 Cipher = new RSACipher();
 
                 Cipher.LoadXml(RSAPrivateKey);
             }
+
+            UpdateTime = DateTime.UtcNow;
+
+            OnUpdate();
+        }
+
+        bool disposed = false;
+
+        public void Dispose()
+        {
+            if (disposed)
+                return;
+
+            disposed = true;
+
+            OnRemoved();
         }
     }
 }

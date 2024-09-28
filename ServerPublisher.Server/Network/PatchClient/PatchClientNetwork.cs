@@ -240,7 +240,7 @@ namespace ServerPublisher.Server.Network
         {
             var packet = RequestPacketBuffer.Create(PublisherPacketEnum.ProjectProxySignIn);
 
-            var userInfo = JsonSerializer.Deserialize<BasicUserInfo>(item.GetPatchSignData(), options: new JsonSerializerOptions() { IgnoreNullValues = true, IgnoreReadOnlyProperties = true, });
+            var userInfo = item.GetProxyUserInfo();
 
             RSACipher rsa = new RSACipher();
             rsa.LoadXml(userInfo.RSAPublicKey);

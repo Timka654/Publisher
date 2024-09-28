@@ -37,8 +37,6 @@ namespace ServerPublisher.Server
 
         public static ExplorerManager ExplorerManager => ExplorerManager.Instance;
 
-        public static UserManager UserManager => UserManager.Instance;
-
         public static bool CommandExecutor { get; set; } = false;
 
         public static void InitializeApp()

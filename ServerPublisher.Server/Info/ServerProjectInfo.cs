@@ -260,6 +260,17 @@ public partial class PublisherScript {
 
             GlobalScriptsWatch = new FSWatcher(GlobalScriptsDirPath, "*.cs"
                 , onAnyChanges: ScriptsWatch_Changed);
+
+            PublisherServer.ProjectsManager.GlobalBothUserStorage.OnCreated += GlobalBothUserStorage_OnCreated;
+            PublisherServer.ProjectsManager.GlobalProxyUserStorage.OnCreated += GlobalBothUserStorage_OnCreated;
+        }
+
+        private void GlobalBothUserStorage_OnCreated(UserInfo obj)
+        {
+            if (obj.FileName == Path.GetFileName(PatchSignFilePath))
+            {
+                LoadPatch();
+            }
         }
 
         private void ScriptsWatch_Changed(FileSystemEventArgs e)
@@ -290,7 +301,7 @@ public partial class PublisherScript {
             {
                 if (PatchClient != null)
                 {
-                    PatchClient.SignOutProject(this);
+                    PatchClient?.SignOutProject(this);
                     PatchClient = null;
                 }
             }
@@ -329,7 +340,11 @@ public partial class PublisherScript {
 
         private void UsersWatch_Deleted(FileSystemEventArgs e)
         {
-            users.RemoveAll(x => x.FileName == e.FullPath);
+            users.RemoveAll(users.Where(x =>
+            {
+                if (x.FileName != e.FullPath) return false;
+                x.Dispose(); return true;
+            }).ToArray().Contains);
         }
 
         private void UsersWatch_Changed(FileSystemEventArgs e)

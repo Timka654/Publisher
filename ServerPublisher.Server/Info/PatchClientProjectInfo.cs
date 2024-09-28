@@ -10,6 +10,7 @@ using System.Threading;
 using ServerPublisher.Shared.Models.ResponseModel;
 using ServerPublisher.Shared.Utils;
 using NSL.Logger;
+using System.Text.Json;
 
 namespace ServerPublisher.Server.Info
 {
@@ -17,12 +18,45 @@ namespace ServerPublisher.Server.Info
     {
         private string? PatchSignFilePath => Info.PatchInfo == null ? default : Path.Combine(UsersPublicksDirPath, Info.PatchInfo.SignName + ".pubuk").GetNormalizedPath();
 
-        public byte[] GetPatchSignData()
-        {
-            if (File.Exists(PatchSignFilePath))
-                return File.ReadAllBytes(PatchSignFilePath);
+        //public byte[] GetPatchSignData()
+        //{
+        //    if (File.Exists(PatchSignFilePath))
+        //        return File.ReadAllBytes(PatchSignFilePath);
 
-            return null;
+        //    return null;
+        //}
+
+        UserInfo? proxyUserInfo;
+
+        public UserInfo? GetProxyUserInfo()
+        {
+            if (proxyUserInfo != null)
+                return proxyUserInfo;
+
+            if (File.Exists(PatchSignFilePath))
+                return JsonSerializer.Deserialize<UserInfo>(File.ReadAllText(PatchSignFilePath), options: new JsonSerializerOptions() { IgnoreNullValues = true, IgnoreReadOnlyProperties = true, });
+
+            proxyUserInfo = PublisherServer.ProjectsManager.GetProxyUser(Info.PatchInfo.SignName);
+
+            if (proxyUserInfo != null)
+            {
+                proxyUserInfo.OnUpdate += ProxyUserInfo_OnUpdate;
+                proxyUserInfo.OnRemoved += ProxyUserInfo_OnRemoved;
+            }
+
+            return proxyUserInfo;
+
+        }
+
+        private void ProxyUserInfo_OnRemoved()
+        {
+            PatchClient?.SignOutProject(this);
+        }
+
+        private void ProxyUserInfo_OnUpdate()
+        {
+            PatchClient?.SignOutProject(this);
+            LoadPatch();
         }
 
         internal PatchClientNetwork PatchClient { get; private set; }
@@ -36,16 +70,16 @@ namespace ServerPublisher.Server.Info
         {
             if (PatchClient != null)
                 return true;
-        
+
             if (PatchSignFilePath == default)
                 return false;
 
             if (Info.PatchInfo == null)
                 return false;
 
-            if (!File.Exists(PatchSignFilePath))
+            if (GetProxyUserInfo() == null)
             {
-                PublisherServer.ServerLogger.AppendError($"Project {Info.Name}({Info.Id}) not have identity file {PatchSignFilePath} for initialize proxy");
+                PublisherServer.ServerLogger.AppendError($"Project {Info.Name}({Info.Id}) cannot connect as proxy - not found identity file {Info.PatchInfo.SignName} for initialize proxy");
 
                 return false;
             }
@@ -198,7 +232,7 @@ namespace ServerPublisher.Server.Info
             do
             {
                 await Task.Delay(20);
-                var downloadProc = await PatchClient.DownloadAsync(Info.Id,startResponse.FileId);
+                var downloadProc = await PatchClient.DownloadAsync(Info.Id, startResponse.FileId);
 
                 if (downloadProc == default)
                     return false;

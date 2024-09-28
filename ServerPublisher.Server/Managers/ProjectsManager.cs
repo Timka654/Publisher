@@ -26,15 +26,35 @@ namespace ServerPublisher.Server.Managers
 
         public static string ProjectsFilePath => Path.Combine(Application.Directory, PublisherServer.Configuration.Publisher.ProjectConfiguration.Server.LibraryFilePath);
 
+        public static string GlobalBothUsersFolderPath => Path.Combine(Application.Directory, PublisherServer.Configuration.Publisher.ProjectConfiguration.Server.GlobalBothUsersFolderPath);
+
+        public static string GlobalPublishUsersFolderPath => Path.Combine(Application.Directory, PublisherServer.Configuration.Publisher.ProjectConfiguration.Server.GlobalPublishUsersFolderPath);
+
+        public static string GlobalProxyUsersFolderPath => Path.Combine(Application.Directory, PublisherServer.Configuration.Publisher.ProjectConfiguration.Server.GlobalProxyUsersFolderPath);
+
+        public UserStorage GlobalBothUserStorage { get; private set; }
+        public UserStorage GlobalPublishUserStorage { get; private set; }
+        public UserStorage GlobalProxyUserStorage { get; private set; }
+
         private FSWatcher projectsLibraryWatcher;
 
         public ProjectsManager()
         {
             Instance = this;
             PublisherServer.ServerLogger.AppendInfo("Load projects");
+
+            GlobalBothUserStorage = new UserStorage(GlobalBothUsersFolderPath, "*.priuk|*.pubuk");
+            GlobalPublishUserStorage = new UserStorage(GlobalPublishUsersFolderPath);
+            GlobalProxyUserStorage = new UserStorage(GlobalProxyUsersFolderPath, "*.pubuk");
+
             LoadProjects();
             LoadWatcher();
             PublisherServer.ServerLogger.AppendInfo("Load projects finished");
+        }
+
+        public UserInfo? GetProxyUser(string signName)
+        {
+            return GlobalProxyUserStorage.GetUser(signName) ?? GlobalBothUserStorage.GetUser(signName);
         }
 
         internal SignStateEnum SignIn(PublisherNetworkClient client, PublishSignInRequestModel request)
@@ -44,7 +64,7 @@ namespace ServerPublisher.Server.Managers
             if (proj == null) return SignStateEnum.ProjectNotFound;
 
 
-            var user = proj.GetUser(request.UserId) ?? PublisherServer.UserManager.GetUser(request.UserId);
+            var user = proj.GetUser(request.UserId) ?? GlobalBothUserStorage.GetUser(request.UserId) ?? GlobalPublishUserStorage.GetUser(request.UserId);
 
             if (user == null) return SignStateEnum.UserNotFound;
 
