@@ -170,6 +170,8 @@ public partial class PublisherScript {
             .AddReferences(MetadataReference.CreateFromFile(Path.Combine(coreDir.FullName, "System.Collections.dll")))
             .AddReferences(MetadataReference.CreateFromFile(typeof(System.Runtime.CompilerServices.DynamicAttribute).Assembly.Location))
             .AddReferences(MetadataReference.CreateFromFile(typeof(Microsoft.CSharp.RuntimeBinder.CSharpArgumentInfo).Assembly.Location))
+            .AddReferences(MetadataReference.CreateFromFile(typeof(System.Diagnostics.Process).Assembly.Location))
+            .AddReferences(MetadataReference.CreateFromFile(typeof(System.Net.Http.HttpClient).Assembly.Location))
             .AddReferences(MetadataReference.CreateFromFile(typeof(IScriptableServerProjectInfo).Assembly.Location))
             .AddReferences(MetadataReference.CreateFromFile(typeof(ServerProjectInfo).Assembly.Location))
             .AddSyntaxTrees(Directory.GetFiles(ScriptsDirPath, "*.cs").Select(x => CSharpSyntaxTree.ParseText(scriptUsings + File.ReadAllText(x), path: x)))
