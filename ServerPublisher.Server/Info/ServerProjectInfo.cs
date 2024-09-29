@@ -80,66 +80,6 @@ namespace ServerPublisher.Server.Info
 
         public bool IsMacOS() => RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
 
-        private void CheckScriptsExists()
-        {
-            if (File.Exists(OnStartScriptPath) == false)
-            {
-                File.WriteAllText(OnStartScriptPath,
-"""
-public partial class PublisherScript {
-	public static void OnStart(IScriptableServerProjectInfo project, bool success, bool postProcessingSuccess) {
-		//Utils.BashExec("sudo systemctl stop test.service");
-	}
-}
-
-""");
-            }
-
-            if (File.Exists(OnEndScriptPath) == false)
-            {
-                File.WriteAllText(OnEndScriptPath,
-"""
-public partial class PublisherScript {
-	public static void OnEnd(IScriptableServerProjectInfo project, bool success, bool postProcessingSuccess, Dictionary<string, string> args) {
-		if (success && postProcessingSuccess)
-		{
-            //var execPath = Path.Combine(ScriptCore.ProjectInfo.ProjectDirPath,"testapp");
-
-            //Utils.BashExec($"sudo chmod +x '{execPath}'");
-
-            //Utils.BashExec("sudo systemctl start test.service");
-        }
-    }
-}
-
-""");
-            }
-
-            if (File.Exists(OnFileStartScriptPath) == false)
-            {
-                File.WriteAllText(OnFileStartScriptPath,
-"""
-public partial class PublisherScript {
-	public static void OnFileStart(IScriptableServerProjectInfo project, ProjectFileInfo file) {
-	}
-}
-
-""");
-            }
-
-            if (File.Exists(OnFileEndScriptPath) == false)
-            {
-                File.WriteAllText(OnFileEndScriptPath,
-"""
-public partial class PublisherScript {
-	public static void OnFileEnd(IScriptableServerProjectInfo project, ProjectFileInfo file) {
-	}
-}
-
-""");
-            }
-        }
-
         DateTime? scriptLatestBuilded;
 
         DateTime scriptLatestChanged = DateTime.UtcNow;
@@ -149,13 +89,13 @@ public partial class PublisherScript {
 
         private delegate void fileMethodDelegate(ScriptInvokingContext context, IScriptableFileInfo file);
 
-        private startMethodDelegate OnStartMethod;
+        private startMethodDelegate? OnStartMethod;
 
-        private endMethodDelegate OnEndMethod;
+        private endMethodDelegate? OnEndMethod;
 
-        private fileMethodDelegate OnFileStartMethod;
+        private fileMethodDelegate? OnFileStartMethod;
 
-        private fileMethodDelegate OnFileEndMethod;
+        private fileMethodDelegate? OnFileEndMethod;
 
         private bool loadScripts(bool ignoreCache = false)
         {
@@ -182,9 +122,12 @@ public partial class PublisherScript {
             .AddReferences(MetadataReference.CreateFromFile(typeof(Component).Assembly.Location))
             .AddReferences(MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location))
             .AddReferences(MetadataReference.CreateFromFile(typeof(IScriptableServerProjectInfo).Assembly.Location))
-            .AddReferences(MetadataReference.CreateFromFile(typeof(ServerProjectInfo).Assembly.Location))
-            .AddSyntaxTrees(Directory.GetFiles(ScriptsDirPath, "*.cs").Select(x => CSharpSyntaxTree.ParseText(scriptUsings + File.ReadAllText(x), path: x)))
-            .AddSyntaxTrees(Directory.GetFiles(GlobalScriptsDirPath, "*.cs").Select(x => CSharpSyntaxTree.ParseText(scriptUsings + File.ReadAllText(x), path: x)));
+            .AddReferences(MetadataReference.CreateFromFile(typeof(ServerProjectInfo).Assembly.Location));
+
+            if (Directory.Exists(ScriptsDirPath))
+                compilation = compilation.AddSyntaxTrees(Directory.GetFiles(ScriptsDirPath, "*.cs").Select(x => CSharpSyntaxTree.ParseText(scriptUsings + File.ReadAllText(x), path: x)));
+            if (Directory.Exists(GlobalScriptsDirPath))
+                compilation = compilation.AddSyntaxTrees(Directory.GetFiles(GlobalScriptsDirPath, "*.cs").Select(x => CSharpSyntaxTree.ParseText(scriptUsings + File.ReadAllText(x), path: x)));
 
 
             using (var ms = new MemoryStream())
@@ -216,13 +159,13 @@ public partial class PublisherScript {
 
                 var asm = Assembly.Load(ms.ToArray());
 
-                OnStartMethod = asm.GetScriptMethod("OnStart").CreateDelegate<startMethodDelegate>();
+                OnStartMethod = asm.GetScriptMethod("OnStart")?.CreateDelegate<startMethodDelegate>();
 
-                OnEndMethod = asm.GetScriptMethod("OnEnd").CreateDelegate<endMethodDelegate>();
+                OnEndMethod = asm.GetScriptMethod("OnEnd")?.CreateDelegate<endMethodDelegate>();
 
-                OnFileStartMethod = asm.GetScriptMethod("OnFileStart").CreateDelegate<fileMethodDelegate>();
+                OnFileStartMethod = asm.GetScriptMethod("OnFileStart")?.CreateDelegate<fileMethodDelegate>();
 
-                OnFileEndMethod = asm.GetScriptMethod("OnFileEnd").CreateDelegate<fileMethodDelegate>();
+                OnFileEndMethod = asm.GetScriptMethod("OnFileEnd")?.CreateDelegate<fileMethodDelegate>();
             }
 
             scriptLatestBuilded = DateTime.UtcNow;
@@ -469,7 +412,7 @@ public partial class PublisherScript {
 
                     createFileBackup(item);
 
-                    OnFileStartMethod(execContext, item);
+                    OnFileStartMethod?.Invoke(execContext, item);
 
                     if (item.TempRelease(context) == false)
                     {
@@ -478,7 +421,7 @@ public partial class PublisherScript {
                         return;
                     }
 
-                    OnFileEndMethod(execContext, item); 
+                    OnFileEndMethod?.Invoke(execContext, item);
 
                     context.Log($"-> Finish file processing");
                 }
@@ -685,7 +628,7 @@ public partial class PublisherScript {
 
         private void finishPublishProcessOnStartScript(IProcessingFilesContext context, bool success, ref bool successProcess)
         {
-            try { OnStartMethod(new ScriptInvokingContext(this, context), success, false); } catch (Exception ex) { context.Log(ex.ToString()); successProcess = false; }
+            try { OnStartMethod?.Invoke(new ScriptInvokingContext(this, context), success, false); } catch (Exception ex) { context.Log(ex.ToString()); successProcess = false; }
         }
 
         private void finishPublishProcessProduceFiles(ProjectPublishContext context, ref bool successProcess)
@@ -714,7 +657,7 @@ public partial class PublisherScript {
 
         private void FinishPublishProcessOnEndScript(IProcessingFilesContext context, bool success, ref bool postProcessingSuccess, Dictionary<string, string> args)
         {
-            try { OnEndMethod(new ScriptInvokingContext(this, context), success, postProcessingSuccess, args); } catch (Exception ex) { context.Log(ex.ToString()); postProcessingSuccess = false; }
+            try { OnEndMethod?.Invoke(new ScriptInvokingContext(this, context), success, postProcessingSuccess, args); } catch (Exception ex) { context.Log(ex.ToString()); postProcessingSuccess = false; }
         }
 
         internal Guid? StartPublishFile(ProjectPublishContext context, PublishProjectFileStartRequestModel data)
@@ -1028,18 +971,8 @@ public partial class PublisherScript {
 
         public FSWatcher GlobalScriptsWatch;
 
-        private void CreateDefault()
+        private void CheckDefault()
         {
-            if (!Directory.Exists(PublisherDirPath))
-            {
-                Directory.CreateDirectory(PublisherDirPath);
-
-                var templatePath = Path.Combine(Application.Directory, "data", "project_template").GetNormalizedPath();
-
-                if (Directory.Exists(templatePath))
-                    DirectoryCopy(templatePath, PublisherDirPath, true);
-            }
-
             if (!Directory.Exists(UsersDirPath))
                 Directory.CreateDirectory(UsersDirPath);
 
@@ -1054,8 +987,6 @@ public partial class PublisherScript {
 
             if (!Directory.Exists(LogsDirPath))
                 Directory.CreateDirectory(LogsDirPath);
-
-            CheckScriptsExists();
         }
 
         private void LoadUsers()
@@ -1080,7 +1011,7 @@ public partial class PublisherScript {
         {
             ProjectDirPath = projectPath;
 
-            CreateDefault();
+            CheckDefault();
             CreateWatchers();
             LoadUsers();
 
@@ -1097,9 +1028,14 @@ public partial class PublisherScript {
         {
             ProjectDirPath = directory;
 
+            var templatePath = Path.Combine(Application.Directory, "data", "project_template").GetNormalizedPath();
+
+            if (Directory.Exists(templatePath))
+                DirectoryCopy(templatePath, PublisherDirPath, true);
+
             Info = pid;
 
-            CreateDefault();
+            CheckDefault();
 
             SaveProjectInfo();
         }
@@ -1119,7 +1055,12 @@ public partial class PublisherScript {
 
             ProjectDirPath = directory;
 
-            CreateDefault();
+            var templatePath = Path.Combine(Application.Directory, "data", "project_template").GetNormalizedPath();
+
+            if (Directory.Exists(templatePath))
+                DirectoryCopy(templatePath, PublisherDirPath, true);
+
+            CheckDefault();
 
             SaveProjectInfo();
         }
