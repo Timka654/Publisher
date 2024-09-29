@@ -50,7 +50,7 @@ if($args.Contains("default") -eq $false)
 	$serverPort = GetValue -text "Publisher port" -type "int" -defaultValue "6583"
 }
 
-Move-Item -Path "$currLocation/*" -Destination $setupPath -Force
+Copy-Item -Path "$currLocation/*" -Destination $setupPath -Force
 
 $a = "{ ""publisher"" : { ""server"": { ""io"": { ""port"": $serverPort } } } }"
 
@@ -80,6 +80,8 @@ else {
 	$execFilePath = [System.IO.Path]::Combine($setupPath, "publisherserver")
 	chmod +x $execFilePath
 	ln -sf $execFilePath /bin/publs
+	ln -sf $execFilePath /bin/publsrv
+	ln -sf $execFilePath /bin/publishsrv
 
 	Write-Host "Invoke 'sudo pwsh setup-service-linux.ps1' for install publisher linux server with sudo"
 	Write-Host "or 'sudo pwsh setup-service-linux.ps1 ""service_name"" ""service_file_name""'"
@@ -90,3 +92,5 @@ Write-Host "Please change path to cd $setupPath/tools/"
 
 
 cd $setupPath/tools/
+
+Remove-Item -Path "$currLocation" -Recurse -Force
