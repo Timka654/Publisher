@@ -29,7 +29,7 @@ if($LASTEXITCODE -eq 0)
 {
 	Write-Host "build success" -ForegroundColor Green
 		
-	Publisher.Client.exe /action:publish /project_id:$publisher_project_id /directory:$publisher_release_dir /auth_key_path:$publisher_auth_key_file /ip:$publisher_ip /port:$publisher_port /cipher_out_key:$publisher_out_cipher_key /cipher_in_key:$publisher_in_cipher_key /has_compression:true
+	publisherclient /action:publish /project_id:$publisher_project_id /directory:$publisher_release_dir /auth_key_path:$publisher_auth_key_file /ip:$publisher_ip /port:$publisher_port /cipher_out_key:$publisher_out_cipher_key /cipher_in_key:$publisher_in_cipher_key /has_compression:true
 		
 	Write-Host "Finished" -ForegroundColor Green
 }
