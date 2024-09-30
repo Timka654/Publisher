@@ -1035,6 +1035,8 @@ namespace ServerPublisher.Server.Info
 
             Info = pid;
 
+            Info.IgnoreFilePaths ??= PublisherServer.Configuration.Publisher.ProjectConfiguration.Default.IgnoreFilePaths.ToList();
+
             CheckDefault();
 
             SaveProjectInfo();
