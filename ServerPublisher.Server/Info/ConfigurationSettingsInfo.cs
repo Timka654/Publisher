@@ -93,6 +93,8 @@ namespace ServerPublisher.Server.Info
             "System.IO",
             "System.Collections",
             "System.Collections.Generic",
+            "System.Linq",
+            "System.Diagnostics",
             "ServerPublisher.Server.Info",
             "ServerPublisher.Server.Scripts"
             ];
