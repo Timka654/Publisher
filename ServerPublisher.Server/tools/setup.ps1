@@ -50,7 +50,7 @@ if($args.Contains("default") -eq $false)
 	$serverPort = GetValue -text "Publisher port" -type "int" -defaultValue "6583"
 }
 
-Copy-Item -Path "$currLocation/*" -Destination $setupPath -Force
+Copy-Item -Recurse -Filter *.* -Path $currLocation -Destination $setupPath -Force
 
 $a = "{ ""publisher"" : { ""server"": { ""io"": { ""port"": $serverPort } } } }"
 
