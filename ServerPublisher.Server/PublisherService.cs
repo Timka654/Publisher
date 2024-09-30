@@ -1,4 +1,5 @@
 ﻿
+using NSL.Logger;
 using ServerPublisher.Server.Network.PublisherClient;
 using System.Runtime.Versioning;
 using System.ServiceProcess;
@@ -10,33 +11,36 @@ namespace ServerPublisher.Server
     {
         public PublisherService()
         {
+            PublisherNetworkServer.Initialize();
         }
 
         protected override void OnStart(string[] args)
         {
-            StaticInstances.ServerLogger.AppendInfo("Service:Starting");
-            PublisherNetworkServer.Instance.Load();
+            PublisherServer.ServerLogger.AppendInfo("Service:Starting");
+
+            PublisherNetworkServer.Run();
+
             base.OnStart(args);
         }
 
         protected override void OnStop()
         {
-            StaticInstances.ServerLogger.AppendInfo("Service:Stopping");
-            PublisherNetworkServer.Listener.Stop();
+            PublisherServer.ServerLogger.AppendInfo("Service:Stopping");
+            PublisherNetworkServer.Stop();
             base.OnStop();
         }
 
         protected override void OnContinue()
         {
-            StaticInstances.ServerLogger.AppendInfo("Service:Continue");
-            PublisherNetworkServer.Listener.Run();
+            PublisherServer.ServerLogger.AppendInfo("Service:Continue");
+            PublisherNetworkServer.Run();
             base.OnContinue();
         }
 
         protected override void OnPause()
         {
-            StaticInstances.ServerLogger.AppendInfo("Service:Pausing");
-            PublisherNetworkServer.Listener.Stop();
+            PublisherServer.ServerLogger.AppendInfo("Service:Pausing");
+            PublisherNetworkServer.Stop();
             base.OnPause();
         }
     }

@@ -15,7 +15,7 @@ if($args.Contains("default") -eq $false)
     }
     else
     {
-        $serviceName = GetValue -text "Service name(default:Publisher Server)"
+        $serviceName = GetValue -text "Service name" -defaultValue "Publisher Server"
     }
 
 
@@ -25,13 +25,13 @@ if($args.Contains("default") -eq $false)
     }
     else
     {
-        $serviceFileName = GetValue -text "Service file name(default:publisher.service)"
+        $serviceFileName = GetValue -text "Service file name" -defaultValue "publisher.service"
     }
 }
 
 $setupPath=Get-Location
 
-$execFile = [System.IO.Path]::Combine($setupPath,"ServerPublisher.Server")
+$execFile = [System.IO.Path]::Combine($setupPath,"publisherserver")
 $dir = Split-Path -Path $execFile
 if((Test-Path -Path $execFile) -eq $false)
 {
@@ -45,7 +45,7 @@ Description=$serviceName
 
 [Service]
 WorkingDirectory=$dir
-ExecStart=$execFile /service
+ExecStart=$execFile /action:service
 Restart=always
 # Restart service after 10 seconds if the dotnet service crashes:
 RestartSec=10
@@ -57,6 +57,6 @@ WantedBy=multi-user.target
 
 sudo systemctl enable $serviceFileName
 
-Write-Host "Enabled service $serviceFileName, print ""systemctl start $serviceFileName"" for start now"
+Write-Host "Service ""$serviceFileName"" enabled, print ""systemctl start $serviceFileName"" for start now"
 
 Set-Location $currdir

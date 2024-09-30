@@ -1,17 +1,20 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using ServerPublisher.Server.Network.ClientPatchPackets;
 using System.Text;
 using ServerPublisher.Server.Network.PublisherClient;
-using ServerPublisher.Server.Network.PublisherClient.Packets;
-using ServerPublisher.Shared;
 using NSL.SocketCore.Utils.Buffer;
-using NSL.SocketCore.Utils;
 using NSL.Cipher.RSA;
+using ServerPublisher.Shared.Enums;
+using System.Threading.Tasks;
+using NSL.Utils;
+using ServerPublisher.Shared.Models.RequestModels;
+using ServerPublisher.Shared.Models.ResponseModel;
+using ServerPublisher.Shared.Info;
+using ServerPublisher.Shared.Models;
+using System;
+using ServerPublisher.Shared.Utils;
 
 namespace ServerPublisher.Server.Info
 {
@@ -23,52 +26,33 @@ namespace ServerPublisher.Server.Info
 
         private ConcurrentBag<PublisherNetworkClient> patchClients = new ConcurrentBag<PublisherNetworkClient>();
 
-        private PublisherNetworkClient currentDownloader = null;
-        private TransportModeEnum currentDownloaderTransportMode = TransportModeEnum.NoArchive;
-
         private void broadcastUpdateTime(PublisherNetworkClient client = null)
         {
-            var packet = new OutputPacketBuffer();
+            using var packet = OutputPacketBuffer.Create(PublisherPacketEnum.ProjectProxyUpdateDataMessage);
 
-            packet.SetPacketId(PatchClientPackets.ChangeLatestUpdateHandle);
-
-            packet.WriteString16(Info.Id);
-            packet.WriteDateTime(Info.LatestUpdate.Value);
+            new ProjectProxyUpdateDataRequestModel()
+            {
+                ProjectId = Info.Id,
+                UpdateTime = Info.LatestUpdate.Value
+            }.WriteFullTo(packet);
 
             if (client == null)
                 foreach (var item in patchClients)
                 {
-                    try { item.Send(packet); } catch { }
+                    try { item.Send(packet, false); } catch { }
                 }
             else
                 client.Send(packet);
         }
 
-        public void SignPatchClient(PublisherNetworkClient client, string userId, byte[] key, DateTime latestUpdate)
+        public SignStateEnum SignPatchClient(PublisherNetworkClient client, ProjectProxySignInRequestModel request)
         {
-            if (client.IsPatchClient == false)
-            {
-                client.IsPatchClient = true;
-                client.PatchProjectMap = new Dictionary<string, ServerProjectInfo>();
-            }
-            else
-            {
-                if (client.PatchProjectMap.ContainsKey(Info.Id))
-                {
-                    if (Info.LatestUpdate.HasValue && Info.LatestUpdate.Value > latestUpdate)
-                        broadcastUpdateTime(client);
+            if (client.ProxyClientContext?.PatchProjectMap?.ContainsKey(Info.Id) == true)
+                return SignStateEnum.Ok;
 
-                    return;
-                }
-            }
+            var user = users.FirstOrDefault(x => x.Id == request.UserId);
 
-            var user = users.FirstOrDefault(x => x.Id == userId);
-
-            if (user == null)
-            {
-                PatchServerPacketRepository.SendSignInResult(client, SignStateEnum.UserNotFound);
-                return;
-            }
+            if (user == null) return SignStateEnum.UserNotFound;
 
             if (user.Cipher == null)
             {
@@ -77,22 +61,25 @@ namespace ServerPublisher.Server.Info
                 user.Cipher.LoadXml(user.RSAPrivateKey);
             }
 
-            byte[] data = user.Cipher.Decode(key, 0, key.Length);
+            byte[] data = user.Cipher.Decode(request.IdentityKey, 0, request.IdentityKey.Length);
 
-            if (Encoding.ASCII.GetString(data) != userId)
-            {
-                PatchServerPacketRepository.SendSignInResult(client, SignStateEnum.UserNotFound);
-                return;
-            }
+            if (Encoding.ASCII.GetString(data) != request.UserId) return SignStateEnum.UserNotFound;
 
             patchClients.Add(client);
 
-            client.PatchProjectMap.Add(Info.Id, this);
+            client.ProxyClientContext ??= new ProxyClientContextDataModel() { Network = client };
 
-            PatchServerPacketRepository.SendSignInResult(client, SignStateEnum.Ok);
+            client.ProxyClientContext.PatchProjectMap.TryAdd(Info.Id, this);
 
-            if (Info.LatestUpdate.HasValue && Info.LatestUpdate.Value > latestUpdate)
-                broadcastUpdateTime(client);
+
+            if (Info.LatestUpdate.HasValue && Info.LatestUpdate.Value > request.LatestUpdate)
+                Task.Run(async () =>
+                {
+                    await Task.Delay(500);
+                    broadcastUpdateTime(client);
+                }).RunAsync();
+
+            return SignStateEnum.Ok;
         }
 
         public void SignOutPatchClient(PublisherNetworkClient client)
@@ -106,70 +93,59 @@ namespace ServerPublisher.Server.Info
         {
             client.Lock(patchLocker);
 
-            currentDownloader = client;
-            currentDownloaderTransportMode = transportMode;
+            client.ProxyClientContext?.ProcessingProjects.TryAdd(Info.Id, new ProxyClientDownloadContext() { Context = client.ProxyClientContext, ProjectInfo = this });
 
-            initializeLogger();
-            client.PatchDownloadProject = this;
+            var message = OutputPacketBuffer.Create(PublisherPacketEnum.ProjectProxyStartMessage);
 
-            PatchServerPacketRepository.SendStartDownloadResult(client, true, Info.IgnoreFilePaths);
+            new ProjectProxyStartDownloadMessageModel()
+            {
+                ProjectId = Info.Id,
+                FileList = FileInfoList.Select(x => new DownloadFileInfo()
+                {
+                    RelativePath = x.RelativePath,
+                    Hash = x.Hash,
+                    LastChanged = x.LastChanged,
+                    CreationTime = x.FileInfo.CreationTimeUtc,
+                    ModifiedTime = x.FileInfo.LastWriteTimeUtc
+                }).ToArray()
+            }.WriteDefaultTo(message);
+
+            client.Send(message);
         }
 
-        public void NextDownloadFile(PublisherNetworkClient client, string relativePath)
+        public ProjectProxyStartFileResponseModel? StartDownloadFile(PublisherNetworkClient client, string relativePath)
         {
-            if (client != currentDownloader)
-                return;
+            var file = FileInfoList.FirstOrDefault(x => x.RelativePath == relativePath);
 
-            if (currentDownloader.CurrentFile != null)
-                currentDownloader.CurrentFile.CloseRead();
+            if (file == null)
+                return new ProjectProxyStartFileResponseModel() { Result = false };
 
-            client.CurrentFile = FileInfoList.FirstOrDefault(x => x.RelativePath == relativePath);
-
-            if (client.CurrentFile != null && !client.CurrentFile.FileInfo.Exists)
-            {
-                FileInfoList.Remove(client.CurrentFile);
-                client.CurrentFile = null;
-            }
-
-            if (client.CurrentFile != null)
-                client.CurrentFile.OpenRead();
+            return new ProjectProxyStartFileResponseModel() { Result = true, FileId = client.ProxyClientContext.AddProcessingFile(this, file) };
         }
 
-        internal void EndDownload<T>(T client, bool success = false)
-            where T : INetworkClient, IProcessFileContainer
+        internal ProjectProxyEndDownloadResponseModel EndDownload(PublisherNetworkClient client, bool success = false)
         {
-            if (client != currentDownloader)
-                return;
-
-            if (client.CurrentFile != null)
-            {
-                client.CurrentFile.CloseRead();
-                client.CurrentFile = null;
-            }
-            currentDownloader = null;
-            if (client is PublisherNetworkClient c)
-                c.PatchDownloadProject = null;
-
             patchLocker.Set();
+
+            if (client?.ProxyClientContext?.ProcessingProjects.TryRemove(Info.Id, out var downloadContext) == true)
+            {
+                downloadContext.Dispose();
+            }
+
+
+            var response = new ProjectProxyEndDownloadResponseModel() { Success = success };
 
             if (success)
             {
-                var packet = new OutputPacketBuffer();
-
-                packet.SetPacketId(PatchClientPackets.FinishDownloadResult);
-
-                byte[] buf = null;
-
-                packet.WriteCollection(Directory.GetFiles(ScriptsDirPath, "*.cs"), (p, d) =>
-                {
-                    buf = File.ReadAllBytes(d);
-                    p.WritePath(Path.GetRelativePath(ProjectDirPath, d));
-                    p.WriteInt32(buf.Length);
-                    p.Write(buf);
-                });
-
-                client.Network?.Send(packet);
+                response.FileList = Directory.GetFiles(ScriptsDirPath, "*.cs")
+                    .Select(d => new FileDownloadDataModel()
+                    {
+                        Data = File.ReadAllBytes(d),
+                        RelativePath = Path.GetRelativePath(ProjectDirPath, d).GetNormalizedPath()
+                    }).ToArray();
             }
+
+            return response;
         }
 
         #endregion

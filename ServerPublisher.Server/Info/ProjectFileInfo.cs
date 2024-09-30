@@ -1,16 +1,18 @@
-﻿using ServerPublisher.Shared;
+﻿using ServerPublisher.Server.Scripts;
+using ServerPublisher.Shared.Info;
+using ServerPublisher.Shared.Utils;
 using System;
 using System.IO;
 
 namespace ServerPublisher.Server.Info
 {
-    public class ProjectFileInfo : BasicFileInfo
+    public class ProjectFileInfo : BasicFileInfo, IScriptableFileInfo
     {
-        public string Path => FileInfo.FullName;
+        public string Path => FileInfo.GetNormalizedFilePath();
 
         public override DateTime LastChanged => FileInfo.LastWriteTimeUtc;
 
-        public FileStream IO { get; set; }
+        public FileStream WriteIO { get; set; }
 
         public ServerProjectInfo Project { get; set; }
 
@@ -23,75 +25,79 @@ namespace ServerPublisher.Server.Info
         private DateTime? updateTime;
         private FileInfo fi;
 
-        public void StartFile(DateTime createTime, DateTime updateTime)
+        public void StartFile(ProjectPublishContext context, DateTime createTime, DateTime updateTime)
         {
-            fi = new FileInfo(System.IO.Path.Combine(Project.TempDirPath, RelativePath));
+            fi = new FileInfo(System.IO.Path.Combine(context.TempPath, RelativePath).GetNormalizedPath());
 
             if (fi.Directory.Exists == false)
                 fi.Directory.Create();
 
-            IO = fi.Create();
+            WriteIO = fi.Create();
 
             this.createTime = createTime;
             this.updateTime = updateTime;
 
-            Project.BroadcastMessage($"starting -> {RelativePath}");
+            context.Log($"starting -> {RelativePath}");
         }
 
-        public bool EndFile()
+        public bool EndFile(ProjectPublishContext context)
         {
-            if (IO == null)
+            if (WriteIO == null)
                 return false;
-            IO.Flush();
-            IO.Dispose();
-            IO = null;
-            try { fi.CreationTimeUtc = createTime.Value; } catch (Exception ex) { Project.BroadcastMessage($"starting error -> {ex}"); }
+            WriteIO.Flush();
+            WriteIO.Dispose();
+            WriteIO = null;
+            try { fi.CreationTimeUtc = createTime.Value; } catch (Exception ex) { context.Log($"finishing error -> {ex}"); }
             createTime = null;
-            try { fi.LastWriteTimeUtc = updateTime.Value; } catch (Exception ex) { Project.BroadcastMessage($"starting error -> {ex}"); }
+            try { fi.LastWriteTimeUtc = updateTime.Value; } catch (Exception ex) { context.Log($"finishing error -> {ex}"); }
             updateTime = null;
 
             fi = null;
 
-            Project.BroadcastMessage($"uploaded -> {RelativePath}");
+            context?.Log($"uploaded -> {RelativePath}");
 
             return true;
         }
 
-        public bool TempRelease()
+        public void ReleaseIO()
         {
-            var fi = new FileInfo(System.IO.Path.Combine(Project.TempDirPath, RelativePath));
+            if (WriteIO == null)
+                return;
+
+            WriteIO.Flush();
+            WriteIO.Dispose();
+            WriteIO = null;
+        }
+
+
+        public bool TempRelease(IProcessingFilesContext context)
+        {
+            var fi = new FileInfo(System.IO.Path.Combine(context.TempPath, RelativePath).GetNormalizedPath());
 
             if (fi.Exists == false)
             {
-                Project.BroadcastMessage($"Error!! {fi.FullName} not exists!!");
+                context.Log($"Error!! {fi.GetNormalizedFilePath()} not exists!!");
+
                 return false;
             }
 
             if (FileInfo.Directory.Exists == false)
                 FileInfo.Directory.Create();
 
-            fi.MoveTo(FileInfo.FullName, true);
+            fi.MoveTo(FileInfo.GetNormalizedFilePath(), true);
 
             if (!FileInfo.Exists)
-                FileInfo = new FileInfo(FileInfo.FullName);
+                FileInfo = new FileInfo(FileInfo.GetNormalizedFilePath());
 
             CalculateHash();
 
-            Project.BroadcastMessage($"{RelativePath} new hash -> {Hash}");
+            context.Log($"{RelativePath} new hash -> {Hash}");
 
             return true;
         }
 
-        public void OpenRead()
-        {
-            IO = FileInfo.OpenRead();
-        }
-
-        public void CloseRead()
-        {
-            IO?.Dispose();
-            IO = null;
-        }
+        public Stream OpenRead()
+            => FileInfo.OpenRead();
 
         public ProjectFileInfo()
         {

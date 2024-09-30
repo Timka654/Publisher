@@ -1,5 +1,5 @@
 ﻿using NSL.ServerOptions.Extensions.Manager;
-using ServerPublisher.Shared;
+using ServerPublisher.Shared.Enums;
 using System;
 
 namespace ServerPublisher.Server.Managers

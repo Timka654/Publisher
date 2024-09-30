@@ -41,7 +41,7 @@ namespace ServerPublisher.Server.Managers
 
         private void ClearProjects()
         {
-            foreach (var item in StaticInstances.ProjectsManager.GetProjects())
+            foreach (var item in PublisherServer.ProjectsManager.GetProjects())
             {
                 ClearProjectLogs(item);
                 ClearProjectBackups(item);

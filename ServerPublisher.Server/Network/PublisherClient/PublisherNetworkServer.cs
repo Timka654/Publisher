@@ -1,107 +1,131 @@
 ﻿using NSL.Cipher.RC.RC4;
-using NSL.ConfigurationEngine;
-using NSL.Logger.Interface;
-using NSL.ServerOptions.Extensions.Packet;
-using NSL.SocketCore.Extensions.Packet;
-using NSL.SocketCore.Extensions.TCPServer;
 using NSL.TCP.Server;
-using NSL.ServerOptions.Extensions.Manager;
 using ServerPublisher.Server.Network.PublisherClient.Packets;
-using ServerPublisher.Shared;
 using NSL.SocketServer;
 using System;
-using System.Reflection;
-using NSL.Utils;
-using NSL.SocketCore.Utils.Logger.Enums;
+using NSL.BuilderExtensions.TCPServer;
+using NSL.BuilderExtensions.SocketCore;
+using Microsoft.Extensions.Configuration;
+using ServerPublisher.Shared.Enums;
+using NSL.SocketCore.Extensions.Buffer;
+using ServerPublisher.Server.Network.PublisherClient.Packets.PacketRepository;
+using NSL.SocketCore.Utils.Logger;
+using ServerPublisher.Server.Info;
+using NSL.SocketCore.Utils.Exceptions;
+using System.Net;
 
 namespace ServerPublisher.Server.Network.PublisherClient
 {
-    internal class PublisherNetworkServer : TCPNetworkServerEntry<PublisherNetworkClient, PublisherNetworkServer>
+    class PublisherNetworkServer
     {
-        protected override ILogger Logger => StaticInstances.ServerLogger;
+        static TCPServerListener<PublisherNetworkClient> listener;
 
-        protected override IConfigurationManager ConfigurationManager => StaticInstances.ServerConfiguration;
+        static ConfigurationSettingsInfo Configuration => PublisherServer.Configuration;
 
-        protected override string ServerName => "Publisher";
+        static ConfigurationSettingsInfo__Publisher__Server ServerSettings => Configuration.Publisher.Server;
+        static ConfigurationSettingsInfo__Publisher__Server__IO IOSettings => ServerSettings.IO;
+        static ConfigurationSettingsInfo__Publisher__Server__Cipher CipherSettings => ServerSettings.Cipher;
 
-        protected override string ServerConfigurationName => "publisher";
+        static IBasicLogger Logger => PublisherServer.ServerLogger;
 
-        protected override ServerOptions<PublisherNetworkClient> LoadConfigurationAction()
+
+        static string BindingAddress => IOSettings.Address;
+        static int BindingPort => IOSettings.Port;
+
+        static int Backlog => IOSettings.Backlog;
+
+        static string CipherInputKey => CipherSettings.InputKey;
+
+        static string CipherOutputKey => CipherSettings.OutputKey;
+
+        public static void Initialize()
         {
-            var options = base.LoadConfigurationAction();
+            Logger.Append(NSL.SocketCore.Utils.Logger.Enums.LoggerLevel.Info, $"Publisher server initialize binding on {BindingAddress}:{BindingPort}");
 
-            options.InputCipher = new XRC4Cipher(ConfigurationManager.GetValue($"{NetworkConfigurationPath}.io.input.key"));
-            options.OutputCipher = new XRC4Cipher(ConfigurationManager.GetValue($"{NetworkConfigurationPath}.io.output.key"));
+            var addr = IPAddress.Parse(BindingAddress == "*" ? "0.0.0.0" : BindingAddress);
 
-            return options;
-        }
 
-        protected override void LoadManagersAction()
-        {
-            Options.LoadManagers<PublisherNetworkClient>(typeof(ManagerLoadAttribute));
-        }
+            var logWrapper = new NSL.Logger.PrefixableLoggerProxy(Logger, "[Publisher]");
 
-        protected override void LoadReceivePacketsAction()
-        {
-            int len = Options.LoadPackets(typeof(ServerPacketAttribute));
+            listener = TCPServerEndPointBuilder.Create()
+                    .WithClientProcessor<PublisherNetworkClient>()
+                    .WithOptions<ServerOptions<PublisherNetworkClient>>()
+                    .WithCode(builder =>
+                    {
+                        builder.SetLogger(logWrapper);
 
-            Logger.Append(LoggerLevel.Log, $"Loaded {ServerName} {len} packets");
+                        var options = builder.GetOptions();
 
-            len = Options.Load<PublisherNetworkClient, ServerPacketDelegateContainerAttribute, ServerPacketAttribute>(Assembly.GetExecutingAssembly());
+                        options.AddAsyncRequestPacketHandle(PublisherPacketEnum.PublishProjectFileStart, ProjectPacketRepository.PublishProjectFileStartReceive);
 
-            Logger.Append(LoggerLevel.Log, $"Loaded {ServerName} {len} packet handles");
-        }
+                        options.AddAsyncRequestPacketHandle(PublisherPacketEnum.PublishProjectFinish, ProjectPacketRepository.PublishProjectFinishReceive);
 
-        protected override void Listener_OnReceivePacket(TCPServerClient<PublisherNetworkClient> client, ushort pid, int len)
-        {
-#if DEBUG
+                        options.AddAsyncRequestPacketHandle(PublisherPacketEnum.PublishProjectSignIn, ProjectPacketRepository.PublishProjectSignInReceive);
 
-            if (PacketEnumExtensions.IsDefined<PublisherServerPackets>(pid))
-                StaticInstances.ServerLogger.AppendDebug($"{ServerName} receive packet pid:{Enum.GetName((PublisherServerPackets)pid)} from {client.GetRemotePoint()}");
+                        options.AddAsyncRequestPacketHandle(PublisherPacketEnum.PublishProjectUploadFilePart, ProjectPacketRepository.PublishProjectUploadFilePartReceive);
 
-            if (PacketEnumExtensions.IsDefined<PatchServerPackets>(pid))
-                StaticInstances.ServerLogger.AppendDebug($"{ServerName} receive patch packet pid:{Enum.GetName((PatchServerPackets)pid)} from {client.GetRemotePoint()}");
 
+                        options.AddAsyncRequestPacketHandle(PublisherPacketEnum.ProjectProxyStartFile, ProjectProxyPacketRepository.ProjectProxyStartFileReceive);
+                        options.AddAsyncRequestPacketHandle(PublisherPacketEnum.ProjectProxyDownloadBytes, ProjectProxyPacketRepository.ProjectProxyDownloadBytesReceive);
+
+                        options.AddAsyncRequestPacketHandle(PublisherPacketEnum.ProjectProxyFinishDownload, ProjectProxyPacketRepository.ProjectProxyFinishDownloadReceive);
+
+                        options.AddAsyncRequestPacketHandle(PublisherPacketEnum.ProjectProxySignIn, ProjectProxyPacketRepository.ProjectProxySignInReceive);
+
+                        options.AddAsyncRequestPacketHandle(PublisherPacketEnum.ProjectProxySignOut, ProjectProxyPacketRepository.ProjectProxySignOutReceive);
+
+                        options.AddAsyncRequestPacketHandle(PublisherPacketEnum.ProjectProxyStartDownload, ProjectProxyPacketRepository.ProjectProxyStartDownloadReceive);
+
+
+                        builder.AddDefaultEventHandlers(logWrapper, handleOptions: DefaultEventHandlersEnum.All
+#if RELEASE
+                            | ~DefaultEventHandlersEnum.Receive | ~DefaultEventHandlersEnum.Send
 #endif
+                            , pid => Enum.GetName((PublisherPacketEnum)pid)
+                            , pid => Enum.GetName((PublisherPacketEnum)pid));
+
+                        builder.WithOutputCipher(new XRC4Cipher(CipherOutputKey));
+
+                        builder.WithInputCipher(new XRC4Cipher(CipherInputKey));
+
+                        builder.AddDisconnectHandle(client =>
+                        {
+                            client.ProxyClientContext?.Dispose();
+                            client.PublishContext?.Dispose();
+                        });
+
+                        builder.AddExceptionHandle((ex, client) =>
+                        {
+                            if (ex is ConnectionLostException)
+                                return;
+
+                            var context = client?.PublishContext;
+
+                            if (context != null)
+                            {
+                                context.Log(ex.ToString());
+
+                                context.Dispose();
+                            }
+
+                            client?.Network?.Disconnect();
+                        });
+                    })
+                    .WithBindingPoint(addr, BindingPort)
+                    .WithBacklog(Backlog)
+                    .Build();
         }
 
-        protected override void Listener_OnSendPacket(TCPServerClient<PublisherNetworkClient> client, ushort pid, int len, string stacktrace)
+        public static void Run()
         {
-#if DEBUG
-            if (PacketEnumExtensions.IsDefined<PublisherClientPackets>(pid))
-                StaticInstances.ServerLogger.AppendDebug($"{ServerName} send packet pid:{Enum.GetName((PublisherClientPackets)pid)} to {client.GetRemotePoint()} (source:{stacktrace})");
-
-            if (PacketEnumExtensions.IsDefined<PatchClientPackets>(pid))
-                StaticInstances.ServerLogger.AppendDebug($"{ServerName} send patch packet pid:{Enum.GetName((PatchClientPackets)pid)} to {client.GetRemotePoint()} (source:{stacktrace}])");
-#endif
+            listener.Start();
+            Logger.Append(NSL.SocketCore.Utils.Logger.Enums.LoggerLevel.Info, $"Publisher server listener started");
         }
 
-        protected override void SocketOptions_OnClientDisconnectEvent(PublisherNetworkClient client)
+        public static void Stop()
         {
-            base.SocketOptions_OnClientDisconnectEvent(client);
-
-            if (client != null)
-                StaticInstances.SessionManager.DisconnectClient(client);
-        }
-
-        protected override void SocketOptions_OnExtensionEvent(Exception ex, PublisherNetworkClient client)
-        {
-            base.SocketOptions_OnExtensionEvent(ex, client);
-
-            if (client != null)
-            {
-                if (client.UserInfo?.CurrentProject != null)
-                {
-                    client.UserInfo.CurrentProject.BroadcastMessage(ex.ToString());
-                }
-
-                if (client.Network?.GetState() == true)
-                {
-                    client.Network.Disconnect();
-                }
-            }
-
-            //SocketOptions_OnClientDisconnectEvent(client);
+            listener.Start();
+            Logger.Append(NSL.SocketCore.Utils.Logger.Enums.LoggerLevel.Info, $"Publisher server listener stopped");
         }
     }
 }

@@ -1,16 +1,43 @@
 ﻿{
-  "server.publisher": {
-    "io.port": "6583",
-    "io.buffer.size": 409600,
-    "io.backlog": 10,
-    "io.input.key": "!{b1HX11R**",
-    "io.output.key": "!{b1HX11R**"
-  },
-  "upload": {
-    "large.min.size": 400000000,
-    "max.file.size": 1000000000,
-    "max.file.count": 999999999
-  },
+  "publisher": {
 
-  "default.append.IgnoreFilePaths": [ "appsettings.[\\s|\\S]*" ]
+    "server": {
+
+      "io": {
+        "port": 6583,
+        "buffer_size": 409600,
+        "backlog": 100
+      },
+
+      "cipher": {
+        "input_key": "!{b1HX11R**",
+        "output_key": "!{b1HX11R**"
+      }
+
+    },
+
+    "project_configuration": {
+
+      "base": {
+        "ignore.file.paths": [ "Publisher/[\\s|\\S]*" ]
+      },
+
+      "default": {
+        "ignore.file.paths": [ "appsettings.[\\s|\\S]*" ]
+      },
+
+      "server": {
+        "scripts.default.usings": [
+          "System",
+          "System.IO",
+          "System.Collections",
+          "System.Collections.Generic",
+          "System.Linq",
+          "System.Diagnostics",
+          "ServerPublisher.Server.Info",
+          "ServerPublisher.Server.Scripts"
+        ]
+      }
+    }
+  }
 }

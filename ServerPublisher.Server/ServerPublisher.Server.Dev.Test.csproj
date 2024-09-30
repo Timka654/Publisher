@@ -1,0 +1,97 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net8.0</TargetFramework>
+		<Configurations>Debug;Release;ScriptsDebugging</Configurations>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<ServerGarbageCollection>false</ServerGarbageCollection>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Compile Remove="Data\**" />
+		<Compile Remove="publish\**" />
+		<Content Remove="Data\**" />
+		<EmbeddedResource Remove="Data\**" />
+		<EmbeddedResource Remove="publish\**" />
+		<None Remove="Data\**" />
+		<None Remove="publish\**" />
+	</ItemGroup>
+	
+	<ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="8.0.8" />
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
+		<PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.0" />
+		<PackageReference Include="NSL.BuilderExtensions.TCPClient" Version="2024.9.28.107" />
+		<PackageReference Include="NSL.BuilderExtensions.Buffer" Version="2024.9.28.107" />
+		<PackageReference Include="NSL.BuilderExtensions.TCPServer" Version="2024.9.28.107" />
+		<PackageReference Include="NSL.Cipher" Version="2024.9.28.107" />
+		<PackageReference Include="NSL.ClientOptions.Extensions.Packet" Version="2024.9.28.107" />
+		<PackageReference Include="NSL.ConfigurationEngine.Providers.Json" Version="2024.9.28.107" />
+		<PackageReference Include="NSL.Extensions.WaitBuffer" Version="2024.9.28.107" />
+		<PackageReference Include="NSL.Generators.FillTypeGenerator" Version="2024.9.28.107" />
+		<PackageReference Include="NSL.Generators.FillTypeGenerator.Attributes" Version="2024.9.28.107" />
+		<PackageReference Include="NSL.Logger" Version="2024.9.28.107" />
+		<PackageReference Include="NSL.Logger.AspNet" Version="2024.9.28.107" />
+		<PackageReference Include="NSL.ServerOptions.Extensions.Packet" Version="2024.9.28.107" />
+		<PackageReference Include="NSL.SocketCore.Extensions.Manager" Version="2024.9.28.107" />
+		<PackageReference Include="NSL.SocketCore.Extensions.Packet" Version="2024.9.28.107" />
+		<PackageReference Include="NSL.SocketServer" Version="2024.9.28.107" />
+		<PackageReference Include="NSL.TCP.Client" Version="2024.9.28.107" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\ServerPublisher.Server.Scripts\ServerPublisher.Server.Scripts.csproj" />
+		<ProjectReference Include="..\ServerPublisher.Shared\ServerPublisher.Shared.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+		<None Update="create_project.ps1">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="create_user.ps1">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="ServerSettings.json">
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</None>
+		<None Update="setup.ps1">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="tools\add_patch_connection.ps1">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="tools\reindexing_project.ps1">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="tools\check_scripts.ps1">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="tools\clone_identity.ps1">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="tools\create_project.ps1">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="tools\add_user.ps1">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="tools\create_user.ps1">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="tools\setup-service-linux.ps1">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="tools\setup-service-windows.ps1">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="tools\setup.ps1">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="tools\utils.psm1">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
+</Project>

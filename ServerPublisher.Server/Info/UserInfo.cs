@@ -1,41 +1,70 @@
 ﻿using Newtonsoft.Json;
 using NSL.Cipher.RSA;
+using NSL.Logger;
 using NSL.Utils;
-using ServerPublisher.Server.Network.PublisherClient;
-using ServerPublisher.Shared;
+using ServerPublisher.Shared.Info;
 using System;
 using System.IO;
 
 namespace ServerPublisher.Server.Info
 {
-    public class UserInfo : BasicUserInfo
+    public enum UserInfoTypeEnum
     {
+        PUBKEY,
+        PRIVKEY
+    }
+
+    public class UserInfo : BasicUserInfo, IDisposable
+    {
+        public UserInfoTypeEnum Type { get; set; }
+
         public string FileName { get; private set; }
 
         public RSACipher Cipher { get; set; }
 
-        public ServerProjectInfo CurrentProject { get; set; }
+        public DateTime UpdateTime { get; set; }
 
-        public PublisherNetworkClient CurrentNetwork { get; set; }
+        public event Action OnRemoved = () => { };
 
-        public UserInfo(string fileName)
+        public event Action OnUpdate = () => { };
+
+        public UserInfo(string fileName, UserInfoTypeEnum type = UserInfoTypeEnum.PRIVKEY)
         {
+            Type = type;
             FileName = fileName;
             Reload(JsonConvert.DeserializeObject<BasicUserInfo>(File.ReadAllText(fileName)));
         }
 
-        public UserInfo(CommandLineArgs args)
+        /// <summary>
+        /// Only for json deserialize
+        /// </summary>
+        public UserInfo()
         {
-            StaticInstances.ServerLogger.AppendInfo("user creating");
 
-            Id = Guid.NewGuid().ToString();
-            Name = args["name"];
-
-            Cipher = new RSACipher();
-
-            RSAPublicKey = Cipher.GetPublicKey();
-            RSAPrivateKey = Cipher.GetPrivateKey();
         }
+
+        public static UserInfo CreateUser(CommandLineArgs args)
+        {
+            return CreateUser(args["name"]);
+        }
+
+        public static UserInfo CreateUser(string name)
+        {
+            var u = new UserInfo();
+
+            PublisherServer.ServerLogger.AppendInfo($"user {name} creating");
+
+            u.Id = Guid.NewGuid().ToString();
+            u.Name = name;
+
+            u.Cipher = new RSACipher();
+
+            u.RSAPublicKey = u.Cipher.GetPublicKey();
+            u.RSAPrivateKey = u.Cipher.GetPrivateKey();
+
+            return u;
+        }
+
 
         internal void Reload(BasicUserInfo userInfo)
         {
@@ -47,10 +76,28 @@ namespace ServerPublisher.Server.Info
             {
                 RSAPrivateKey = userInfo.RSAPrivateKey;
 
+                Cipher?.Dispose();
+
                 Cipher = new RSACipher();
 
                 Cipher.LoadXml(RSAPrivateKey);
             }
+
+            UpdateTime = DateTime.UtcNow;
+
+            OnUpdate();
+        }
+
+        bool disposed = false;
+
+        public void Dispose()
+        {
+            if (disposed)
+                return;
+
+            disposed = true;
+
+            OnRemoved();
         }
     }
 }

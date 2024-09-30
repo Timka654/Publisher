@@ -1,71 +1,66 @@
-﻿using ServerPublisher.Server.Info;
+﻿using ServerPublisher.Server.Dev.Test.Utils;
+using ServerPublisher.Server.Info;
+using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace ServerPublisher.Server.Managers.Storages
 {
     public class UserStorage
     {
-        protected static readonly string DataDirPath = Path.Combine(Application.Directory, "Data");
-        protected static readonly string UsersDirPath = Path.Combine(DataDirPath, "Users");
-
         protected List<UserInfo> userList = new List<UserInfo>();
 
-        public UserInfo GetUser(string userId)
+        public UserInfo? GetUser(string userId)
             => userList.Find(x => x.Id == userId);
 
-        protected UserStorage()
+        private string dirPath;
+        private string watchPattern;
+
+        public event Action<UserInfo> OnCreated = (f) => { };
+
+        public UserStorage(string dirPath, string watchPattern = "*.priuk")
         {
-            CreateWather();
+            this.dirPath = dirPath;
+            this.watchPattern = watchPattern;
+
+            DirectoryUtils.CreateNoExistsDirectory(dirPath);
+
+            CreateWatcher();
             LoadUsers();
         }
 
         private void LoadUsers()
         {
-            if (!File.Exists(UsersDirPath))
-                return;
-
-            foreach (var item in Directory.GetFiles(UsersDirPath, "*.priuk"))
+            foreach (var item in Directory.GetFiles(dirPath, watchPattern))
             {
                 AddOrUpdateUser(new UserInfo(item));
             }
         }
 
-        private FileSystemWatcher UsersWatch;
+        private FSWatcher UsersWatch;
 
-        private void CreateWather()
+        private void CreateWatcher()
         {
-            string path = UsersDirPath;
-            
-            if (!Directory.Exists(path))
-                path = DataDirPath;
+            if (PublisherServer.CommandExecutor)
+                return;
 
-            if (!Directory.Exists(path))
-                path = Application.Directory;
-
-            UsersWatch = new FileSystemWatcher(path, "*.priuk");
-
-            UsersWatch.Changed += UsersWatch_Changed;
-            UsersWatch.Deleted += UsersWatch_Deleted;
-
-            UsersWatch.EnableRaisingEvents = true;
+            UsersWatch = new FSWatcher(dirPath, watchPattern, onCreated: UsersWatch_Changed, onChanged: UsersWatch_Changed, onDeleted: UsersWatch_Deleted);
         }
 
-        private void UsersWatch_Deleted(object sender, FileSystemEventArgs e)
+        private void UsersWatch_Deleted(FileSystemEventArgs e)
         {
-            userList.RemoveAll(x => x.FileName == e.FullPath);
-        }
-
-        private async void UsersWatch_Changed(object sender, FileSystemEventArgs e)
-        {
-            await Task.Delay(1500);
-
-            try
+            userList.RemoveAll(userList.Where(x =>
             {
-                AddOrUpdateUser(new UserInfo(e.FullPath));
-            }
-            catch { }
+                if (x.FileName != e.FullPath) return false;
+                x.Dispose(); return true;
+            }).ToArray().Contains);
+        }
+
+        private void UsersWatch_Changed(FileSystemEventArgs e)
+        {
+            AddOrUpdateUser(new UserInfo(e.FullPath));
         }
 
         private void AddOrUpdateUser(UserInfo user)
@@ -75,6 +70,7 @@ namespace ServerPublisher.Server.Managers.Storages
             if (exist == null)
             {
                 userList.Add(user);
+                OnCreated(user);
             }
             else
             {

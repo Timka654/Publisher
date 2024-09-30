@@ -7,11 +7,17 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.IO.Compression;
 using System.Collections.Concurrent;
-using ServerPublisher.Shared;
 using NSL.Cipher.RSA;
 using Newtonsoft.Json;
 using ServerPublisher.Client.Library;
 using NSL.Utils;
+using ServerPublisher.Shared.Info;
+using ServerPublisher.Shared.Enums;
+using ServerPublisher.Shared.Models.ResponseModel;
+using System.Threading;
+using Newtonsoft.Json.Linq;
+using ServerPublisher.Shared.Models.RequestModels;
+using ServerPublisher.Shared.Utils;
 
 namespace ServerPublisher.Client
 {
@@ -54,7 +60,7 @@ namespace ServerPublisher.Client
 
         private List<BasicFileInfo> uploadFileList = null;
 
-        private List<BasicFileInfo> remoteFileList = null;
+        private BasicFileInfo[] remoteFileList = null;
 
         internal void WriteLog(string v)
         {
@@ -185,37 +191,34 @@ namespace ServerPublisher.Client
 
             Console.WriteLine($"Try connect to {publishInfo.Ip}:{publishInfo.Port}");
 
-            if (!network.Connect())
+            if (!await network.ConnectAsync())
             {
                 LogError($"Cannot connect");
             }
 
             Console.WriteLine($"Success connected");
 
-            network.OnProjectPublishStartMessage += ProjectPublishStart_OnReceiveEvent;
+            network.OnPublishProjectStartMessage += PublishProjectStartMessage_OnReceiveEvent;
             network.OnServerLogMessage += Instance_OnReceiveEvent;
 
             Console.WriteLine($"Try sign");
 
             var result = await SignIn();
 
-            if (result != SignStateEnum.Ok)
+            if (result.Result != SignStateEnum.Ok)
             {
-                LogError($"Sign result - {Enum.GetName(result)}, error");
+                LogError($"Sign result - {Enum.GetName(result.Result)}, error");
             }
-            Console.WriteLine($"Sign result - ok, wait....");
 
+            if (startDelayToken.IsCancellationRequested)
+                Console.WriteLine($"Sign result - ok");
+            else
+                Console.WriteLine($"Sign result - ok, wait....");
 
-            StepLocker.WaitOne();
-        }
+            try { await Task.Delay(-1, startDelayToken.Token); } catch { }
 
-        private void Instance_OnReceiveEvent(string value)
-        {
-            Console.WriteLine(value);
-        }
+            var value = result.IgnoreFilePatterns;
 
-        private async void ProjectPublishStart_OnReceiveEvent(List<string> value)
-        {
             Console.WriteLine($"PublishStart, build ignore pattern list");
             for (int i = 0; i < value.Count; i++)
             {
@@ -232,10 +235,7 @@ namespace ServerPublisher.Client
 
             uploadFileList = GetFiles(publishInfo.PublishDirectory);
 
-            remoteFileList = await network.GetFileList();
-
-            if (remoteFileList == default)
-                LogError($"Cannot receive file list");
+            remoteFileList = fileList.FileList;
 
             uploadFileList.RemoveAll(x => remoteFileList.Any(r => r.RelativePath == x.RelativePath && r.Hash == x.Hash));
 
@@ -246,6 +246,23 @@ namespace ServerPublisher.Client
             StepLocker.Set();
         }
 
+
+        ProjectFileListResponseModel fileList;
+
+        CancellationTokenSource startDelayToken = new CancellationTokenSource();
+
+        private void Instance_OnReceiveEvent(string value)
+        {
+            Console.WriteLine(value);
+        }
+
+        private async void PublishProjectStartMessage_OnReceiveEvent(ProjectFileListResponseModel value)
+        {
+            fileList = value;
+
+            startDelayToken.Cancel();
+        }
+
         private System.Threading.AutoResetEvent StepLocker = new System.Threading.AutoResetEvent(false);
         bool finished = false;
 
@@ -253,8 +270,11 @@ namespace ServerPublisher.Client
         {
             if (uploadFileList.Any())
             {
+                SemaphoreSlim ss;
                 if (publishInfo.HasCompression)
                 {
+                    ss = new SemaphoreSlim(0, 1);
+
                     var archivePath = Path.GetTempFileName();
 
                     using (var archive = ZipFile.Open(archivePath, ZipArchiveMode.Update))
@@ -267,48 +287,76 @@ namespace ServerPublisher.Client
 
                     var archiveFileInfo = new FileInfo(archivePath);
 
-                    await UploadFile(new BasicFileInfo(archiveFileInfo.Directory.FullName, archiveFileInfo), true);
+                    UploadFile(new BasicFileInfo(archiveFileInfo.Directory.GetNormalizedDirectoryPath(), archiveFileInfo), ss, true);
+
+                    while (ss.CurrentCount < 1)
+                        await Task.Delay(500);
                 }
                 else
                 {
+                    ss = new SemaphoreSlim(0, uploadFileList.Count);
+
                     foreach (var item in uploadFileList)
                     {
-                        await UploadFile(item);
+                        UploadFile(item, ss);
                     }
+
+                    while (ss.CurrentCount < uploadFileList.Count)
+                        await Task.Delay(500);
                 }
             }
 
-            await network.ProjectPublishEnd(successArgs);
-            finished = true;
-            network.Disconnect();
+            var result = await network.ProjectFinish(new PublishProjectFinishRequestModel()
+            {
+                Args = successArgs.GetArgs().ToDictionary(x => x.Key, x => x.Value)
+            });
 
-            Environment.Exit(0);
+            if (result)
+            {
+                finished = true;
+                network.Disconnect();
+                Environment.Exit(0);
+            }
         }
 
-        private async Task UploadFile(BasicFileInfo file, bool compressed = false)
+        private int uploadBufferLen => publishInfo.BufferLen - 50;
+
+        private async void UploadFile(BasicFileInfo file, SemaphoreSlim ss, bool compressed = false)
         {
-            await network.FilePublishStart(file);
+            //if (file.RelativePath != "n1.bin")
+            //    return;
+
+            var fsr = await network.FileStart(new PublishProjectFileStartRequestModel()
+            {
+                RelativePath = file.RelativePath,
+                CreateTime = file.FileInfo.CreationTime,
+                UpdateTime = file.FileInfo.LastWriteTime
+            });
 
             var fs = file.FileInfo.OpenRead();
 
-            byte[] buf = new byte[publishInfo.BufferLen];
+            int len = uploadBufferLen;
+
+            byte[] buf = new byte[len];
 
             int currLen = default;
 
             do
             {
-                currLen = fs.Read(buf, 0, publishInfo.BufferLen);
+                currLen = fs.Read(buf, 0, buf.Length);
 
-                if (currLen == 0)
-                    break;
+                if (currLen < buf.Length)
+                    Array.Resize(ref buf, currLen);
 
-                Console.WriteLine($"Uploading: {100.0 / fs.Length * fs.Position}%");
+                Console.WriteLine($"Uploading {file.RelativePath}: {100.0 / fs.Length * fs.Position}%");
 
-                await network.UploadFileBytes(buf, currLen);
+                await network.UploadFilePart(new PublishProjectUploadFileBytesRequestModel() { Bytes = buf, EOF = fs.Length == fs.Position, FileId = fsr.FileId });
 
-            } while (currLen == publishInfo.BufferLen);
+            } while (buf.Length == len);
 
             fs.Close();
+
+            ss.Release();
         }
 
         private List<BasicFileInfo> GetFiles(string dir)
@@ -320,7 +368,7 @@ namespace ServerPublisher.Client
             Parallel.ForEach(fileList,
                 item =>
             {
-                if (ignorePatternList.Any(x => Regex.IsMatch(Path.GetRelativePath(dir, item), x)))
+                if (ignorePatternList.Any(x => Regex.IsMatch(Path.GetRelativePath(dir, item).GetNormalizedPath(), x)))
                     return;
 
                 BasicFileInfo temp = new BasicFileInfo(dir, new FileInfo(item));
@@ -335,7 +383,7 @@ namespace ServerPublisher.Client
             return result.ToList();
         }
 
-        private async Task<SignStateEnum> SignIn()
+        private async Task<PublishSignInResponseModel> SignIn()
         {
             RSACipher rsa = new RSACipher();
             rsa.LoadXml(userInfo.RSAPublicKey);
@@ -343,7 +391,15 @@ namespace ServerPublisher.Client
             var temp = Encoding.ASCII.GetBytes(userInfo.Id);
             temp = rsa.Encode(temp, 0, temp.Length);
 
-            return await network.SignIn(publishInfo.ProjectId, userInfo, temp, publishInfo.HasCompression);
+            var request = new PublishSignInRequestModel()
+            {
+                ProjectId = publishInfo.ProjectId,
+                UserId = userInfo.Id,
+                IdentityKey = temp,
+                UploadMethod = publishInfo.HasCompression ? UploadMethodEnum.SingleArchive : UploadMethodEnum.Default
+            };
+
+            return await network.SignIn(request);
         }
     }
 }

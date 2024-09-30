@@ -9,10 +9,10 @@ $file_src = GetValue -text "Введите путь к приватному фа
 $project_id = GetValue -text "Введите идентификатор проекта"
 
 if ($IsWindows) {
-    $execFile = "./ServerPublisher.Server.exe"
+    $execFile = "./publisherserver.exe"
 }
 else {
-    $execFile = "./ServerPublisher.Server"
+    $execFile = "./publisherserver"
 }
 
 & $execFile /action:add_user /path:$file_src /project_id:$project_id

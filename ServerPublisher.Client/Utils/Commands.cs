@@ -1,5 +1,5 @@
 ﻿using NSL.Utils;
-using ServerPublisher.Shared;
+using ServerPublisher.Shared.Utils;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -24,18 +24,18 @@ namespace ServerPublisher.Client.Utils
         {
             var appPath = AppDomain.CurrentDomain.BaseDirectory;
 
-            string templatesPath = Path.Combine(appPath, "Templates");
+            string templatesPath = Path.Combine(appPath, "templates");
 
             string name = default;
 
-            if (!cmd.TryGetValue("name", ref name) || string.IsNullOrWhiteSpace(name) || !Directory.Exists(Path.Combine(templatesPath, name)))
+            if (!cmd.TryGetValue("name", ref name) || string.IsNullOrWhiteSpace(name) || !Directory.Exists(Path.Combine(templatesPath, name).GetNormalizedPath()))
             {
                 Console.WriteLine("parameter name is empty or not exists /name:<value>");
                 Console.WriteLine("exists values:");
 
                 foreach (var item in Directory.GetDirectories(templatesPath))
                 {
-                    Console.WriteLine($"- {Path.GetRelativePath(templatesPath, item)}");
+                    Console.WriteLine($"- {Path.GetRelativePath(templatesPath, item).GetNormalizedPath()}");
                 }
                 return;
             }
@@ -45,7 +45,7 @@ namespace ServerPublisher.Client.Utils
 
             foreach (var item in Directory.GetFiles(templatePath))
             {
-                var targetPath = Path.Combine(Directory.GetCurrentDirectory(), Path.GetRelativePath(templatePath, item));
+                var targetPath = Path.Combine(Directory.GetCurrentDirectory().GetNormalizedPath(), Path.GetRelativePath(templatePath, item).GetNormalizedPath()).GetNormalizedPath();
 
                 try
                 {

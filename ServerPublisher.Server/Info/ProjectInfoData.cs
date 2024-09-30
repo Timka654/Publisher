@@ -1,22 +1,27 @@
-﻿using ServerPublisher.Shared;
+﻿using NSL.Generators.FillTypeGenerator.Attributes;
+using ServerPublisher.Shared.Info;
 using System;
 using System.Collections.Generic;
 
 namespace ServerPublisher.Server.Info
 {
-    public class ProjectInfoData
+    [FillTypeGenerate(typeof(ProjectInfoData), "Updatable")]
+    public partial class ProjectInfoData
     {
+        [FillTypeGenerateInclude("Updatable")]
         public string Id { get; set; }
 
+        [FillTypeGenerateInclude("Updatable")]
         public string Name { get; set; }
 
+        [FillTypeGenerateInclude("Updatable")]
         public bool FullReplace { get; set; }
 
+        [FillTypeGenerateInclude("Updatable")]
         public bool Backup { get; set; }
 
-        public bool PreventScriptExecution { get; set; } = false;
-
-        public List<string> IgnoreFilePaths { get; set; }
+        [FillTypeGenerateInclude("Updatable")]
+        public List<string> IgnoreFilePaths { get; set; } = [];
 
         public DateTime? LatestUpdate { get; set; }
 

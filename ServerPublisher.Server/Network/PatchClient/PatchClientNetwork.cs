@@ -1,239 +1,352 @@
-﻿using ServerPublisher.Server.Info.PacketInfo;
-using ServerPublisher.Server.Network.ClientPatchPackets;
-using ServerPublisher.Server.Info;
+﻿using ServerPublisher.Server.Info;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using ServerPublisher.Shared;
 using NSL.Cipher.RSA;
 using NSL.Cipher.RC.RC4;
 using NSL.TCP.Client;
+using ServerPublisher.Shared.Info;
+using ServerPublisher.Shared.Enums;
+using NSL.Logger;
+using NSL.BuilderExtensions.TCPClient;
+using NSL.BuilderExtensions.SocketCore;
+using Microsoft.Extensions.Configuration;
+using NSL.SocketCore.Extensions.Buffer;
+using NSL.SocketCore.Utils.Buffer;
+using ServerPublisher.Shared.Models.RequestModels;
+using ServerPublisher.Shared.Models.ResponseModel;
+using NSL.SocketCore.Utils.Logger;
 using NSL.SocketClient;
-using NSL.ClientOptions.Extensions.Packet;
-using NSL.Utils;
+using NSL.SocketCore.Utils.Logger.Enums;
+using NSL.BuilderExtensions.Buffer;
 
 namespace ServerPublisher.Server.Network
 {
-    class PatchClientNetwork : TCPNetworkClient<NetworkPatchClient, ClientOptions<NetworkPatchClient>>
+    class PatchClientNetwork
     {
-        public ClientOptions<NetworkPatchClient> Options => base.Options as ClientOptions<NetworkPatchClient>;
+        public string IpAddress { get; private set; }
 
-        public SignInPacket GetSignInPacket() 
-            => Options.GetPacket<SignInPacket>((ushort)PatchClientPackets.SignInResult);
+        public int Port { get; private set; }
 
-        public StartDownloadPacket GetStartDownloadPacket() 
-            => Options.GetPacket<StartDownloadPacket>((ushort)PatchClientPackets.StartDownloadResult);
+        private IBasicLogger? Logger;
 
-        public FinishDownloadPacket GetFinishDownloadPacket() 
-            => Options.GetPacket<FinishDownloadPacket>((ushort)PatchClientPackets.FinishDownloadResult);
+        private TCPNetworkClient<NetworkProjectProxyClient, ClientOptions<NetworkProjectProxyClient>> client;
 
-        public DownloadBytesPacket GetDownloadBytesPacket() 
-            => Options.GetPacket<DownloadBytesPacket>((ushort)PatchClientPackets.DownloadBytesResult);
-
-        public ChangeLatestUpdateHandlePacket GetChangeLatestUpdateHandlePacket() 
-            => Options.GetPacket<ChangeLatestUpdateHandlePacket>((ushort)PatchClientPackets.ChangeLatestUpdateHandle);
-
-        public FileListPacket GetFileListPacket() 
-            => Options.GetPacket<FileListPacket>((ushort)PatchClientPackets.ProjectFileListResult);
-
-        public PatchClientNetwork(ClientOptions<NetworkPatchClient> options) : base(options)
+        public PatchClientNetwork(ProjectPatchInfo patchInfo)// : base(options)
         {
-            options.OnClientConnectEvent += Options_OnClientConnectEvent;
-            options.OnClientDisconnectEvent += Options_OnClientDisconnectEvent;
-            options.OnReconnectEvent += Options_OnReconnectEvent;
+            Logger = new PrefixableLoggerProxy(PublisherServer.ServerLogger, $"[Project Proxy({patchInfo.IpAddress}:{patchInfo.Port})]");
 
-            options.OnExceptionEvent += Options_OnExceptionEvent;
+            IpAddress = patchInfo.IpAddress;
+            Port = patchInfo.Port;
 
-            options.HelperLogger = StaticInstances.ServerLogger;
+            client = TCPClientEndPointBuilder.Create()
+                .WithClientProcessor<NetworkProjectProxyClient>()
+                .WithOptions()
+                .WithEndPoint(patchInfo.IpAddress, patchInfo.Port)
+                .WithCode(builder =>
+                {
+                    builder.SetLogger(Logger);
 
-            GetChangeLatestUpdateHandlePacket().OnReceiveEvent += PatchClientNetwork_OnReceiveEvent;
+                    builder.AddClientObjectBag();
+                    builder.ConfigureRequestProcessor();
+
+                    builder.AddConnectHandle(Options_OnClientConnectEvent);
+                    builder.AddDisconnectHandle(Options_OnClientDisconnectEvent);
+                    builder.AddExceptionHandle(Options_OnExceptionEvent);
+
+
+                    builder.AddDefaultEventHandlers(Logger, handleOptions: DefaultEventHandlersEnum.All
+#if RELEASE
+                            | ~DefaultEventHandlersEnum.Receive | ~DefaultEventHandlersEnum.Send
+#endif
+                        , pid => Enum.GetName((PublisherPacketEnum)pid)
+                        , pid => Enum.GetName((PublisherPacketEnum)pid));
+
+                    builder.WithInputCipher(new XRC4Cipher(patchInfo.InputCipherKey));
+                    builder.WithOutputCipher(new XRC4Cipher(patchInfo.OutputCipherKey));
+
+                    builder.WithBufferSize(PublisherServer.Configuration.Publisher.Proxy.BufferSize);
+
+                    builder.AddAsyncPacketHandle(PublisherPacketEnum.ProjectProxyStartMessage, StartMessageHandle);
+                    builder.AddAsyncPacketHandle(PublisherPacketEnum.ProjectProxyUpdateDataMessage, ChangeLatestUpdateDataMessageHandle);
+                })
+                .Build();
+
+            Connect();
         }
 
-        private void Options_OnExceptionEvent(Exception ex, NetworkPatchClient client)
+        private async Task StartMessageHandle(NetworkProjectProxyClient client, InputPacketBuffer data)
         {
-            StaticInstances.ServerLogger.AppendError(ex.ToString());
+            var message = ProjectProxyStartDownloadMessageModel.ReadDefaultFrom(data);
+
+            if (!ProjectMap.TryGetValue(message.ProjectId, out var project))
+            {
+                SignOutProject(message.ProjectId);
+                return;
+            }
+
+            await project.UnlockDownload(message);
         }
 
-        private async void Options_OnReconnectEvent(int currentTry, bool result)
+        private RequestProcessor? requestProcessor => client.Data?.GetRequestProcessor();
+
+        private async Task<T?> RequestAsync<T>(RequestPacketBuffer packet, Func<InputPacketBuffer, Task<T>> responseHander, bool disposeResponse = true)
         {
-            if (currentTry == int.MaxValue)
+            T? result = default;
+
+            var rp = requestProcessor;
+
+            if (rp != null)
+                await rp.SendRequestAsync(packet, async data =>
+                {
+                    if (data != null)
+                        result = await responseHander(data);
+
+                    return disposeResponse;
+                });
+
+            return result;
+        }
+
+
+        public async Task<ProjectProxyStartFileResponseModel?> StartFileAsync(string projectId, string relativePath)
+        {
+            var packet = RequestPacketBuffer.Create(PublisherPacketEnum.ProjectProxyStartFile);
+
+            new ProjectProxyStartFileRequestModel
+            {
+                ProjectId = projectId,
+                RelativePath = relativePath
+            }
+            .WriteFullTo(packet);
+
+            var response = await RequestAsync(packet, data =>
+            {
+                return Task.FromResult(ProjectProxyStartFileResponseModel.ReadFullFrom(data));
+            });
+
+            return response;
+        }
+
+        public async Task<ProjectProxyDownloadBytesResponseModel?> DownloadAsync(string projectId, Guid fileId, int? buffLength = null)
+        {
+            buffLength ??= GetMaxReceiveSize();
+
+            var packet = RequestPacketBuffer.Create(PublisherPacketEnum.ProjectProxyDownloadBytes);
+
+            new ProjectProxyDownloadBytesRequestModel
+            {
+                ProjectId = projectId,
+                FileId = fileId,
+                BufferLength = buffLength.Value
+            }
+            .WriteFullTo(packet);
+
+            var response = await RequestAsync(packet, data =>
+            {
+                return Task.FromResult(ProjectProxyDownloadBytesResponseModel.ReadFullFrom(data));
+            });
+
+            return response;
+        }
+
+        private static int BufferSize => PublisherServer.Configuration.Publisher.Proxy.BufferSize;
+
+        private static int GetMaxReceiveSize() => BufferSize - 32;
+
+        private async Task ChangeLatestUpdateDataMessageHandle(NetworkProjectProxyClient client, InputPacketBuffer data)
+        {
+            //(string projectId, DateTime updateTime)
+            var value = ProjectProxyUpdateDataRequestModel.ReadFullFrom(data);
+
+            if (!ProjectMap.TryGetValue(value.ProjectId, out var proj))
+                return;
+
+            if (proj == null || (proj.Info.LatestUpdate.HasValue && proj.Info.LatestUpdate >= value.UpdateTime))
+                return;
+
+            await proj.Download(value.UpdateTime);
+        }
+
+        private int connectionIter = 0;
+
+        private async void Connect()
+        {
+            if (connectionIter > 0)
             {
 #if DEBUG
                 await Task.Delay(10_000);
 #else
-                await Task.Delay(120_000);
-
+                await Task.Delay(60_000);
 #endif
-                await ConnectAsync();
-                return;
             }
-            StaticInstances.ServerLogger.AppendDebug($"PatchClient {Options.IpAddress}:{Options.Port} reconnection try: {currentTry} with result = {result}");
+
+            var result = await client.ConnectAsync();
+
+            Logger.Append(result ? LoggerLevel.Info : LoggerLevel.Error, $"{(connectionIter > 0 ? "Rec" : "C")}onnection try: {connectionIter} with result = {result}");
+
+            if (result)
+                connectionIter = 0;
+            else
+            {
+                ++connectionIter;
+                Connect();
+            }
+        }
+
+
+        private void Options_OnExceptionEvent(Exception ex, NetworkProjectProxyClient client)
+        {
 
         }
 
-        protected override void OnReceive(ushort pid, int len)
-        {
-            if (PacketEnumExtensions.IsDefined<PatchClientPackets>(pid))
-                StaticInstances.ServerLogger.AppendDebug($"PatchClient receive packet pid:{Enum.GetName((PatchClientPackets)pid)} from {Options.IpAddress}:{Options.Port}");
-        }
-        private async void Options_OnClientConnectEvent(NetworkPatchClient client)
-        {
-            StaticInstances.ServerLogger.AppendInfo($"Success connected to PatchServer({Options.IpAddress}:{Options.Port})");
+        private ManualResetEvent readyLocker = new ManualResetEvent(false);
 
-            SetFailed();
+        private async void Options_OnClientConnectEvent(NetworkProjectProxyClient client)
+        {
+            Logger.AppendInfo($"Success connected");
 
             foreach (var item in ProjectMap.Values.ToArray())
             {
-                await SignProject(item);
+                await _signProject(item);
             }
+
+            readyLocker.Set();
         }
 
-        private void Options_OnClientDisconnectEvent(NetworkPatchClient client)
+        private void Options_OnClientDisconnectEvent(NetworkProjectProxyClient client)
         {
-            if (ProcessingProject != null)
-                SetFailed();
-        }
+            readyLocker.Reset();
 
-        private async void PatchClientNetwork_OnReceiveEvent((string projectId, DateTime updateTime) value)
-        {
-            if (!ProjectMap.TryGetValue(value.projectId, out var proj))
-                return;
-
-            if (proj == null || (proj.Info.LatestUpdate.HasValue && proj.Info.LatestUpdate > value.updateTime))
-                return;
-
-            await proj.Download(value.updateTime);
+            Connect();
         }
 
         public async Task<SignStateEnum> SignProject(ServerProjectInfo item)
         {
+            if (!ProjectMap.TryAdd(item.Info.Id, item))
+                return SignStateEnum.Ok;
 
-            var userInfo = JsonSerializer.Deserialize<BasicUserInfo>(item.GetPatchSignData(), options: new JsonSerializerOptions() { IgnoreNullValues = true, IgnoreReadOnlyProperties = true, });
+            if (!readyLocker.WaitOne())
+                return SignStateEnum.CannotConnected;
+
+            return await _signProject(item);
+        }
+
+        private async Task<SignStateEnum> _signProject(ServerProjectInfo item)
+        {
+            var packet = RequestPacketBuffer.Create(PublisherPacketEnum.ProjectProxySignIn);
+
+            var userInfo = item.GetProxyUserInfo();
 
             RSACipher rsa = new RSACipher();
             rsa.LoadXml(userInfo.RSAPublicKey);
 
-            var temp = Encoding.ASCII.GetBytes(userInfo.Id);
-            temp = rsa.Encode(temp, 0, temp.Length);
+            var identityKey = Encoding.ASCII.GetBytes(userInfo.Id);
+            identityKey = rsa.Encode(identityKey, 0, identityKey.Length);
 
 
-            var result = await GetSignInPacket().Send(item.Info.Id, userInfo.Id, temp, item.Info.LatestUpdate);
-            if (result != SignStateEnum.Ok && result != SignStateEnum.CannotConnected)
+            new ProjectProxySignInRequestModel
+            {
+                ProjectId = item.Info.Id,
+                UserId = userInfo.Id,
+                IdentityKey = identityKey,
+                LatestUpdate = item.Info.LatestUpdate ?? DateTime.MinValue
+            }.WriteFullTo(packet);
+
+
+            var response = await RequestAsync(packet, data =>
+            {
+                return Task.FromResult(ProjectProxySignInResponseModel.ReadFullFrom(data));
+            });
+
+            if (response == null || response.Result == SignStateEnum.CannotConnected)
+                return SignStateEnum.CannotConnected;
+
+            if (response.Result > SignStateEnum.Ok)
             {
                 ProjectMap.TryRemove(item.Info.Id, out var dummy);
 
                 item.ClearPatchClient();
 
-                StaticInstances.ServerLogger.AppendError($"Project {item.Info.Name}({item.Info.Id}) cannot sign PatchServer({Options.IpAddress}:{Options.Port}) reasone ={Enum.GetName(result)} - removed");
+                Logger.AppendError($"Cannot sign project {item.Info.Name}({item.Info.Id}), reasone = {Enum.GetName(response.Result)}, removed");
             }
-            else if (result == SignStateEnum.Ok)
-                StaticInstances.ServerLogger.AppendInfo($"Project {item.Info.Name}({item.Info.Id}) success sign on PatchServer({Options.IpAddress}:{Options.Port})");
+            else
+                Logger.AppendInfo($"Success sign project {item.Info.Name}({item.Info.Id})");
 
-            return result;
+            return response.Result;
         }
 
         public void SignOutProject(ServerProjectInfo item)
         {
-            if (this.Options.ClientData != null)
-                SignOutPacket.Send(this.Options.ClientData, item.Info.Id);
-
-            ProjectMap.TryRemove(item.Info.Id, out var dummy);
+            SignOutProject(item.Info.Id);
 
             item.ClearPatchClient();
         }
 
-        private AutoResetEvent downloadQueueLocker = new AutoResetEvent(true);
-
-        internal ServerProjectInfo ProcessingProject = null;
-
-        public async Task<bool> InitializeDownload(ServerProjectInfo item)
+        public void SignOutProject(string projectId)
         {
-            downloadQueueLocker.WaitOne();
+            readyLocker.WaitOne();
 
-            var result = await GetStartDownloadPacket().Send(item.Info.Id);
+            var packet = OutputPacketBuffer.Create(PublisherPacketEnum.ProjectProxySignOut);
 
-            if (!result.result)
+            new ProjectProxySignOutResponseModel()
             {
-                downloadQueueLocker.Set();
-            }
-            else
+                ProjectId = projectId
+            }.WriteFullTo(packet);
+
+            client.Send(packet);
+
+            ProjectMap.TryRemove(projectId, out var dummy);
+        }
+
+        public async Task<bool> StartDownload(ServerProjectInfo item)
+        {
+            readyLocker.WaitOne();
+
+            var packet = RequestPacketBuffer.Create(PublisherPacketEnum.ProjectProxyStartDownload);
+
+            new ProjectProxyStartDownloadRequestModel()
             {
-                ProcessingProject = item;
-                item.Info.IgnoreFilePaths = result.Item2;
+                ProjectId = item.Info.Id,
+                TransportMode = TransportModeEnum.NoArchive
+            }.WriteFullTo(packet);
+
+            var response = await RequestAsync(packet, data =>
+            {
+                return Task.FromResult(Shared.Models.RequestModels.ProjectProxyStartDownloadResponseModel.ReadFullFrom(data));
+            });
+
+            if (response?.Result == true)
+            {
+                item.Info.IgnoreFilePaths = response.IgnoreFilePathes;
             }
 
-            return result.result;
+            return response?.Result == true;
         }
 
-        public async Task<List<DownloadFileInfo>> GetFileList(ServerProjectInfo project)
+        public async Task<ProjectProxyEndDownloadResponseModel> FinishDownload(ServerProjectInfo project)
         {
-            if (ProcessingProject != project)
-                throw new Exception($"{ProcessingProject} != {project}");
+            readyLocker.WaitOne();
 
-            return await GetFileListPacket().Send();
+            var packet = RequestPacketBuffer.Create(PublisherPacketEnum.ProjectProxyFinishDownload);
+
+            new ProjectProxyFileListRequestModel()
+            {
+                ProjectId = project.Info.Id
+            }.WriteFullTo(packet);
+
+            var response = await RequestAsync(packet, data =>
+            {
+                return Task.FromResult(ProjectProxyEndDownloadResponseModel.ReadFullFrom(data));
+            });
+
+            return response;
         }
 
-        public async Task<(string fileName, byte[] data)[]> FinishDownload(ServerProjectInfo item)
-        {
-            if (item != ProcessingProject)
-                throw new Exception($"{item} != {ProcessingProject}");
-
-            var result = await GetFinishDownloadPacket().Send();
-
-            ProcessingProject = null;
-
-            downloadQueueLocker.Set();
-
-            return result;
-        }
-
-        public void NextDownloadFile(BasicFileInfo file)
-        {
-            NextFilePacket.Send(this.Options.ClientData, file.RelativePath);
-        }
-
-        public async Task<DownloadPacketData> Download()
-        {
-            return await GetDownloadBytesPacket().Send();
-        }
-
-        public static PatchClientNetwork Load(ProjectPatchInfo patchInfo)
-        {
-            var patchConnectionOptions = new ClientOptions<NetworkPatchClient>();
-
-            patchConnectionOptions.IpAddress = patchInfo.IpAddress;
-            patchConnectionOptions.Port = patchInfo.Port;
-            patchConnectionOptions.InputCipher = new XRC4Cipher(patchInfo.InputCipherKey);
-            patchConnectionOptions.OutputCipher = new XRC4Cipher(patchInfo.OutputCipherKey);
-
-            patchConnectionOptions.AddressFamily = System.Net.Sockets.AddressFamily.InterNetwork;
-
-            patchConnectionOptions.EnableAutoRecovery = true;
-            patchConnectionOptions.RecoveryWaitTime = 10_000;
-            patchConnectionOptions.MaxRecoveryTryTime = int.MaxValue;
-
-            patchConnectionOptions.HelperLogger = StaticInstances.ServerLogger;
-            patchConnectionOptions.MaxRecoveryTryTime = int.MaxValue;
-            patchConnectionOptions.ProtocolType = System.Net.Sockets.ProtocolType.Tcp;
-            patchConnectionOptions.ReceiveBufferSize = StaticInstances.ServerConfiguration.GetValue<int>("patch.io.buffer.size");
-
-            int cnt = patchConnectionOptions.LoadPackets(typeof(PathClientPacketAttribute));
-
-            return new PatchClientNetwork(patchConnectionOptions);
-        }
-
-
-        private void SetFailed()
-        {
-            ProcessingProject = null;
-            downloadQueueLocker.Set();
-        }
-
-        public ConcurrentDictionary<string, ServerProjectInfo> ProjectMap = new ConcurrentDictionary<string, ServerProjectInfo>();
+        private ConcurrentDictionary<string, ServerProjectInfo> ProjectMap = new ConcurrentDictionary<string, ServerProjectInfo>();
     }
 }

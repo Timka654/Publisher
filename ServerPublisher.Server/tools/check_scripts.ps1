@@ -7,10 +7,10 @@ Set-Location ..
 $project_id = GetValue -text "Введите идентификатор проекта"
 
 if ($IsWindows) {
-    $execFile = "./ServerPublisher.Server.exe"
+    $execFile = "./publisherserver.exe"
 }
 else {
-    $execFile = "./ServerPublisher.Server"
+    $execFile = "./publisherserver"
 }
 
 & $execFile /action:check_scripts /project_id:$project_id

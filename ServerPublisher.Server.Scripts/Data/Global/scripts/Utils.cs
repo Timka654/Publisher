@@ -1,25 +1,43 @@
-﻿using System;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
-
-internal class Utils
+﻿internal class Utils
 {
-    public static void CmdExec(string command)
+    public static void CmdExec(ScriptInvokingContext context, string[] commands)
     {
-        if (string.IsNullOrEmpty(command))
+        if (!commands.Any())
             return;
 
-        Process cmdProc = Process.Start("cmd", $"-c \"{command}\"");
+        var cmd = context.Project.IsWindows() ? "cmd" : "/bin/bash";
 
-        cmdProc.WaitForExit();
-    }
+        var si = new ProcessStartInfo(cmd)
+        {
+            RedirectStandardError = true,
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+        };
 
-    public static void BashExec(string command)
-    {
-        if (string.IsNullOrEmpty(command))
-            return;
+        Process cmdProc = Process.Start(si);
 
-        Process cmdProc = Process.Start("/bin/bash", $"-c \"{command}\"");
+        cmdProc.ErrorDataReceived += (s, e) => context.Executor.Log(e.Data);
+        cmdProc.OutputDataReceived += (s, e) => context.Executor.Log(e.Data);
+        cmdProc.EnableRaisingEvents = true;
+
+        cmdProc.Start();
+
+        cmdProc.BeginOutputReadLine();
+        cmdProc.BeginErrorReadLine();
+
+        var input = cmdProc.StandardInput;
+
+        foreach (var item in commands)
+        {
+            input.WriteLine(item);
+            input.Flush();
+        }
+
+        if (commands.Last() != "exit")
+        {
+            input.WriteLine("exit");
+            input.Flush();
+        }
 
         cmdProc.WaitForExit();
     }

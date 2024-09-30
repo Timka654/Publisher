@@ -14,13 +14,13 @@ if($args.Contains("default") -eq $false)
     }
     else
     {
-        $serviceName = GetValue -text "Service name(default:Publisher Server)"
+        $serviceName = GetValue -text "Service name" -defaultValue "Publisher Server"
     }
 }
 
 $setupPath=Get-Location
 
-$execFile = [System.IO.Path]::Combine($setupPath,"ServerPublisher.Server.exe")
+$execFile = [System.IO.Path]::Combine($setupPath,"publisherserver.exe")
 
 if((Test-Path -Path $execFile) -eq $false)
 {
@@ -28,6 +28,6 @@ if((Test-Path -Path $execFile) -eq $false)
     exit
 }
 
-sc.exe create $serviceName binPath="""$execFile /service""" start=auto
+sc.exe create $serviceName binPath="""$execFile /action:service""" start=auto
 
 Set-Location $currdir

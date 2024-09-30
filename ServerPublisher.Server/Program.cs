@@ -1,4 +1,5 @@
-﻿using ServerPublisher.Server.Utils;
+﻿using NSL.Logger;
+using ServerPublisher.Server.Utils;
 using System;
 
 namespace ServerPublisher.Server
@@ -7,10 +8,12 @@ namespace ServerPublisher.Server
     {
         static void Main(string[] args)
         {
-            if ((new Commands()).Process())
+            PublisherServer.InitializeApp();
+
+            if (Commands.Process())
                 return;
 
-            Console.WriteLine($"Unknown args {string.Join(" ", args)}");
+            PublisherServer.ServerLogger.AppendError($"Unknown args {string.Join(" ", args)}");
         }
     }
 }
