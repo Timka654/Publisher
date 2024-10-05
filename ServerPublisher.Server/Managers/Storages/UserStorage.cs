@@ -77,5 +77,18 @@ namespace ServerPublisher.Server.Managers.Storages
                 exist.Reload(user);
             }
         }
+
+        internal bool AddUser(UserInfo user)
+        {
+            if (userList.Any(x => x.Name.Equals(user.Name, StringComparison.OrdinalIgnoreCase)))
+            {
+                return false;
+            }
+
+            user.ProducePublicKey(Path.Combine(dirPath, "publ"));
+            user.ProducePrivateKey(dirPath);
+
+            return true;
+        }
     }
 }

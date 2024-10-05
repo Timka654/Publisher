@@ -37,9 +37,19 @@
       "commandLineArgs": "/action:add_patch_connection /project_id:273a2073-5a66-43aa-ac08-c2e6e7838bb7 /ip_address:127.0.0.1 /port:6583 /input_cipher_key:!{b1HX11R** /output_cipher_key:!{b1HX11R** /identity_name:dev_user_78d92859-cfe5-432d-9643-5c2e1f5f056e",
       "workingDirectory": "D:\\Temp\\publisher2\\server2"
     },
-    "template_create_project": {
+    "cdefault_command": {
+      "commandName": "Project",
+      "commandLineArgs": "/action:cdefault /y",
+      "workingDirectory": "D:\\Temp\\publisher2\\server"
+    },
+    "template_create_project_command": {
       "commandName": "Project",
       "commandLineArgs": "/action:create_project /template",
+      "workingDirectory": "D:\\Temp\\publisher2\\server"
+    },
+    "cset_command": {
+      "commandName": "Project",
+      "commandLineArgs": "/action:cset /path:\"publisher/server/io/port\" /value:1221 /y",
       "workingDirectory": "D:\\Temp\\publisher2\\server"
     }
   }

@@ -16,7 +16,7 @@ namespace ServerPublisher.Server.Info
 {
     public partial class ServerProjectInfo
     {
-        private string? PatchSignFilePath => Info.PatchInfo == null ? default : Path.Combine(UsersPublicksDirPath, Info.PatchInfo.SignName + ".pubuk").GetNormalizedPath();
+        private string? PatchSignFilePath => Info.PatchInfo == null ? default : Path.Combine(UsersPublicsDirPath, Info.PatchInfo.SignName + ".pubuk").GetNormalizedPath();
 
         //public byte[] GetPatchSignData()
         //{

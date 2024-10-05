@@ -1,7 +1,9 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using NSL.Logger;
 using NSL.SocketCore.Utils.Logger;
+using ServerPublisher.Server.Dev.Test.Utils;
 using ServerPublisher.Server.Info;
 using ServerPublisher.Server.Managers;
 using ServerPublisher.Server.Network.PublisherClient;
@@ -43,13 +45,7 @@ namespace ServerPublisher.Server
         {
             ServerLogger.AppendInfo($"Initialize application");
 
-            var cb = new ConfigurationBuilder()
-                .AddJsonFile("ServerSettings.json")
-                .AddCommandLine(Environment.GetCommandLineArgs())
-                .AddEnvironmentVariables()
-                    .Build();
-
-            Configuration = cb.Get<ConfigurationSettingsInfo>();
+            initializeConfiguration();
 
             //var loggerFactory = LoggerFactory.Create(b => b.AddConsole());
 
@@ -57,11 +53,23 @@ namespace ServerPublisher.Server
 
             //AppLogger = new NSL.Logger.AspNet.ILoggerWrapper(logger);
 
-            var globalScriptsPath = Path.Combine(Application.Directory, Configuration.Publisher.ProjectConfiguration.Server.GlobalScriptsFolderPath);
+            DirectoryUtils.CreateNoExistsDirectory(Path.Combine(Application.Directory, Configuration.Publisher.ProjectConfiguration.Server.GlobalScriptsFolderPath));
+        }
 
-            if (!Directory.Exists(globalScriptsPath))
-                Directory.CreateDirectory(globalScriptsPath);
+        static void initializeConfiguration()
+        {
+            var path = Path.Combine(Application.Directory, "ServerSettings.json");
 
+            if (!File.Exists(path))
+            {
+                ServerLogger.AppendError($"Cannot found \"{path}\" configuration file - load default!!");
+
+                Configuration = new ConfigurationSettingsInfo();
+
+                return;
+            }
+
+            Configuration = JsonConvert.DeserializeObject<ConfigurationSettingsInfo>(File.ReadAllText(path));
         }
 
         public static void RunServer()

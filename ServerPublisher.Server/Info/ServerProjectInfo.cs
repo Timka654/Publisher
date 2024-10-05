@@ -46,7 +46,7 @@ namespace ServerPublisher.Server.Info
 
         public string UsersDirPath => Path.Combine(PublisherDirPath, "users");
 
-        public string UsersPublicksDirPath => Path.Combine(UsersDirPath, "publ");
+        public string UsersPublicsDirPath=> Path.Combine(UsersDirPath, "publ");
 
         public string TempDirPath => Path.Combine(PublisherDirPath, "temp");
 
@@ -196,7 +196,7 @@ namespace ServerPublisher.Server.Info
 
         private void CreateWatchers()
         {
-            PubUsersWatch = new FSWatcher(UsersPublicksDirPath, "*.pubuk"
+            PubUsersWatch = new FSWatcher(UsersPublicsDirPath, "*.pubuk"
                 , onCreated: PubUsersWatch_Changed
                 , onChanged: PubUsersWatch_Changed
                 , onDeleted: PubUsersWatch_Deleted);
@@ -910,20 +910,8 @@ namespace ServerPublisher.Server.Info
                 return false;
             }
 
-            File.WriteAllText(Path.Combine(UsersPublicksDirPath, $"{user.Name}_{user.Id}.pubuk").GetNormalizedPath(), JsonConvert.SerializeObject(new
-            {
-                user.Id,
-                user.Name,
-                user.RSAPublicKey
-            }, jsonSettings));
-
-            File.WriteAllText(Path.Combine(UsersDirPath, $"{user.Name}_{user.Id}.priuk").GetNormalizedPath(), JsonConvert.SerializeObject(new
-            {
-                user.Id,
-                user.Name,
-                user.RSAPublicKey,
-                user.RSAPrivateKey
-            }, jsonSettings));
+            user.ProducePublicKey(UsersPublicsDirPath);
+            user.ProducePrivateKey(UsersDirPath);
 
             return true;
         }
@@ -976,8 +964,8 @@ namespace ServerPublisher.Server.Info
             if (!Directory.Exists(UsersDirPath))
                 Directory.CreateDirectory(UsersDirPath);
 
-            if (!Directory.Exists(UsersPublicksDirPath))
-                Directory.CreateDirectory(UsersPublicksDirPath);
+            if (!Directory.Exists(UsersPublicsDirPath))
+                Directory.CreateDirectory(UsersPublicsDirPath);
 
             if (!Directory.Exists(TempDirPath))
                 Directory.CreateDirectory(TempDirPath);
@@ -1067,11 +1055,9 @@ namespace ServerPublisher.Server.Info
             SaveProjectInfo();
         }
 
-        private static readonly JsonSerializerSettings jsonSettings = new JsonSerializerSettings() { Formatting = Formatting.Indented };
-
         public void SaveProjectInfo()
         {
-            File.WriteAllText(ProjectFilePath, JsonConvert.SerializeObject(Info, jsonSettings));
+            File.WriteAllText(ProjectFilePath, JsonConvert.SerializeObject(Info, JsonUtils.JsonSettings));
         }
 
         public void LoadProjectInfo()

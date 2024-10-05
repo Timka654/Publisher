@@ -12,92 +12,44 @@ using NSL.Logger;
 using ServerPublisher.Shared.Info;
 using Microsoft.Extensions.Configuration;
 using ServerPublisher.Shared.Utils;
-using System.Text.Json;
 using Newtonsoft.Json;
+using System.Linq;
 
 namespace ServerPublisher.Server.Utils
 {
     public class Commands
     {
-        protected static Dictionary<string, Action<CommandLineArgs>> commands;
-
-        static Commands()
+        static Dictionary<string, Action<CommandLineArgs>> commands = new Dictionary<string, Action<CommandLineArgs>>()
         {
-            commands = new Dictionary<string, Action<CommandLineArgs>>()
-            {
-                { "service", RunService },
-                { "create_project", CreateProject },
-                { "update_project", UpdateProject },
-                { "link_project", LinkProject },
-                { "create_user", CreateUser },
-                { "add_user", AddUser },
-                { "add_patch_connection", AddPatchConnection },
-                { "clone_identity", CloneIdentity },
-                { "check_scripts", CheckScripts },
-                { "reindexing", ReIndexing },
-                { "dev_clear_invalid_path", DevClearInvalidPath }
-            };
-        }
+            { "service", RunService },
+            { "cset", ConfigurationSet },
+            { "cdefault", ConfigurationDefault },
+            { "create_project", CreateProject },
+            { "update_project", UpdateProject },
+            { "link_project", LinkProject },
+            { "create_user", CreateUser },
+            { "add_user", AddUser },
+            { "add_patch_connection", AddPatchConnection },
+            { "clone_identity", CloneIdentity },
+            { "check_scripts", CheckScripts },
+            { "reindexing", ReIndexing },
+            { "dev_clear_invalid_path", DevClearInvalidPath }
+        };
 
-        private static void RunService(CommandLineArgs args)
-        {
-            PublisherServer.RunServer();
-        }
+        static void RunService(CommandLineArgs args)
+            => PublisherServer.RunServer();
 
-        private static bool GetDirParameter(CommandLineArgs args, string name, out string value)
-        {
-            value = default;
-
-            if (!args.TryGetValue(name, ref value))
-            {
-                value = Directory.GetCurrentDirectory();
-                Logger.AppendInfo($"Cannot find paramater {name}. Try set current directory - {value}");
-                return false;
-            }
-
-            return true;
-        }
-
-        private static bool ConfirmAction(CommandLineArgs args)
-        {
-            if (args.TryGetOutValue("flags", out string flags))
-            {
-                if (flags.Contains("y", StringComparison.OrdinalIgnoreCase))
-                {
-                    Logger.AppendInfo($"Flags contains 'y' - confirm action");
-                    return true;
-                }
-            }
-
-            string latestInput = default;
-
-            do
-            {
-                Console.Write("You confirm action? 'y' - yes/'n' - no:");
-
-                latestInput = Console.ReadLine();
-
-                if (latestInput.Equals("y", StringComparison.OrdinalIgnoreCase))
-                    return true;
-                else if (latestInput.Equals("n", StringComparison.OrdinalIgnoreCase))
-                    return false;
-                else
-                    Logger.AppendError($"Value cannot be {latestInput}. Try again or press Ctrl+C for cancel");
-
-            } while (true);
-        }
-
-        private static void PidOrDirInfo()
+        static void PidOrDirInfo()
         {
             Logger.AppendError($"Current command must have project_id(has GUID format) or directory parameters for identity project");
             Logger.AppendError($"You can not using identity parameters if executing command from directory contains project");
         }
 
-        private static ServerProjectInfo GetProject(CommandLineArgs args)
+        static ServerProjectInfo GetProject(CommandLineArgs args)
         {
             ServerProjectInfo projectInfo;
 
-            if (args.TryGetOutValue("project_id", out string projectId))
+            if (TryGetCommandValue(args, "project_id", out string projectId))
             {
                 if (!Guid.TryParse(projectId, out var _))
                 {
@@ -132,7 +84,7 @@ namespace ServerPublisher.Server.Utils
             return projectInfo;
         }
 
-        protected static void CheckScripts(CommandLineArgs args)
+        static void CheckScripts(CommandLineArgs args)
         {
             Logger.AppendInfo("Check Scripts");
 
@@ -143,7 +95,7 @@ namespace ServerPublisher.Server.Utils
             GetProject(args)?.CheckScripts();
         }
 
-        protected static void ReIndexing(CommandLineArgs args)
+        static void ReIndexing(CommandLineArgs args)
         {
             Logger.AppendInfo("Try reindexing");
 
@@ -153,11 +105,11 @@ namespace ServerPublisher.Server.Utils
             GetProject(args)?.ReIndexing();
         }
 
-        protected static void CreateProject(CommandLineArgs args)
+        static void CreateProject(CommandLineArgs args)
         {
             Logger.AppendInfo("Create project");
 
-            if (args.ContainsKey("template") || args.ContainsKey("template_path"))
+            if (CheckHaveCommandFlag(args, "template") || CheckHaveCommandFlag(args, "template_path"))
             {
                 UpdateProject(args);
 
@@ -166,13 +118,13 @@ namespace ServerPublisher.Server.Utils
 
             GetDirParameter(args, "directory", out string directory);
 
-            if (!args.ContainsKey("name"))
+            if (!TryGetCommandValue<string>(args, "name", out _))
             {
                 Logger.AppendError($"create project must have \"name\" parameter");
                 return;
             }
 
-            if (args.TryGetOutValue("project_id", out string projectId) && !Guid.TryParse(projectId, out var _))
+            if (TryGetCommandValue(args, "project_id", out string projectId) && !Guid.TryParse(projectId, out var _))
             {
                 Logger.AppendError($"create project \"project_id\" parameter must have GUID format");
                 return;
@@ -197,7 +149,7 @@ namespace ServerPublisher.Server.Utils
             Logger.AppendInfo($"project {proj.Info.Name} by id {proj.Info.Id} created");
         }
 
-        protected static void UpdateProject(CommandLineArgs args)
+        static void UpdateProject(CommandLineArgs args)
         {
             Logger.AppendInfo("Update project from template");
 
@@ -212,7 +164,7 @@ namespace ServerPublisher.Server.Utils
             if (!File.Exists(path))
             {
                 Logger.AppendError($"Project template \"{path}\" does not exists!!");
-                
+
                 return;
             }
 
@@ -267,7 +219,7 @@ namespace ServerPublisher.Server.Utils
 
         }
 
-        protected static void LinkProject(CommandLineArgs args)
+        static void LinkProject(CommandLineArgs args)
         {
             Logger.AppendInfo("Link project");
 
@@ -304,13 +256,71 @@ namespace ServerPublisher.Server.Utils
             }
         }
 
-        protected static void CreateUser(CommandLineArgs args)
+        static void CreateUser(CommandLineArgs args)
         {
             Logger.AppendInfo("Create user");
 
-            if (!args.ContainsKey("name"))
+            if (!TryGetCommandValue<string>(args, "name", out _))
             {
                 Logger.AppendError($"create user must have \"name\" parameter");
+                return;
+            }
+
+            if (CheckHaveCommandFlag(args, "global"))
+            {
+                Logger.AppendInfo("Create global user");
+
+                if (CheckHaveCommandFlag(args, "publisher"))
+                {
+                    Logger.AppendInfo("Create publisher user");
+
+                    if (!ConfirmAction(args))
+                        return;
+
+                    var user = UserInfo.CreateUser(args);
+
+                    if (PublisherServer.ProjectsManager.GlobalPublishUserStorage.AddUser(user))
+                        Logger.AppendInfo($"user {user.Name} by id {user.Id} success created");
+                    else
+                    {
+                        Logger.AppendError($"{user.Name} already exist");
+                    }
+
+                }
+                else if (CheckHaveCommandFlag(args, "proxy"))
+                {
+                    Logger.AppendInfo("Create proxy user");
+
+                    if (!ConfirmAction(args))
+                        return;
+
+                    var user = UserInfo.CreateUser(args);
+
+                    if (PublisherServer.ProjectsManager.GlobalProxyUserStorage.AddUser(user))
+                        Logger.AppendInfo($"user {user.Name} by id {user.Id} success created");
+                    else
+                    {
+                        Logger.AppendError($"{user.Name} already exist");
+                    }
+                }
+                else if (CheckHaveCommandFlag(args, "both"))
+                {
+                    Logger.AppendInfo("Create publisher/proxy user");
+
+                    if (!ConfirmAction(args))
+                        return;
+
+                    var user = UserInfo.CreateUser(args);
+
+                    if (PublisherServer.ProjectsManager.GlobalBothUserStorage.AddUser(user))
+                        Logger.AppendInfo($"user {user.Name} by id {user.Id} success created");
+                    else
+                    {
+                        Logger.AppendError($"{user.Name} already exist");
+                    }
+                }
+
+
                 return;
             }
 
@@ -324,19 +334,19 @@ namespace ServerPublisher.Server.Utils
                 var user = UserInfo.CreateUser(args);
 
                 if (projectInfo.AddUser(user))
-                    Logger.AppendInfo($"user {user.Name} by id {user.Id} created");
+                    Logger.AppendInfo($"user {user.Name} by id {user.Id} success created");
                 else
                 {
-                    PublisherServer.ServerLogger.AppendError($"{user.Name} already exist in project {user.Name}");
+                    Logger.AppendError($"{user.Name} already exist in project {projectInfo.Info.Name}({projectInfo.Info.Id})");
                 }
             }
         }
 
-        protected static void AddUser(CommandLineArgs args)
+        static void AddUser(CommandLineArgs args)
         {
             Logger.AppendInfo("Add user");
 
-            if (!args.TryGetOutValue("path", out string path))
+            if (!TryGetCommandValue(args, "path", out string path))
             {
                 Logger.AppendError($"Add user must have \"path\" parameter");
                 return;
@@ -373,37 +383,37 @@ namespace ServerPublisher.Server.Utils
             }
         }
 
-        protected static void AddPatchConnection(CommandLineArgs args)
+        static void AddPatchConnection(CommandLineArgs args)
         {
             Logger.AppendInfo("Add Patch Connection");
 
-            if (!args.TryGetOutValue("ip_address", out string ip_address))
+            if (!TryGetCommandValue(args, "ip_address", out string ip_address))
             {
                 Logger.AppendError($"Add Patch Connection must have \"ip_address\" parameter");
                 return;
             }
 
-            if (!args.TryGetOutValue("port", out ushort port))
+            if (!TryGetCommandValue(args, "port", out ushort port))
             {
                 Logger.AppendError($"Add Patch Connection must have \"port\" parameter");
                 return;
             }
 
-            if (!args.TryGetOutValue("input_cipher_key", out string input_cipher_key))
+            if (!TryGetCommandValue(args, "input_cipher_key", out string input_cipher_key))
             {
                 input_cipher_key = PublisherServer.Configuration.Publisher.Server.Cipher.OutputKey;
 
                 Logger.AppendInfo($"Not contains \"input_cipher_key\" parameter. Set from configuration {input_cipher_key}");
             }
 
-            if (!args.TryGetOutValue("output_cipher_key", out string output_cipher_key))
+            if (!TryGetCommandValue(args, "output_cipher_key", out string output_cipher_key))
             {
                 output_cipher_key = PublisherServer.Configuration.Publisher.Server.Cipher.InputKey;
 
                 Logger.AppendInfo($"Not contains \"output_cipher_key\" parameter. Set from configuration {output_cipher_key}");
             }
 
-            if (!args.TryGetOutValue("identity_name", out string identity_name))
+            if (!TryGetCommandValue(args, "identity_name", out string identity_name))
             {
                 Logger.AppendError($"Add Patch Connection must have \"identity_name\" parameter");
                 return;
@@ -429,11 +439,11 @@ namespace ServerPublisher.Server.Utils
             }
         }
 
-        protected static void CloneIdentity(CommandLineArgs args)
+        static void CloneIdentity(CommandLineArgs args)
         {
             Logger.AppendInfo("Clone identity");
 
-            if (!args.TryGetOutValue("source_project_id", out string sourceProjectId))
+            if (!TryGetCommandValue(args, "source_project_id", out string sourceProjectId))
             {
                 Logger.AppendError($"Clone identity must have \"source_project_id\" parameter");
                 return;
@@ -464,15 +474,15 @@ namespace ServerPublisher.Server.Utils
                     item.CopyTo(Path.Combine(pidest.UsersDirPath, item.Name).GetNormalizedPath(), true);
                 }
 
-                if (!args.ContainsKey("only_private"))
+                if (!CheckHaveCommandFlag(args, "only_private"))
                 {
-                    files = new DirectoryInfo(pisrc.UsersPublicksDirPath).GetFiles("*.pubuk");
+                    files = new DirectoryInfo(pisrc.UsersPublicsDirPath).GetFiles("*.pubuk");
 
                     var pubKeyCount = files.Length;
 
                     foreach (var item in files)
                     {
-                        item.CopyTo(Path.Combine(pidest.UsersPublicksDirPath, item.Name).GetNormalizedPath(), true);
+                        item.CopyTo(Path.Combine(pidest.UsersPublicsDirPath, item.Name).GetNormalizedPath(), true);
                     }
 
                     Logger.AppendError($"{priKeyCount} private and {pubKeyCount} public keys copied from  {pisrc.Info.Name} to {pidest.Info.Name}");
@@ -484,14 +494,16 @@ namespace ServerPublisher.Server.Utils
             }
         }
 
-        protected static void DevClearInvalidPath(CommandLineArgs args)
+        static void DevClearInvalidPath(CommandLineArgs args)
         {
             Logger.AppendInfo("Try DevClearInvalidPath");
 
             foreach (var item in PublisherServer.ProjectsManager.GetProjects())
             {
                 Logger.AppendInfo($"Start process {item.Info.Name}");
+
                 int c = 0;
+
                 foreach (var file in item.FileInfoList)
                 {
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -518,7 +530,114 @@ namespace ServerPublisher.Server.Utils
             }
         }
 
+        static void ConfigurationSet(CommandLineArgs args)
+        {
+            Logger.AppendInfo("Configuration set value");
+
+            if (!TryGetCommandValue<string>(args, "path", out var _path))
+            {
+                Logger.AppendError($"Configuration set must have \"path\" parameter");
+                return;
+            }
+
+            if (!TryGetCommandValue<string>(args, "value", out var value))
+            {
+                Logger.AppendError($"Configuration set must have \"value\" parameter");
+                return;
+            }
+
+            if (!ConfirmAction(args))
+                return;
+
+
+
+            var cpath = Path.Combine(Application.Directory, "ServerSettings.json").GetNormalizedPath();
+
+            ConfigurationSettingsInfo cdata = File.Exists(cpath) ? JsonConvert.DeserializeObject<ConfigurationSettingsInfo>(File.ReadAllText(cpath)) : new ConfigurationSettingsInfo();
+
+            List<(PropertyInfo property, Type type, object value)> cmap = [
+                (null, typeof(ConfigurationSettingsInfo), cdata)
+            ];
+
+            var tAttr = typeof(JsonPropertyAttribute);
+
+            var path = _path.Split('/');
+
+            int c = 0;
+
+            foreach (var item in path)
+            {
+                ++c;
+                var li = cmap.Last();
+                var lt = li.type;
+
+                var props = lt.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                    .Select(x => new
+                    {
+                        property = x,
+                        pathName = x.GetCustomAttributes().Where(x => x is JsonPropertyAttribute).Select(x => ((JsonPropertyAttribute)x).PropertyName).SingleOrDefault()
+                    }).ToArray();
+
+                var nprop = props.FirstOrDefault(x =>
+                (x.pathName != default && x.pathName.Equals(item, StringComparison.InvariantCultureIgnoreCase))
+                || x.property.Name.Equals(item, StringComparison.InvariantCultureIgnoreCase));
+
+                if (nprop == default)
+                {
+                    Logger.AppendError($"Cannot found path {item} partition for set. {string.Join(".", path.Take(c))}");
+                    return;
+                }
+
+                cmap.Add((nprop.property, nprop.property.PropertyType, nprop.property.GetValue(li.value)));
+            }
+
+            var curr = cmap.Last();
+
+            var currobj = cmap[cmap.Count - 2].value ?? cdata;
+
+            object setValue = null;
+
+            if (curr.type == typeof(string))
+            {
+                setValue = value;
+            }
+            else if (curr.type == typeof(decimal))
+            {
+                setValue = decimal.Parse(value);
+            }
+            else if (curr.type == typeof(Guid))
+            {
+                setValue = Guid.Parse(value);
+            }
+            else if (curr.type.IsPrimitive)
+            {
+                setValue = Convert.ChangeType(value, curr.type);
+            }
+            else
+            {
+                Logger.AppendError($"Cannot set value {value} to {curr.type} type");
+                return;
+            }
+
+            curr.property.SetValue(currobj, setValue);
+
+
+            File.WriteAllText(cpath, JsonConvert.SerializeObject(cdata, JsonUtils.JsonSettings));
+        }
+
+        static void ConfigurationDefault(CommandLineArgs args)
+        {
+            Logger.AppendInfo("Configuration reset to default");
+
+            if (!ConfirmAction(args))
+                return;
+
+            File.WriteAllText(Path.Combine(Application.Directory, "ServerSettings.json").GetNormalizedPath(), JsonConvert.SerializeObject(new ConfigurationSettingsInfo(), JsonUtils.JsonSettings));
+        }
+
         static FileLogger Logger => PublisherServer.ServerLogger;
+
+        #region Utils
 
         public static bool Process()
         {
@@ -527,13 +646,13 @@ namespace ServerPublisher.Server.Utils
 
             Logger.AppendInfo($"Read command. Args:");
 
-            foreach (var item in args.GetArgs())
-            {
-                if (item.Value == default)
-                    Logger.AppendInfo($"- {item.Key}");
-                else
-                    Logger.AppendInfo($"- {item.Key} = {item.Value}");
-            }
+            //foreach (var item in args.GetArgs())
+            //{
+            //    if (item.Value == default)
+            //        Logger.AppendInfo($"- {item.Key}");
+            //    else
+            //        Logger.AppendInfo($"- {item.Key} = {item.Value}");
+            //}
 
             var actionName = args["action"];
 
@@ -563,5 +682,85 @@ namespace ServerPublisher.Server.Utils
 
             return true;
         }
+
+        static bool GetDirParameter(CommandLineArgs args, string name, out string value)
+        {
+            value = default;
+
+            if (!args.TryGetValue(name, ref value))
+            {
+                value = Directory.GetCurrentDirectory();
+                Logger.AppendInfo($"Cannot find paramater {name}. Try set current directory - {value}");
+                return false;
+            }
+
+            return true;
+        }
+
+        static bool TryGetCommandValue<T>(CommandLineArgs args, string key, out T result)
+        {
+            if (args.TryGetOutValue(key, out result))
+            {
+                Logger.AppendInfo($"\"{key}\" = \"{result}\"");
+
+                return true;
+            }
+
+            Logger.AppendInfo($"\"{key}\" = <none>");
+
+            return false;
+        }
+
+        static bool CheckHaveCommandFlag(CommandLineArgs args, string key)
+        {
+            if (args.ContainsKey(key))
+            {
+                Logger.AppendInfo($"flag \"{key}\" = y");
+
+                return true;
+            }
+
+            Logger.AppendInfo($"\"{key}\" = n");
+
+            return false;
+        }
+
+
+        static bool ConfirmAction(CommandLineArgs args)
+        {
+            if (args.TryGetOutValue("flags", out string flags))
+            {
+                if (flags.Contains("y", StringComparison.OrdinalIgnoreCase))
+                {
+                    Logger.AppendInfo($"Flags contains 'y' - confirm action");
+                    return true;
+                }
+            }
+
+            if (CheckHaveCommandFlag(args, "y"))
+            {
+                Logger.AppendInfo($"Flags contains 'y' - confirm action");
+                return true;
+            }
+
+            string latestInput = default;
+
+            do
+            {
+                Console.Write("You confirm action? 'y' - yes/'n' - no:");
+
+                latestInput = Console.ReadLine();
+
+                if (latestInput.Equals("y", StringComparison.OrdinalIgnoreCase))
+                    return true;
+                else if (latestInput.Equals("n", StringComparison.OrdinalIgnoreCase))
+                    return false;
+                else
+                    Logger.AppendError($"Value cannot be {latestInput}. Try again or press Ctrl+C for cancel");
+
+            } while (true);
+        }
+
+        #endregion
     }
 }

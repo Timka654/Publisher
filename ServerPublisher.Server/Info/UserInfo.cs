@@ -2,7 +2,10 @@
 using NSL.Cipher.RSA;
 using NSL.Logger;
 using NSL.Utils;
+using ServerPublisher.Server.Dev.Test.Utils;
+using ServerPublisher.Server.Utils;
 using ServerPublisher.Shared.Info;
+using ServerPublisher.Shared.Utils;
 using System;
 using System.IO;
 
@@ -63,6 +66,31 @@ namespace ServerPublisher.Server.Info
             u.RSAPrivateKey = u.Cipher.GetPrivateKey();
 
             return u;
+        }
+
+        public void ProducePublicKey(string dir)
+        {
+            DirectoryUtils.CreateNoExistsDirectory(dir);
+
+            File.WriteAllText(Path.Combine(dir, $"{Name}_{Id}.pubuk").GetNormalizedPath(), JsonConvert.SerializeObject(new
+            {
+                Id,
+                Name,
+                RSAPublicKey
+            }, JsonUtils.JsonSettings));
+        }
+
+        public void ProducePrivateKey(string dir)
+        {
+            DirectoryUtils.CreateNoExistsDirectory(dir);
+
+            File.WriteAllText(Path.Combine(dir, $"{Name}_{Id}.priuk").GetNormalizedPath(), JsonConvert.SerializeObject(new
+            {
+                Id,
+                Name,
+                RSAPublicKey,
+                RSAPrivateKey
+            }, JsonUtils.JsonSettings));
         }
 
 
