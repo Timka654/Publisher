@@ -41,8 +41,6 @@ if($args.Contains("default") -eq $false)
 	while ($true);
 }
 
-$configPath = [System.IO.Path]::Combine($setupPath, "ServerSettings.json")
-
 $serverPort = 6583;
 
 if($args.Contains("default") -eq $false)
@@ -52,20 +50,18 @@ if($args.Contains("default") -eq $false)
 
 Copy-Item -Recurse -Filter *.* -Path $currLocation -Destination $setupPath -Force
 
-$a = "{ ""publisher"" : { ""server"": { ""io"": { ""port"": $serverPort } } } }"
-
-$a | set-content $configPath
-
 
 if([System.IO.File]::Exists([System.IO.Path]::Combine($setupPath, "..", "installed")) -eq $false) {
     New-Item -Path $setupPath -Name "installed" -ItemType "file"
 }
+
 
 if ($IsWindows) {
 	$PathEnv = [System.Environment]::GetEnvironmentVariable("Path");
 	if ($PathEnv.Contains($setupPath, [StringComparison]::OrdinalIgnoreCase) -eq $false) {
 		[System.Environment]::SetEnvironmentVariable("Path", "$setupPath;$PathEnv", [System.EnvironmentVariableTarget]::Machine)
 	}
+	$execFilePath = [System.IO.Path]::Combine($setupPath, "publisherserver.exe")
 
 	Write-Host "Invoke ./setup-service-windows for install publisher windows server with Administrator rights"
 	Write-Host "or './setup-service-windows ""service_name""'"
@@ -90,7 +86,9 @@ else {
 
 Write-Host "Please change path to cd $setupPath/tools/"
 
-
 cd $setupPath/tools/
 
 Remove-Item -Path "$currLocation" -Recurse -Force
+
+& $execFilePath /action:cdefault /y
+& $execFilePath /action:cset /path:"publisher/server/io/port" /value:$serverPort /y

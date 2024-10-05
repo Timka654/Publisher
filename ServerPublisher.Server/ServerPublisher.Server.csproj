@@ -63,6 +63,15 @@
 		<None Update="tools\add_patch_connection.ps1">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
+		<None Update="tools\create_user_global_proxy.ps1">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="tools\create_user_global_publisher.ps1">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="tools\create_user_global_both.ps1">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 		<None Update="tools\reindexing_project.ps1">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
@@ -81,10 +90,10 @@
 		<None Update="tools\create_user.ps1">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
-		<None Update="tools\setup-service-linux.ps1">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		<None Update="tools\setup_default.ps1">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
-		<None Update="tools\setup-service-windows.ps1">
+		<None Update="tools\setup_service.ps1">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 		<None Update="tools\setup.ps1">
