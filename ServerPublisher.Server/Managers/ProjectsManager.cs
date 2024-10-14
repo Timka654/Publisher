@@ -24,13 +24,13 @@ namespace ServerPublisher.Server.Managers
     {
         public static ProjectsManager Instance { get; private set; }
 
-        public static string ProjectsFilePath => Path.Combine(Application.Directory, PublisherServer.Configuration.Publisher.ProjectConfiguration.Server.LibraryFilePath);
+        public static string ProjectsFilePath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, PublisherServer.Configuration.Publisher.ProjectConfiguration.Server.LibraryFilePath);
 
-        public static string GlobalBothUsersFolderPath => Path.Combine(Application.Directory, PublisherServer.Configuration.Publisher.ProjectConfiguration.Server.GlobalBothUsersFolderPath);
+        public static string GlobalBothUsersFolderPath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, PublisherServer.Configuration.Publisher.ProjectConfiguration.Server.GlobalBothUsersFolderPath);
 
-        public static string GlobalPublishUsersFolderPath => Path.Combine(Application.Directory, PublisherServer.Configuration.Publisher.ProjectConfiguration.Server.GlobalPublishUsersFolderPath);
+        public static string GlobalPublishUsersFolderPath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, PublisherServer.Configuration.Publisher.ProjectConfiguration.Server.GlobalPublishUsersFolderPath);
 
-        public static string GlobalProxyUsersFolderPath => Path.Combine(Application.Directory, PublisherServer.Configuration.Publisher.ProjectConfiguration.Server.GlobalProxyUsersFolderPath);
+        public static string GlobalProxyUsersFolderPath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, PublisherServer.Configuration.Publisher.ProjectConfiguration.Server.GlobalProxyUsersFolderPath);
 
         public UserStorage GlobalBothUserStorage { get; private set; }
         public UserStorage GlobalPublishUserStorage { get; private set; }

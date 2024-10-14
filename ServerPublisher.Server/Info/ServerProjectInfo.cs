@@ -46,7 +46,7 @@ namespace ServerPublisher.Server.Info
 
         public string UsersDirPath => Path.Combine(PublisherDirPath, "users");
 
-        public string UsersPublicsDirPath=> Path.Combine(UsersDirPath, "publ");
+        public string UsersPublicsDirPath => Path.Combine(UsersDirPath, "publ");
 
         public string TempDirPath => Path.Combine(PublisherDirPath, "temp");
 
@@ -55,7 +55,7 @@ namespace ServerPublisher.Server.Info
 
         #region Scripts
 
-        public static string GlobalScriptsDirPath => Path.Combine(Application.Directory, PublisherServer.Configuration.Publisher.ProjectConfiguration.Server.GlobalScriptsFolderPath);
+        public static string GlobalScriptsDirPath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, PublisherServer.Configuration.Publisher.ProjectConfiguration.Server.GlobalScriptsFolderPath);
         public static string[] ScriptsDefaultUsings => PublisherServer.Configuration.Publisher.ProjectConfiguration.Server.ScriptsDefaultUsings;
 
         public string ScriptsDirPath => Path.Combine(PublisherDirPath, "scripts");
@@ -731,7 +731,7 @@ namespace ServerPublisher.Server.Info
             if (!File.Exists(CacheFilePath))
             {
                 ProcessFolderData();
-                DumpFileList();
+                dumpFileList();
             }
             else
             {
@@ -795,12 +795,16 @@ namespace ServerPublisher.Server.Info
 
             FileInfoList = newFileList;
 
-            DumpFileList();
+            dumpFileList();
         }
 
-        public void DumpFileList()
+        private void dumpFileList()
         {
-            File.WriteAllText(CacheFilePath, System.Text.Json.JsonSerializer.Serialize(FileInfoList.Select(x => new { x.RelativePath, x.Hash })));
+            File.WriteAllText(CacheFilePath, System.Text.Json.JsonSerializer.Serialize(FileInfoList.Select(x => new
+            {
+                x.RelativePath,
+                x.Hash
+            })));
         }
 
         internal void ReIndexing()
@@ -820,7 +824,7 @@ namespace ServerPublisher.Server.Info
 
                 if (oldHash != item.Hash)
                 {
-                    PublisherServer.ServerLogger.AppendInfo($"{item.RelativePath} invaliid hash ({oldHash} vs {item.Hash})");
+                    PublisherServer.ServerLogger.AppendInfo($"{item.RelativePath} invalid hash ({oldHash} vs {item.Hash})");
                     exists = true;
                 }
             }
@@ -850,7 +854,7 @@ namespace ServerPublisher.Server.Info
 
             if (exists)
             {
-                DumpFileList();
+                dumpFileList();
                 Info.LatestUpdate = DateTime.UtcNow;
                 SaveProjectInfo();
                 PublisherServer.ServerLogger.AppendInfo($"Success reindexing project");
@@ -1016,7 +1020,7 @@ namespace ServerPublisher.Server.Info
         {
             ProjectDirPath = directory;
 
-            var templatePath = Path.Combine(Application.Directory, "data", "project_template").GetNormalizedPath();
+            var templatePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "project_template").GetNormalizedPath();
 
             if (Directory.Exists(templatePath))
                 DirectoryCopy(templatePath, PublisherDirPath, true);
@@ -1045,7 +1049,7 @@ namespace ServerPublisher.Server.Info
 
             ProjectDirPath = directory;
 
-            var templatePath = Path.Combine(Application.Directory, "data", "project_template").GetNormalizedPath();
+            var templatePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "project_template").GetNormalizedPath();
 
             if (Directory.Exists(templatePath))
                 DirectoryCopy(templatePath, PublisherDirPath, true);

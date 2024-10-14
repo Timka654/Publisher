@@ -37,7 +37,7 @@ namespace ServerPublisher.Shared.Info
 
             using var fs = File.OpenRead(FileInfo.GetNormalizedFilePath());
 
-            Hash = string.Join("", SHA256.HashData(fs).Select(x => x.ToString("X2")));
+            Hash = string.Join("", MD5.HashData(fs).Select(x => x.ToString("X2")));
         }
 
         public BasicFileInfo()
