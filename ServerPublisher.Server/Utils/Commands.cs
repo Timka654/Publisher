@@ -551,7 +551,7 @@ namespace ServerPublisher.Server.Utils
 
 
 
-            var cpath = Path.Combine(Application.Directory, "ServerSettings.json").GetNormalizedPath();
+            var cpath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ServerSettings.json").GetNormalizedPath();
 
             ConfigurationSettingsInfo cdata = File.Exists(cpath) ? JsonConvert.DeserializeObject<ConfigurationSettingsInfo>(File.ReadAllText(cpath)) : new ConfigurationSettingsInfo();
 
@@ -632,7 +632,7 @@ namespace ServerPublisher.Server.Utils
             if (!ConfirmAction(args))
                 return;
 
-            File.WriteAllText(Path.Combine(Application.Directory, "ServerSettings.json").GetNormalizedPath(), JsonConvert.SerializeObject(new ConfigurationSettingsInfo(), JsonUtils.JsonSettings));
+            File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ServerSettings.json").GetNormalizedPath(), JsonConvert.SerializeObject(new ConfigurationSettingsInfo(), JsonUtils.JsonSettings));
         }
 
         static FileLogger Logger => PublisherServer.ServerLogger;

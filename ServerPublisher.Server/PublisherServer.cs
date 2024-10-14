@@ -53,12 +53,12 @@ namespace ServerPublisher.Server
 
             //AppLogger = new NSL.Logger.AspNet.ILoggerWrapper(logger);
 
-            DirectoryUtils.CreateNoExistsDirectory(Path.Combine(Application.Directory, Configuration.Publisher.ProjectConfiguration.Server.GlobalScriptsFolderPath));
+            DirectoryUtils.CreateNoExistsDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Configuration.Publisher.ProjectConfiguration.Server.GlobalScriptsFolderPath));
         }
 
         static void initializeConfiguration()
         {
-            var path = Path.Combine(Application.Directory, "ServerSettings.json");
+            var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ServerSettings.json");
 
             if (!File.Exists(path))
             {

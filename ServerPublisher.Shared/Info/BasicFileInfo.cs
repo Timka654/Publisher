@@ -35,9 +35,9 @@ namespace ServerPublisher.Shared.Info
                 return;
             }
 
-            using MD5 md5 = MD5.Create();
+            using var fs = File.OpenRead(FileInfo.GetNormalizedFilePath());
 
-            Hash = string.Join("", md5.ComputeHash(File.ReadAllBytes(FileInfo.GetNormalizedFilePath())).Select(x => x.ToString("X2")));
+            Hash = string.Join("", SHA256.HashData(fs).Select(x => x.ToString("X2")));
         }
 
         public BasicFileInfo()
