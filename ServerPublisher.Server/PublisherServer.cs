@@ -25,7 +25,7 @@ namespace ServerPublisher.Server
 
 
 #if RELEASE
-        public static FileLogger ServerLogger { get; } = new FileLogger(Path.Combine(Application.Directory, "logs", "server"), handleUnhandledThrow: true);
+        public static FileLogger ServerLogger { get; } = new FileLogger(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs", "server"), handleUnhandledThrow: true);
 #else
         public static FileLogger ServerLogger { get; } = new FileLogger(Path.Combine("logs", "server").GetNormalizedPath(), handleUnhandledThrow: true);
 #endif
