@@ -8,8 +8,9 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="NSL.Cipher" Version="2024.9.28.107" />
-		<PackageReference Include="NSL.Utils" Version="2024.9.28.107" />
+		<PackageReference Include="NSL.Cipher" Version="2024.10.25.1449" />
+		<PackageReference Include="NSL.Logger" Version="2024.10.25.1449" />
+		<PackageReference Include="NSL.Utils" Version="2024.10.25.1449" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -25,12 +26,6 @@
 	<ItemGroup>
 		<None Update="templates\dotnet\Publish.ps1">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="tools\setup.ps1">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="tools\utils.psm1">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 	</ItemGroup>
 </Project>

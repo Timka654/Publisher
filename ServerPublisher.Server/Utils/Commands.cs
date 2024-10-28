@@ -19,77 +19,170 @@ namespace ServerPublisher.Server.Utils
 {
     public class Commands
     {
-        static Dictionary<string, Action<CommandLineArgs>> commands = new Dictionary<string, Action<CommandLineArgs>>()
+        private record struct Command(Action<CommandLineArgs> action, string helpContent, string helpDetailsContent);
+
+        static Dictionary<string, Command> commands = new()
         {
-            { "service", RunService },
-            { "cset", ConfigurationSet },
-            { "cdefault", ConfigurationDefault },
-            { "create_project", CreateProject },
-            { "update_project", UpdateProject },
-            { "link_project", LinkProject },
-            { "create_user", CreateUser },
-            { "add_user", AddUser },
-            { "add_patch_connection", AddPatchConnection },
-            { "clone_identity", CloneIdentity },
-            { "check_scripts", CheckScripts },
-            { "reindexing", ReIndexing },
-            { "dev_clear_invalid_path", DevClearInvalidPath }
+            { "install", new Command(Install,"","") },
+            { "service", new Command(RunService,"","") },
+            { "cset", new Command(ConfigurationSet,"","") },
+            { "cdefault", new Command(ConfigurationDefault,"","") },
+            { "create_project", new Command(CreateProject,"","") },
+            { "update_project", new Command(UpdateProject,"","") },
+            { "link_project", new Command(LinkProject,"","") },
+            { "create_user", new Command(CreateUser,"","") },
+            { "add_user", new Command(AddUser,"","") },
+            { "add_patch_connection", new Command(AddPatchConnection,"","") },
+            { "clone_identity", new Command(CloneIdentity,"","") },
+            { "check_scripts", new Command(CheckScripts,"","") },
+            { "reindexing", new Command(ReIndexing,"","") },
+            { "dev_clear_invalid_path", new Command(DevClearInvalidPath,"","") }
         };
 
-        static void RunService(CommandLineArgs args)
-            => PublisherServer.RunServer();
-
-        static void PidOrDirInfo()
+        static void Install(CommandLineArgs args)
         {
-            Logger.AppendError($"Current command must have project_id(has GUID format) or directory parameters for identity project");
-            Logger.AppendError($"You can not using identity parameters if executing command from directory contains project");
-        }
+            var appPath = AppDomain.CurrentDomain.BaseDirectory;
 
-        static ServerProjectInfo GetProject(CommandLineArgs args)
-        {
-            ServerProjectInfo projectInfo;
+            bool isDefault = args.ContainsKey("default");
 
-            if (TryGetCommandValue(args, "project_id", out string projectId))
+            bool isService = args.ContainsKey("service");
+
+            string serviceName = "Publisher Server";
+
+            string serviceFileName = "publisher.service";
+
+
+
+            if (!args.TryGetOutValue("path", out string path))
             {
-                if (!Guid.TryParse(projectId, out var _))
+                if (Environment.OSVersion.Platform == PlatformID.Unix)
                 {
-                    Logger.AppendError($"Invalid \"project_id\" parameter format - must have GUID format");
-                    PidOrDirInfo();
-                    return null;
+                    path = "/etc/publisherserver";
+                }
+                else
+                {
+                    if (Environment.Is64BitProcess)
+                        path = @"C:\Program Files (x86)\Publisher.Server";
+                    else
+                        path = @"C:\Program Files\Publisher.Server";
                 }
 
-                projectInfo = PublisherServer.ProjectsManager.GetProject(projectId);
+                path = CommandParameterReader.Read("Install directory", path);
+            }
 
-                if (projectInfo == null)
+            if (isService)
+            {
+                if (!args.TryGetValue("service_name", ref serviceName))
                 {
-                    Logger.AppendError($"Cannot find project by project_id = \"{projectId}\"");
-                    PidOrDirInfo();
+                    serviceName = CommandParameterReader.Read("Service name", serviceName);
                 }
+                if (Environment.OSVersion.Platform == PlatformID.Unix)
+                {
+                    if (!args.TryGetValue("service_file_name", ref serviceFileName))
+                    {
+                        serviceFileName = CommandParameterReader.Read("Service file name", serviceFileName);
+                    }
+                }
+            }
+
+            if (!Directory.Exists(path))
+                Directory.CreateDirectory(path);
+
+            foreach (var item in Directory.GetFiles(appPath, "*", SearchOption.AllDirectories))
+            {
+                var ePath = Path.Combine(path, Path.GetRelativePath(appPath, item));
+
+                File.Copy(item, ePath, true);
+            }
+
+
+            int port = 6583;
+
+
+            if (!args.TryGetValue("path", ref port))
+            {
+                port = CommandParameterReader.Read("Server port", port);
+            }
+
+            var execPath = Path.Combine(path, "publisherserver");
+
+            if (Environment.OSVersion.Platform == PlatformID.Unix)
+            {
+
+                System.Diagnostics.Process.Start("ln", $"-s \"{execPath}\" /bin/publs");
+                System.Diagnostics.Process.Start("ln", $"-s \"{execPath}\" /bin/publsrv");
+                System.Diagnostics.Process.Start("ln", $"-s \"{execPath}\" /bin/publishsrv");
+
+                var envs = Environment.GetEnvironmentVariable("PATH");
+
+                if (!envs.Contains(path))
+                    Environment.SetEnvironmentVariable("PATH", $"{path};{envs}", EnvironmentVariableTarget.Machine);
             }
             else
             {
-                Logger.AppendError($"Cannot find project_id parameter. Try get by directory");
+                execPath += ".exe";
 
-                GetDirParameter(args, "directory", out var directory);
+                var envs = Environment.GetEnvironmentVariable("Path");
 
-                projectInfo = PublisherServer.ProjectsManager.GetProjectByPath(directory);
+                if (!envs.Contains(path))
+                    Environment.SetEnvironmentVariable("Path", $"{path};{envs}", EnvironmentVariableTarget.Machine);
+            }
 
-                if (projectInfo == null)
+            var configPath = Path.Combine(path, "ServerSettings.json").GetNormalizedPath();
+
+            var config = new ConfigurationSettingsInfo();
+
+            if (File.Exists(configPath))
+            {
+                config = JsonConvert.DeserializeObject<ConfigurationSettingsInfo>(File.ReadAllText(configPath));
+            }
+
+            config.Publisher.Server.IO.Port = port;
+
+            File.WriteAllText(configPath, JsonConvert.SerializeObject(config, JsonUtils.JsonSettings));
+
+            if (isService)
+            {
+                if (Environment.OSVersion.Platform == PlatformID.Unix)
                 {
-                    Logger.AppendError($"Cannot find project in \"{directory}\"");
-                    PidOrDirInfo();
+                    System.Diagnostics.Process.Start("sc.exe", $"create \"{serviceName}\" binPath=\"{execPath} / action:service\"\"\" start=auto");
+                }
+                else
+                {
+                    File.WriteAllText(Path.Combine("/etc/systemd/system/", serviceFileName), $"""
+[Unit]
+Description={serviceName}
+
+[Service]
+WorkingDirectory={path}
+ExecStart={execPath} /action:service
+Restart=always
+# Restart service after 10 seconds if the dotnet service crashes:
+RestartSec=10
+KillSignal=SIGINT
+
+[Install]
+WantedBy=multi-user.target
+""");
+
+                    System.Diagnostics.Process.Start($"systemctl enable {serviceFileName}");
+
+                    Logger.AppendInfo($"Service \"{serviceName}\" enabled, print \"systemctl start {serviceFileName}\" for start now");
                 }
             }
 
-            return projectInfo;
         }
+
+
+        static void RunService(CommandLineArgs args)
+            => PublisherServer.RunServer();
 
         static void CheckScripts(CommandLineArgs args)
         {
             Logger.AppendInfo("Check Scripts");
 
 
-            if (!ConfirmAction(args))
+            if (!args.ConfirmAction(Logger))
                 return;
 
             GetProject(args)?.CheckScripts();
@@ -99,17 +192,19 @@ namespace ServerPublisher.Server.Utils
         {
             Logger.AppendInfo("Try reindexing");
 
-            if (!ConfirmAction(args))
+            if (!args.ConfirmAction(Logger))
                 return;
 
             GetProject(args)?.ReIndexing();
         }
 
+        #region Project
+
         static void CreateProject(CommandLineArgs args)
         {
             Logger.AppendInfo("Create project");
 
-            if (CheckHaveCommandFlag(args, "template") || CheckHaveCommandFlag(args, "template_path"))
+            if (args.CheckHaveCommandFlag(Logger, "template") || args.CheckHaveCommandFlag(Logger, "template_path"))
             {
                 UpdateProject(args);
 
@@ -136,7 +231,7 @@ namespace ServerPublisher.Server.Utils
                 return;
             }
 
-            if (!ConfirmAction(args))
+            if (!args.ConfirmAction(Logger))
                 return;
 
             var proj = new ServerProjectInfo(args, directory);
@@ -225,7 +320,7 @@ namespace ServerPublisher.Server.Utils
 
             GetDirParameter(args, "directory", out string directory);
 
-            if (!ConfirmAction(args))
+            if (!args.ConfirmAction(Logger))
                 return;
 
             try
@@ -240,7 +335,7 @@ namespace ServerPublisher.Server.Utils
                 {
                     Logger.AppendInfo($"Already exist: {exists.ProjectDirPath}");
 
-                    if (!ConfirmAction(args))
+                    if (!args.ConfirmAction(Logger))
                         return;
 
                     PublisherServer.ProjectsManager.RemoveProject(exists, false);
@@ -256,6 +351,8 @@ namespace ServerPublisher.Server.Utils
             }
         }
 
+        #endregion
+
         static void CreateUser(CommandLineArgs args)
         {
             Logger.AppendInfo("Create user");
@@ -266,15 +363,15 @@ namespace ServerPublisher.Server.Utils
                 return;
             }
 
-            if (CheckHaveCommandFlag(args, "global"))
+            if (args.CheckHaveCommandFlag(Logger, "global"))
             {
                 Logger.AppendInfo("Create global user");
 
-                if (CheckHaveCommandFlag(args, "publisher"))
+                if (args.CheckHaveCommandFlag(Logger, "publisher"))
                 {
                     Logger.AppendInfo("Create publisher user");
 
-                    if (!ConfirmAction(args))
+                    if (!args.ConfirmAction(Logger))
                         return;
 
                     var user = UserInfo.CreateUser(args);
@@ -287,11 +384,11 @@ namespace ServerPublisher.Server.Utils
                     }
 
                 }
-                else if (CheckHaveCommandFlag(args, "proxy"))
+                else if (args.CheckHaveCommandFlag(Logger, "proxy"))
                 {
                     Logger.AppendInfo("Create proxy user");
 
-                    if (!ConfirmAction(args))
+                    if (!args.ConfirmAction(Logger))
                         return;
 
                     var user = UserInfo.CreateUser(args);
@@ -303,11 +400,11 @@ namespace ServerPublisher.Server.Utils
                         Logger.AppendError($"{user.Name} already exist");
                     }
                 }
-                else if (CheckHaveCommandFlag(args, "both"))
+                else if (args.CheckHaveCommandFlag(Logger, "both"))
                 {
                     Logger.AppendInfo("Create publisher/proxy user");
 
-                    if (!ConfirmAction(args))
+                    if (!args.ConfirmAction(Logger))
                         return;
 
                     var user = UserInfo.CreateUser(args);
@@ -328,7 +425,7 @@ namespace ServerPublisher.Server.Utils
 
             if (projectInfo != null)
             {
-                if (!ConfirmAction(args))
+                if (!args.ConfirmAction(Logger))
                     return;
 
                 var user = UserInfo.CreateUser(args);
@@ -357,7 +454,7 @@ namespace ServerPublisher.Server.Utils
             if (projectInfo != null)
             {
 
-                if (!ConfirmAction(args))
+                if (!args.ConfirmAction(Logger))
                     return;
 
                 var fileInfo = new FileInfo(path);
@@ -380,6 +477,61 @@ namespace ServerPublisher.Server.Utils
                 File.Copy(path, dest, true);
 
                 Logger.AppendError($"{fileInfo.GetNormalizedFilePath()} private key copied to {projectInfo.Info.Name} project ({dest})");
+            }
+        }
+
+        static void CloneIdentity(CommandLineArgs args)
+        {
+            Logger.AppendInfo("Clone identity");
+
+            if (!TryGetCommandValue(args, "source_project_id", out string sourceProjectId))
+            {
+                Logger.AppendError($"Clone identity must have \"source_project_id\" parameter");
+                return;
+            }
+
+            ServerProjectInfo pidest = GetProject(args);
+
+            if (pidest != null)
+            {
+                ServerProjectInfo pisrc = PublisherServer.ProjectsManager.GetProject(sourceProjectId);
+
+                if (pisrc == null)
+                {
+                    Logger.AppendError($"project by source_project_id = {sourceProjectId} not found");
+
+                    return;
+                }
+
+                if (!args.ConfirmAction(Logger))
+                    return;
+
+                var files = new DirectoryInfo(pisrc.UsersDirPath).GetFiles("*.priuk");
+
+                var priKeyCount = files.Length;
+
+                foreach (var item in files)
+                {
+                    item.CopyTo(Path.Combine(pidest.UsersDirPath, item.Name).GetNormalizedPath(), true);
+                }
+
+                if (!args.CheckHaveCommandFlag(Logger, "only_private"))
+                {
+                    files = new DirectoryInfo(pisrc.UsersPublicsDirPath).GetFiles("*.pubuk");
+
+                    var pubKeyCount = files.Length;
+
+                    foreach (var item in files)
+                    {
+                        item.CopyTo(Path.Combine(pidest.UsersPublicsDirPath, item.Name).GetNormalizedPath(), true);
+                    }
+
+                    Logger.AppendError($"{priKeyCount} private and {pubKeyCount} public keys copied from  {pisrc.Info.Name} to {pidest.Info.Name}");
+
+                    return;
+                }
+
+                Logger.AppendError($"{priKeyCount} private keys copied from  {pisrc.Info.Name} to {pidest.Info.Name}");
             }
         }
 
@@ -423,7 +575,7 @@ namespace ServerPublisher.Server.Utils
 
             if (projectInfo != null)
             {
-                if (!ConfirmAction(args))
+                if (!args.ConfirmAction(Logger))
                     return;
 
                 projectInfo.UpdatePatchInfo(new ProjectPatchInfo()
@@ -436,61 +588,6 @@ namespace ServerPublisher.Server.Utils
                 });
 
                 Logger.AppendInfo($"Patch connection info changed in {projectInfo.Info.Name}({projectInfo.Info.Id}) project");
-            }
-        }
-
-        static void CloneIdentity(CommandLineArgs args)
-        {
-            Logger.AppendInfo("Clone identity");
-
-            if (!TryGetCommandValue(args, "source_project_id", out string sourceProjectId))
-            {
-                Logger.AppendError($"Clone identity must have \"source_project_id\" parameter");
-                return;
-            }
-
-            ServerProjectInfo pidest = GetProject(args);
-
-            if (pidest != null)
-            {
-                ServerProjectInfo pisrc = PublisherServer.ProjectsManager.GetProject(sourceProjectId);
-
-                if (pisrc == null)
-                {
-                    Logger.AppendError($"project by source_project_id = {sourceProjectId} not found");
-
-                    return;
-                }
-
-                if (!ConfirmAction(args))
-                    return;
-
-                var files = new DirectoryInfo(pisrc.UsersDirPath).GetFiles("*.priuk");
-
-                var priKeyCount = files.Length;
-
-                foreach (var item in files)
-                {
-                    item.CopyTo(Path.Combine(pidest.UsersDirPath, item.Name).GetNormalizedPath(), true);
-                }
-
-                if (!CheckHaveCommandFlag(args, "only_private"))
-                {
-                    files = new DirectoryInfo(pisrc.UsersPublicsDirPath).GetFiles("*.pubuk");
-
-                    var pubKeyCount = files.Length;
-
-                    foreach (var item in files)
-                    {
-                        item.CopyTo(Path.Combine(pidest.UsersPublicsDirPath, item.Name).GetNormalizedPath(), true);
-                    }
-
-                    Logger.AppendError($"{priKeyCount} private and {pubKeyCount} public keys copied from  {pisrc.Info.Name} to {pidest.Info.Name}");
-
-                    return;
-                }
-
-                Logger.AppendError($"{priKeyCount} private keys copied from  {pisrc.Info.Name} to {pidest.Info.Name}");
             }
         }
 
@@ -546,7 +643,7 @@ namespace ServerPublisher.Server.Utils
                 return;
             }
 
-            if (!ConfirmAction(args))
+            if (!args.ConfirmAction(Logger))
                 return;
 
 
@@ -629,7 +726,7 @@ namespace ServerPublisher.Server.Utils
         {
             Logger.AppendInfo("Configuration reset to default");
 
-            if (!ConfirmAction(args))
+            if (!args.ConfirmAction(Logger))
                 return;
 
             File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ServerSettings.json").GetNormalizedPath(), JsonConvert.SerializeObject(new ConfigurationSettingsInfo(), JsonUtils.JsonSettings));
@@ -646,13 +743,13 @@ namespace ServerPublisher.Server.Utils
 
             Logger.AppendInfo($"Read command. Args:");
 
-            //foreach (var item in args.GetArgs())
-            //{
-            //    if (item.Value == default)
-            //        Logger.AppendInfo($"- {item.Key}");
-            //    else
-            //        Logger.AppendInfo($"- {item.Key} = {item.Value}");
-            //}
+            foreach (var item in args.GetArgs())
+            {
+                if (item.Value == default)
+                    Logger.AppendInfo($"- {item.Key}");
+                else
+                    Logger.AppendInfo($"- {item.Key} = {item.Value}");
+            }
 
             var actionName = args["action"];
 
@@ -678,7 +775,7 @@ namespace ServerPublisher.Server.Utils
 
             options.LoadManagers<PublisherNetworkClient>(Assembly.GetExecutingAssembly(), typeof(ManagerLoadAttribute));
 
-            action(args);
+            action.action(args);
 
             return true;
         }
@@ -711,54 +808,49 @@ namespace ServerPublisher.Server.Utils
             return false;
         }
 
-        static bool CheckHaveCommandFlag(CommandLineArgs args, string key)
+        static ServerProjectInfo GetProject(CommandLineArgs args)
         {
-            if (args.ContainsKey(key))
+            ServerProjectInfo projectInfo;
+
+            if (TryGetCommandValue(args, "project_id", out string projectId))
             {
-                Logger.AppendInfo($"flag \"{key}\" = y");
-
-                return true;
-            }
-
-            Logger.AppendInfo($"\"{key}\" = n");
-
-            return false;
-        }
-
-
-        static bool ConfirmAction(CommandLineArgs args)
-        {
-            if (args.TryGetOutValue("flags", out string flags))
-            {
-                if (flags.Contains("y", StringComparison.OrdinalIgnoreCase))
+                if (!Guid.TryParse(projectId, out var _))
                 {
-                    Logger.AppendInfo($"Flags contains 'y' - confirm action");
-                    return true;
+                    Logger.AppendError($"Invalid \"project_id\" parameter format - must have GUID format");
+                    PidOrDirInfo();
+                    return null;
+                }
+
+                projectInfo = PublisherServer.ProjectsManager.GetProject(projectId);
+
+                if (projectInfo == null)
+                {
+                    Logger.AppendError($"Cannot find project by project_id = \"{projectId}\"");
+                    PidOrDirInfo();
+                }
+            }
+            else
+            {
+                Logger.AppendError($"Cannot find project_id parameter. Try get by directory");
+
+                GetDirParameter(args, "directory", out var directory);
+
+                projectInfo = PublisherServer.ProjectsManager.GetProjectByPath(directory);
+
+                if (projectInfo == null)
+                {
+                    Logger.AppendError($"Cannot find project in \"{directory}\"");
+                    PidOrDirInfo();
                 }
             }
 
-            if (CheckHaveCommandFlag(args, "y"))
-            {
-                Logger.AppendInfo($"Flags contains 'y' - confirm action");
-                return true;
-            }
+            return projectInfo;
+        }
 
-            string latestInput = default;
-
-            do
-            {
-                Console.Write("You confirm action? 'y' - yes/'n' - no:");
-
-                latestInput = Console.ReadLine();
-
-                if (latestInput.Equals("y", StringComparison.OrdinalIgnoreCase))
-                    return true;
-                else if (latestInput.Equals("n", StringComparison.OrdinalIgnoreCase))
-                    return false;
-                else
-                    Logger.AppendError($"Value cannot be {latestInput}. Try again or press Ctrl+C for cancel");
-
-            } while (true);
+        static void PidOrDirInfo()
+        {
+            Logger.AppendError($"Current command must have project_id(has GUID format) or directory parameters for identity project");
+            Logger.AppendError($"You can not using identity parameters if executing command from directory contains project");
         }
 
         #endregion
