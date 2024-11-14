@@ -5,7 +5,7 @@
 		<TargetFramework>net8.0</TargetFramework>
 		<Configurations>Debug;Release;ScriptsDebugging</Configurations>
 		<Nullable>enable</Nullable>
-		<AssemblyName>publisherserver</AssemblyName>
+		<AssemblyName>deployhost</AssemblyName>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -23,25 +23,25 @@
 	</ItemGroup>
 	
 	<ItemGroup>
-		<PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="8.0.8" />
+		<PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="8.0.11" />
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
-		<PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.0" />
-		<PackageReference Include="NSL.BuilderExtensions.TCPClient" Version="2024.10.25.1449" />
-		<PackageReference Include="NSL.BuilderExtensions.Buffer" Version="2024.10.25.1449" />
-		<PackageReference Include="NSL.BuilderExtensions.TCPServer" Version="2024.10.25.1449" />
-		<PackageReference Include="NSL.Cipher" Version="2024.10.25.1449" />
-		<PackageReference Include="NSL.ClientOptions.Extensions.Packet" Version="2024.10.25.1449" />
-		<PackageReference Include="NSL.ConfigurationEngine.Providers.Json" Version="2024.10.25.1449" />
-		<PackageReference Include="NSL.Extensions.WaitBuffer" Version="2024.10.25.1449" />
-		<PackageReference Include="NSL.Generators.FillTypeGenerator" Version="2024.10.25.1449" />
-		<PackageReference Include="NSL.Generators.FillTypeGenerator.Attributes" Version="2024.10.25.1449" />
-		<PackageReference Include="NSL.Logger" Version="2024.10.25.1449" />
-		<PackageReference Include="NSL.Logger.AspNet" Version="2024.10.25.1449" />
-		<PackageReference Include="NSL.ServerOptions.Extensions.Packet" Version="2024.10.25.1449" />
-		<PackageReference Include="NSL.SocketCore.Extensions.Manager" Version="2024.10.25.1449" />
-		<PackageReference Include="NSL.SocketCore.Extensions.Packet" Version="2024.10.25.1449" />
-		<PackageReference Include="NSL.SocketServer" Version="2024.10.25.1449" />
-		<PackageReference Include="NSL.TCP.Client" Version="2024.10.25.1449" />
+		<PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.1" />
+		<PackageReference Include="NSL.BuilderExtensions.TCPClient" Version="2024.11.6.1129" />
+		<PackageReference Include="NSL.BuilderExtensions.Buffer" Version="2024.11.6.1129" />
+		<PackageReference Include="NSL.BuilderExtensions.TCPServer" Version="2024.11.6.1129" />
+		<PackageReference Include="NSL.Cipher" Version="2024.11.6.1129" />
+		<PackageReference Include="NSL.ClientOptions.Extensions.Packet" Version="2024.11.6.1129" />
+		<PackageReference Include="NSL.ConfigurationEngine.Providers.Json" Version="2024.11.6.1129" />
+		<PackageReference Include="NSL.Extensions.WaitBuffer" Version="2024.11.6.1129" />
+		<PackageReference Include="NSL.Generators.FillTypeGenerator" Version="2024.11.6.1129" />
+		<PackageReference Include="NSL.Generators.FillTypeGenerator.Attributes" Version="2024.11.6.1129" />
+		<PackageReference Include="NSL.Logger" Version="2024.11.6.1129" />
+		<PackageReference Include="NSL.Logger.AspNet" Version="2024.11.6.1129" />
+		<PackageReference Include="NSL.ServerOptions.Extensions.Packet" Version="2024.11.6.1129" />
+		<PackageReference Include="NSL.SocketCore.Extensions.Manager" Version="2024.11.6.1129" />
+		<PackageReference Include="NSL.SocketCore.Extensions.Packet" Version="2024.11.6.1129" />
+		<PackageReference Include="NSL.SocketServer" Version="2024.11.6.1129" />
+		<PackageReference Include="NSL.TCP.Client" Version="2024.11.6.1129" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\ServerPublisher.Server.Scripts\ServerPublisher.Server.Scripts.csproj" />

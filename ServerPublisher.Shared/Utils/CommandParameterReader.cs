@@ -12,7 +12,7 @@ namespace ServerPublisher.Shared.Utils
 {
     public static class CommandParameterReader
     {
-        public static TResult Read<TResult>(string text, TResult defaultValue = default)
+        public static TResult Read<TResult>(string text, IBasicLogger logger, TResult defaultValue = default)
             where TResult : IConvertible
         {
             var haveDefaultValue = !Equals(defaultValue, default(TResult));
@@ -38,21 +38,21 @@ namespace ServerPublisher.Shared.Utils
                 }
                 catch (Exception)
                 {
-                    Console.WriteLine($"Error, cannot convert \"{answer}\" input to type {typeof(TResult).Name}");
+                    logger.Append(NSL.SocketCore.Utils.Logger.Enums.LoggerLevel.Error, $"Error, cannot convert \"{answer}\" input to type {typeof(TResult).Name}");
                     continue;
                 }
 
 
                 while (true)
                 {
-                    Console.WriteLine($"Value set to \"{answer}\" (y - continue, n - cancel, c - close)");
+                    logger.Append(NSL.SocketCore.Utils.Logger.Enums.LoggerLevel.Info, $"Value set to \"{answer}\" (y - continue, n - cancel, c - close)");
 
                     answer = Console.ReadLine().Trim();
 
                     if (string.Equals(answer, "y")) return result;
                     else if (string.Equals(answer, "c")) Environment.Exit(0);
                     else if (string.Equals(answer, "n")) break;
-                    else Console.WriteLine($"Invalid value {answer}");
+                    else logger.Append(NSL.SocketCore.Utils.Logger.Enums.LoggerLevel.Error, $"Invalid value {answer}");
                 }
             }
         }
@@ -92,7 +92,7 @@ namespace ServerPublisher.Shared.Utils
 
             do
             {
-                Console.Write("You confirm action? 'y' - yes/'n' - no:");
+                logger.Append(NSL.SocketCore.Utils.Logger.Enums.LoggerLevel.Info, "You confirm action? 'y' - yes/'n' - no:");
 
                 latestInput = Console.ReadLine();
 

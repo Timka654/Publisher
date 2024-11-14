@@ -117,7 +117,7 @@ Command for clone all *.pubuk from current directory to app key library
                 }
 
                 if (!isDefault)
-                    path = CommandParameterReader.Read("Install directory", path);
+                    path = CommandParameterReader.Read("Install directory", Logger, path);
             }
 
             if (!Directory.Exists(path))
@@ -164,7 +164,7 @@ Command for clone all *.pubuk from current directory to app key library
                     Console.WriteLine($"- {Path.GetRelativePath(templatesPath, item).GetNormalizedPath()}");
                 }
 
-                name = CommandParameterReader.Read<string>($"template name");
+                name = CommandParameterReader.Read<string>($"template name", Logger);
             }
 
             string templatePath = Path.Combine(templatesPath, name);

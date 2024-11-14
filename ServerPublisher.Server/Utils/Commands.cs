@@ -14,6 +14,8 @@ using Microsoft.Extensions.Configuration;
 using ServerPublisher.Shared.Utils;
 using Newtonsoft.Json;
 using System.Linq;
+using System.Diagnostics;
+using System.Threading;
 
 namespace ServerPublisher.Server.Utils
 {
@@ -47,71 +49,144 @@ namespace ServerPublisher.Server.Utils
 
             bool isService = args.ContainsKey("service");
 
-            string serviceName = "Publisher Server";
+            bool reInit = args.ContainsKey("reinit");
 
-            string serviceFileName = "publisher.service";
+            string serviceName = "Deploy Host";
 
-
+            string serviceFileName = "deployhost.service";
 
             if (!args.TryGetOutValue("path", out string path))
             {
                 if (Environment.OSVersion.Platform == PlatformID.Unix)
                 {
-                    path = "/etc/publisherserver";
+                    path = "/etc/deployhost";
                 }
                 else
                 {
                     if (Environment.Is64BitProcess)
-                        path = @"C:\Program Files (x86)\Publisher.Server";
+                        path = @"C:\Program Files (x86)\DeployHost";
                     else
-                        path = @"C:\Program Files\Publisher.Server";
+                        path = @"C:\Program Files\DeployHost";
                 }
 
-                path = CommandParameterReader.Read("Install directory", path);
+                if (!isDefault && !reInit)
+                    path = CommandParameterReader.Read("Install directory", Logger, path);
             }
+
+            if (reInit)
+                path = appPath;
 
             if (isService)
             {
                 if (!args.TryGetValue("service_name", ref serviceName))
                 {
-                    serviceName = CommandParameterReader.Read("Service name", serviceName);
+                    if (!isDefault)
+                        serviceName = CommandParameterReader.Read("Service name", Logger, serviceName);
                 }
+
                 if (Environment.OSVersion.Platform == PlatformID.Unix)
                 {
                     if (!args.TryGetValue("service_file_name", ref serviceFileName))
                     {
-                        serviceFileName = CommandParameterReader.Read("Service file name", serviceFileName);
+                        if (!isDefault)
+                            serviceFileName = CommandParameterReader.Read("Service file name", Logger, serviceFileName);
                     }
                 }
             }
 
-            if (!Directory.Exists(path))
-                Directory.CreateDirectory(path);
-
-            foreach (var item in Directory.GetFiles(appPath, "*", SearchOption.AllDirectories))
-            {
-                var ePath = Path.Combine(path, Path.GetRelativePath(appPath, item));
-
-                File.Copy(item, ePath, true);
-            }
-
-
             int port = 6583;
 
-
-            if (!args.TryGetValue("path", ref port))
+            if (!args.TryGetValue("port", ref port))
             {
-                port = CommandParameterReader.Read("Server port", port);
+                if (!isDefault)
+                    port = CommandParameterReader.Read("Server port", Logger, port);
             }
 
-            var execPath = Path.Combine(path, "publisherserver");
+            var execPath = Path.Combine(path, "deployhost");
+
+            if (Environment.OSVersion.Platform != PlatformID.Unix)
+                execPath += ".exe";
+
+            var configPath = Path.Combine(path, "ServerSettings.json").GetNormalizedPath();
+
+
+            Logger.AppendInfo($"""
+
+- current path: {appPath}
+- destination path: {path}
+- config path: {configPath}
+- is service: {isService}
+- service name: {serviceName}
+- service path(linux only): {serviceFileName}
+- port: {port}
+""");
+
+            if (!args.ConfirmAction(Logger))
+                return;
+
+            if (!Directory.Exists(path) && !reInit)
+                Directory.CreateDirectory(path);
+
+            if (isService)
+            {
+                if (Environment.OSVersion.Platform == PlatformID.Unix)
+                {
+                    TerminalExecute($"systemctl disable {serviceFileName}");
+                    TerminalExecute($"systemctl stop {serviceFileName}");
+                }
+                else
+                {
+
+                }
+            }
+
+            if (!reInit)
+            {
+                foreach (var item in Directory.GetFiles(appPath, "*", SearchOption.AllDirectories))
+                {
+                    int i = 0;
+
+                    var ePath = Path.Combine(path, Path.GetRelativePath(appPath, item));
+
+                    var dir = Path.GetDirectoryName(ePath);
+
+                    Logger.AppendInfo($"Copy '{item}' -> '{ePath}'");
+
+                    do
+                    {
+                        try
+                        {
+                            if (!Directory.Exists(dir))
+                                Directory.CreateDirectory(dir);
+
+                            File.Delete(ePath);
+
+                            File.Copy(item, ePath, true);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.AppendError(ex.ToString());
+
+                            i++;
+
+                            if (i == 5)
+                                return;
+
+                            Thread.Sleep(1_000);
+
+                            continue;
+                        }
+
+                        break;
+
+                    } while (true);
+                }
+            }
 
             if (Environment.OSVersion.Platform == PlatformID.Unix)
             {
-
-                System.Diagnostics.Process.Start("ln", $"-s \"{execPath}\" /bin/publs");
-                System.Diagnostics.Process.Start("ln", $"-s \"{execPath}\" /bin/publsrv");
-                System.Diagnostics.Process.Start("ln", $"-s \"{execPath}\" /bin/publishsrv");
+                TerminalExecute("rm /bin/deployhost");
+                TerminalExecute($"ln -s \\\"{execPath}\\\" /bin/deployhost");
 
                 var envs = Environment.GetEnvironmentVariable("PATH");
 
@@ -120,15 +195,11 @@ namespace ServerPublisher.Server.Utils
             }
             else
             {
-                execPath += ".exe";
-
                 var envs = Environment.GetEnvironmentVariable("Path");
 
                 if (!envs.Contains(path))
                     Environment.SetEnvironmentVariable("Path", $"{path};{envs}", EnvironmentVariableTarget.Machine);
             }
-
-            var configPath = Path.Combine(path, "ServerSettings.json").GetNormalizedPath();
 
             var config = new ConfigurationSettingsInfo();
 
@@ -144,10 +215,6 @@ namespace ServerPublisher.Server.Utils
             if (isService)
             {
                 if (Environment.OSVersion.Platform == PlatformID.Unix)
-                {
-                    System.Diagnostics.Process.Start("sc.exe", $"create \"{serviceName}\" binPath=\"{execPath} / action:service\"\"\" start=auto");
-                }
-                else
                 {
                     File.WriteAllText(Path.Combine("/etc/systemd/system/", serviceFileName), $"""
 [Unit]
@@ -165,9 +232,13 @@ KillSignal=SIGINT
 WantedBy=multi-user.target
 """);
 
-                    System.Diagnostics.Process.Start($"systemctl enable {serviceFileName}");
+                    TerminalExecute($"systemctl enable {serviceFileName}");
 
                     Logger.AppendInfo($"Service \"{serviceName}\" enabled, print \"systemctl start {serviceFileName}\" for start now");
+                }
+                else
+                {
+                    System.Diagnostics.Process.Start("sc.exe", $"create \"{serviceName}\" binPath=\"{execPath} / action:service\"\"\" start=auto");
                 }
             }
 
@@ -851,6 +922,11 @@ WantedBy=multi-user.target
         {
             Logger.AppendError($"Current command must have project_id(has GUID format) or directory parameters for identity project");
             Logger.AppendError($"You can not using identity parameters if executing command from directory contains project");
+        }
+
+        static void TerminalExecute(string command)
+        {
+            System.Diagnostics.Process.Start("/bin/bash", $"-c \"{command}\"");
         }
 
         #endregion
