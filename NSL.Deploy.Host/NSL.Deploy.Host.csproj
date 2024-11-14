@@ -44,8 +44,8 @@
 		<PackageReference Include="NSL.TCP.Client" Version="2024.11.6.1129" />
 	</ItemGroup>
 	<ItemGroup>
-		<ProjectReference Include="..\ServerPublisher.Server.Scripts\ServerPublisher.Server.Scripts.csproj" />
-		<ProjectReference Include="..\ServerPublisher.Shared\ServerPublisher.Shared.csproj" />
+		<ProjectReference Include="..\ServerPublisher.Server.Scripts\NSL.Deploy.Server.Scripts.csproj" />
+		<ProjectReference Include="..\ServerPublisher.Shared\NSL.Deploy.Shared.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 		<None Update="create_project.ps1">
@@ -58,48 +58,6 @@
 			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
 		</None>
 		<None Update="setup.ps1">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="tools\add_patch_connection.ps1">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="tools\create_user_global_proxy.ps1">
-		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="tools\create_user_global_publisher.ps1">
-		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="tools\create_user_global_both.ps1">
-		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="tools\reindexing_project.ps1">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="tools\check_scripts.ps1">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="tools\clone_identity.ps1">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="tools\create_project.ps1">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="tools\add_user.ps1">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="tools\create_user.ps1">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="tools\setup_default.ps1">
-		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="tools\setup_service.ps1">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="tools\setup.ps1">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="tools\utils.psm1">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 	</ItemGroup>

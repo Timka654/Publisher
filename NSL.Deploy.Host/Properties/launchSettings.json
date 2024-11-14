@@ -51,6 +51,11 @@
       "commandName": "Project",
       "commandLineArgs": "/action:cset /path:\"publisher/server/io/port\" /value:1221 /y",
       "workingDirectory": "D:\\Temp\\publisher2\\server"
+    },
+    "install_command": {
+      "commandName": "Project",
+      "commandLineArgs": "/action:install /default /service /y",
+      "workingDirectory": "D:\\Temp\\publisher2\\server"
     }
   }
 }

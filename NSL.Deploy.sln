@@ -3,19 +3,19 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServerPublisher.Client", "ServerPublisher.Client\ServerPublisher.Client.csproj", "{9B265296-DB33-4889-8516-CDDB6DBB55B2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NSL.Deploy.Client", "NSL.Deploy.Client\NSL.Deploy.Client.csproj", "{9B265296-DB33-4889-8516-CDDB6DBB55B2}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServerPublisher.Client.Library", "ServerPublisher.Client.Library\ServerPublisher.Client.Library.csproj", "{6E42AB66-4E3F-4634-A8D6-401CCD785FD7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NSL.Deploy.Client.Library", "NSL.Deploy.Client.Library\NSL.Deploy.Client.Library.csproj", "{6E42AB66-4E3F-4634-A8D6-401CCD785FD7}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServerPublisher.QuickUpdater", "ServerPublisher.QuickUpdater\ServerPublisher.QuickUpdater.csproj", "{5EE86906-FAAA-48F9-AEEB-BBC392B955A3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NSL.Deploy.QuickUpdater", "NSL.Deploy.QuickUpdater\NSL.Deploy.QuickUpdater.csproj", "{5EE86906-FAAA-48F9-AEEB-BBC392B955A3}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServerPublisher.Server", "ServerPublisher.Server\ServerPublisher.Server.csproj", "{756304ED-8940-4312-AD3A-5EFCDE9A7AF8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NSL.Deploy.Host", "NSL.Deploy.Host\NSL.Deploy.Host.csproj", "{756304ED-8940-4312-AD3A-5EFCDE9A7AF8}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServerPublisher.Shared", "ServerPublisher.Shared\ServerPublisher.Shared.csproj", "{326156E5-0DF6-4C04-B006-81802DAE9C05}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NSL.Deploy.Shared", "NSL.Deploy.Shared\NSL.Deploy.Shared.csproj", "{326156E5-0DF6-4C04-B006-81802DAE9C05}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServerPublisher.Server.Scripts", "ServerPublisher.Server.Scripts\ServerPublisher.Server.Scripts.csproj", "{2A6ED6E5-C74E-47A0-973F-5A90DEDA140C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NSL.Deploy.Server.Scripts", "NSL.Deploy.Host.Scripts\NSL.Deploy.Server.Scripts.csproj", "{2A6ED6E5-C74E-47A0-973F-5A90DEDA140C}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServerPublisher.Server.Dev.Test", "ServerPublisher.Server\ServerPublisher.Server.Dev.Test.csproj", "{D5BCD7D6-A48F-4FBF-8EB2-6A1B15AB76DB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NSL.Deploy.Host.Dev.Test", "NSL.Deploy.Host\NSL.Deploy.Host.Dev.Test.csproj", "{D5BCD7D6-A48F-4FBF-8EB2-6A1B15AB76DB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
