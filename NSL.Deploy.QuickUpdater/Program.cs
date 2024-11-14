@@ -1,4 +1,4 @@
-﻿using QuickUpdater;
+﻿using NSL.Deploy.QuickUpdater;
 using System.IO.Compression;
 
 using var httpClient = new HttpClient();

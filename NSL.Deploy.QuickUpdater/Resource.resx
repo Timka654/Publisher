@@ -118,6 +118,6 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="update_archive.url" xml:space="preserve">
-    <value>https://panel.apptask.ru/423_install/publisher.zip</value>
+    <value>https://pubstorage.twicepricegroup.com/deployhost-linux-x64.zip</value>
   </data>
 </root>

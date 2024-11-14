@@ -61,7 +61,7 @@ namespace NSL.Deploy.QuickUpdater {
         }
         
         /// <summary>
-        ///   Ищет локализованную строку, похожую на https://panel.apptask.ru/423_install/publisher.zip.
+        ///   Ищет локализованную строку, похожую на https://pubstorage.twicepricegroup.com/deployhost-linux-x64.zip.
         /// </summary>
         internal static string update_archive_url {
             get {
