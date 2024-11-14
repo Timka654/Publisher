@@ -43,8 +43,8 @@
 		<PackageReference Include="NSL.TCP.Client" Version="2024.11.6.1129" />
 	</ItemGroup>
 	<ItemGroup>
-		<ProjectReference Include="..\ServerPublisher.Server.Scripts\NSL.Deploy.Server.Scripts.csproj" />
-		<ProjectReference Include="..\ServerPublisher.Shared\NSL.Deploy.Shared.csproj" />
+		<ProjectReference Include="..\NSL.Deploy.Host.Scripts\NSL.Deploy.Host.Scripts.csproj" />
+		<ProjectReference Include="..\NSL.Deploy.Shared\NSL.Deploy.Shared.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 		<None Update="create_project.ps1">

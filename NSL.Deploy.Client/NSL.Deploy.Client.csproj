@@ -14,7 +14,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\ServerPublisher.Client.Library\NSL.Deploy.Client.Library.csproj" />
+		<ProjectReference Include="..\NSL.Deploy.Client.Library\NSL.Deploy.Client.Library.csproj" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(Configuration)'=='Debug'">

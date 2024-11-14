@@ -15,7 +15,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\ServerPublisher.Shared\NSL.Deploy.Shared.csproj" />
+		<ProjectReference Include="..\NSL.Deploy.Shared\NSL.Deploy.Shared.csproj" />
 	</ItemGroup>
 
 </Project>

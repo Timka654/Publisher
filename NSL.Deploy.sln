@@ -13,7 +13,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NSL.Deploy.Host", "NSL.Depl
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NSL.Deploy.Shared", "NSL.Deploy.Shared\NSL.Deploy.Shared.csproj", "{326156E5-0DF6-4C04-B006-81802DAE9C05}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NSL.Deploy.Server.Scripts", "NSL.Deploy.Host.Scripts\NSL.Deploy.Server.Scripts.csproj", "{2A6ED6E5-C74E-47A0-973F-5A90DEDA140C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NSL.Deploy.Host.Scripts", "NSL.Deploy.Host.Scripts\NSL.Deploy.Host.Scripts.csproj", "{2A6ED6E5-C74E-47A0-973F-5A90DEDA140C}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NSL.Deploy.Host.Dev.Test", "NSL.Deploy.Host\NSL.Deploy.Host.Dev.Test.csproj", "{D5BCD7D6-A48F-4FBF-8EB2-6A1B15AB76DB}"
 EndProject
