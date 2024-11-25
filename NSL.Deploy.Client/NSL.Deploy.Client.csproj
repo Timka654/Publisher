@@ -8,9 +8,10 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="NSL.Cipher" Version="2024.11.6.1129" />
-		<PackageReference Include="NSL.Logger" Version="2024.11.6.1129" />
-		<PackageReference Include="NSL.Utils" Version="2024.11.6.1129" />
+		<PackageReference Include="NSL.Cipher" Version="2024.11.25.143" />
+		<PackageReference Include="NSL.Logger" Version="2024.11.25.143" />
+		<PackageReference Include="NSL.Utils" Version="2024.11.25.143" />
+		<PackageReference Include="System.Threading.Tasks.Dataflow" Version="8.0.1" />
 	</ItemGroup>
 
 	<ItemGroup>

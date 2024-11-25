@@ -20,6 +20,7 @@ namespace ServerPublisher.Client.Library
         public event Action<ProjectFileListResponseModel> OnPublishProjectStartMessage = (d) => { };
 
         public event Action<string> OnServerLogMessage = (d) => { };
+        public event Action<int> OnUploadPartMessage = (d) => { };
 
         public Network(string ip, int port, string inputKey, string outputKey, Action<NetworkClient> disconnectedEvent, int bufferSize = 8196)
         {
@@ -35,8 +36,15 @@ namespace ServerPublisher.Client.Library
 
                 builder.GetOptions().ConfigureRequestProcessor();
 
+                builder.AddReceiveHandle((c, p, l) =>
+                {
+                    Console.WriteLine($"receive pid {p}");
+                });
+
+
                 builder.AddPacketHandle(PublisherPacketEnum.PublishProjectStartMessage, (c, d) => OnPublishProjectStartMessage(ProjectFileListResponseModel.ReadDefaultFrom(d)));
                 builder.AddPacketHandle(PublisherPacketEnum.ServerLog, (c, d) => OnServerLogMessage(d.ReadString()));
+                builder.AddPacketHandle(PublisherPacketEnum.UploadPartIncrementMessage, (c, d) => OnUploadPartMessage(d.ReadInt32()));
 
                 builder.WithInputCipher(new XRC4Cipher(inputKey));
                 builder.WithOutputCipher(new XRC4Cipher(outputKey));
@@ -98,6 +106,18 @@ namespace ServerPublisher.Client.Library
             => await Request(PublisherPacketEnum.PublishProjectFileStart, request.WriteFullTo, PublishProjectFileStartResponseModel.ReadFullFrom);
 
         public async Task<bool> UploadFilePart(PublishProjectUploadFileBytesRequestModel request)
-            => await Request(PublisherPacketEnum.PublishProjectUploadFilePart, request.WriteFullTo, r => true);
+        {
+            var req = OutputPacketBuffer.Create(PublisherPacketEnum.PublishProjectUploadFilePart);
+
+            //req.WriteGuid(Guid.Empty);
+
+            request.WriteFullTo(req);
+
+            Client.Send(req);
+
+            //await Task.Delay(20000);
+            return true;
+            //await Request(PublisherPacketEnum.PublishProjectUploadFilePart, request.WriteFullTo, r => r != null);
+        } 
     }
 }

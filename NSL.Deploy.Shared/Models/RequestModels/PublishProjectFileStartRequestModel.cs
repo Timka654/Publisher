@@ -8,6 +8,8 @@ namespace ServerPublisher.Shared.Models.RequestModels
     {
         public string RelativePath { get; set; }
 
+        public long Length { get; set; }
+
         public DateTime CreateTime { get; set; }
 
         public DateTime UpdateTime { get; set; }

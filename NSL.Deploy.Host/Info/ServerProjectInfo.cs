@@ -345,7 +345,7 @@ namespace ServerPublisher.Server.Info
 
             context.Log("-> Start Archive processing");
 
-            var archivePath = Path.Combine(context.TempPath, archiveFile.RelativePath).GetNormalizedPath();
+            var archivePath = Path.Combine(context.TempPath, archiveFile.file.RelativePath).GetNormalizedPath();
 
             using (var archive = ZipFile.OpenRead(archivePath))
             {
@@ -369,10 +369,10 @@ namespace ServerPublisher.Server.Info
 
                     using (var ex = archiveEntry.Open())
                     {
-                        ex.CopyTo(file.WriteIO);
+                        ex.CopyTo(file.file.WriteIO);
                     }
 
-                    endPublishFile(context, file);
+                    endPublishFile(context, file.file);
                 }
             }
 
@@ -677,7 +677,7 @@ namespace ServerPublisher.Server.Info
 
             Guid id = default;
 
-            while (!context.FileMap.TryAdd(id = Guid.NewGuid(), file)) ;
+            while (!context.FileMap.TryAdd(id = Guid.NewGuid(), (new ProjectPublishContext.UploadFileInfo(data.Length), file))) ;
 
             file.StartFile(context, data.CreateTime, data.UpdateTime);
 
@@ -695,12 +695,16 @@ namespace ServerPublisher.Server.Info
             if (!context.FileMap.TryGetValue(request.FileId, out var file))
                 return false;
 
-            file.WriteIO?.Write(request.Bytes);
+            file.file.WriteIO.Position = request.Offset;
+
+            file.file.WriteIO?.Write(request.Bytes);
+
+            file.upload.Offset += request.Bytes.Length;
 
             request.Bytes = null;
 
-            if (request.EOF)
-                EndPublishFile(context, file);
+            if (file.upload.Offset == file.upload.len)
+                EndPublishFile(context, file.file);
 
 
             return true;
@@ -1196,7 +1200,12 @@ namespace ServerPublisher.Server.Info
 
         public UploadMethodEnum UploadMethod { get; set; }
 
-        public ConcurrentDictionary<Guid, ProjectFileInfo> FileMap { get; } = new();
+        public ConcurrentDictionary<Guid, (UploadFileInfo upload, ProjectFileInfo file)> FileMap { get; } = new();
+
+        public record UploadFileInfo(long len)
+        {
+            public long Offset { get; set; }
+        }
 
         public void Log(string text, bool appLog = false)
         {
@@ -1214,7 +1223,7 @@ namespace ServerPublisher.Server.Info
 
             foreach (var item in FileMap.Values)
             {
-                item.ReleaseIO();
+                item.file.ReleaseIO();
             }
 
             FileMap.Clear();
@@ -1230,7 +1239,7 @@ namespace ServerPublisher.Server.Info
         }
 
         public IEnumerable<ProjectFileInfo> GetFiles()
-            => FileMap.Values;
+            => FileMap.Select(x => x.Value.file).ToArray();
 
         public bool AnyFiles()
             => FileMap.Any();

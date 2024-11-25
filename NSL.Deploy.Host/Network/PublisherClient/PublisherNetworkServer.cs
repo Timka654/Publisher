@@ -62,7 +62,10 @@ namespace ServerPublisher.Server.Network.PublisherClient
 
                         options.AddAsyncRequestPacketHandle(PublisherPacketEnum.PublishProjectSignIn, ProjectPacketRepository.PublishProjectSignInReceive);
 
-                        options.AddAsyncRequestPacketHandle(PublisherPacketEnum.PublishProjectUploadFilePart, ProjectPacketRepository.PublishProjectUploadFilePartReceive);
+                        //options.AddAsyncRequestPacketHandle(PublisherPacketEnum.PublishProjectUploadFilePart, ProjectPacketRepository.PublishProjectUploadFilePartReceive);
+                        
+
+                        options.AddHandle((ushort)PublisherPacketEnum.PublishProjectUploadFilePart, ProjectPacketRepository.PublishProjectUploadFilePartReceive);
 
 
                         options.AddAsyncRequestPacketHandle(PublisherPacketEnum.ProjectProxyStartFile, ProjectProxyPacketRepository.ProjectProxyStartFileReceive);

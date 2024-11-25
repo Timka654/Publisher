@@ -18,6 +18,7 @@ using System.Threading;
 using Newtonsoft.Json.Linq;
 using ServerPublisher.Shared.Models.RequestModels;
 using ServerPublisher.Shared.Utils;
+using System.Diagnostics;
 
 namespace ServerPublisher.Client
 {
@@ -39,11 +40,6 @@ namespace ServerPublisher.Client
         private List<BasicFileInfo> uploadFileList = null;
 
         private BasicFileInfo[] remoteFileList = null;
-
-        internal void WriteLog(string v)
-        {
-            Console.WriteLine(v);
-        }
 
         private T ReadConfigunation<T>(string basedir, string path, out string outBasePath)
         {
@@ -178,6 +174,7 @@ namespace ServerPublisher.Client
 
             network.OnPublishProjectStartMessage += PublishProjectStartMessage_OnReceiveEvent;
             network.OnServerLogMessage += Instance_OnReceiveEvent;
+            network.OnUploadPartMessage += Network_OnUploadPartMessage;
 
             Console.WriteLine($"Try sign");
 
@@ -224,6 +221,15 @@ namespace ServerPublisher.Client
             StepLocker.Set();
         }
 
+        private void Network_OnUploadPartMessage(int len)
+        {
+            Interlocked.Add(ref uploadedLen, len);
+            Interlocked.Decrement(ref uploadingCount);
+
+            if (uploadedLen == uploadLen)
+                uploadLocker.Set();
+
+        }
 
         ProjectFileListResponseModel fileList;
 
@@ -231,7 +237,13 @@ namespace ServerPublisher.Client
 
         private void Instance_OnReceiveEvent(string value)
         {
+            outputLocker.WaitOne();
+            Console.WriteLine();
             Console.WriteLine(value);
+            Console.SetCursorPosition(0, Console.CursorTop - 1);
+            Console.WriteLine(value);
+            //outputHave = true;
+            outputLocker.Set();
         }
 
         private async void PublishProjectStartMessage_OnReceiveEvent(ProjectFileListResponseModel value)
@@ -248,11 +260,14 @@ namespace ServerPublisher.Client
         {
             if (uploadFileList.Any())
             {
-                SemaphoreSlim ss;
+                CancellationTokenSource tokenSource = new CancellationTokenSource();
+
+                var token = tokenSource.Token;
+
+                statsOutput(token);
+
                 if (publishInfo.HasCompression)
                 {
-                    ss = new SemaphoreSlim(0, 1);
-
                     var archivePath = Path.GetTempFileName();
 
                     using (var archive = ZipFile.Open(archivePath, ZipArchiveMode.Update))
@@ -265,23 +280,32 @@ namespace ServerPublisher.Client
 
                     var archiveFileInfo = new FileInfo(archivePath);
 
-                    UploadFile(new BasicFileInfo(archiveFileInfo.Directory.GetNormalizedDirectoryPath(), archiveFileInfo), ss, true);
+                    uploadLen = archiveFileInfo.Length;
 
-                    while (ss.CurrentCount < 1)
-                        await Task.Delay(500);
+                    await UploadFile(new BasicFileInfo(archiveFileInfo.Directory.GetNormalizedDirectoryPath(), archiveFileInfo), token, true);
                 }
                 else
                 {
-                    ss = new SemaphoreSlim(0, uploadFileList.Count);
+                    uploadLen = uploadFileList.Sum(x => x.FileInfo.Length);
 
+                    //await Parallel.ForEachAsync(uploadFileList, async (item, token) =>
+                    //{
                     foreach (var item in uploadFileList)
                     {
-                        UploadFile(item, ss);
+                        await UploadFile(item, token);
                     }
-
-                    while (ss.CurrentCount < uploadFileList.Count)
-                        await Task.Delay(500);
+                    //});
                 }
+
+
+                await Task.WhenAll(waitUploadTasks.ToArray());
+
+                uploadLocker.WaitOne();
+
+                displayStats(null);
+
+                tokenSource.Cancel();
+
             }
 
             var result = await network.ProjectFinish(new PublishProjectFinishRequestModel()
@@ -297,9 +321,71 @@ namespace ServerPublisher.Client
             }
         }
 
-        private int uploadBufferLen => publishInfo.BufferLen - 50;
+        long uploadLen = 0;
+        long uploadedLen = 0;
 
-        private async void UploadFile(BasicFileInfo file, SemaphoreSlim ss, bool compressed = false)
+        long uploadingCount = 0;
+
+        List<long> uploadedMarks = new List<long>();
+
+        ConcurrentBag<Task> waitUploadTasks = new ConcurrentBag<Task>();
+
+        ManualResetEvent uploadLocker = new ManualResetEvent(false);
+
+
+        private async void statsOutput(CancellationToken token)
+        {
+            try
+            {
+                while (true)
+                {
+                    var c = uploadedLen;
+                    await Task.Delay(1000, token);
+
+                    if (token.IsCancellationRequested)
+                        return;
+
+                    var old = c;
+
+                    c = uploadedLen;
+
+                    //if (c == old)
+                    //    continue;
+
+                    var speed = c - old;
+
+                    uploadedMarks.Add(speed);
+
+                    displayStats(speed);
+                }
+            }
+            catch (Exception)
+            {
+            }
+        }
+        private AutoResetEvent outputLocker = new AutoResetEvent(true);
+        private int consoleWidth = Console.WindowWidth;
+
+        private void displayStats(long? speed)
+        {
+            outputLocker.WaitOne();
+
+            Console.SetCursorPosition(0, Console.CursorTop); // Возврат каретки
+            consoleWidth = Console.WindowWidth;
+
+            //int currentLineCursor = Console.CursorTop;
+            //Console.SetCursorPosition(0, Console.CursorTop);
+            Console.Write($"Uploaded {uploadedLen / 1024:N0}/{uploadLen / 1024:N0} kbytes {(1.0 * uploadLen / uploadedLen) / uploadLen:P}. Speed {speed / 1024:N2}(Max: {uploadedMarks.Max() / 1024:N2}, Avg: {uploadedMarks.Average() / 1024:N2}, Min: {uploadedMarks.Min() / 1024:N2}) kbytes/s, {uploadingCount}w".PadRight(consoleWidth - 1));
+            //Console.SetCursorPosition(0, currentLineCursor);
+
+            outputLocker.Set();
+        }
+
+        private int uploadBufferLen => publishInfo.BufferLen;
+
+        private SemaphoreSlim uploadBalancing = new SemaphoreSlim(20000);
+
+        private async Task UploadFile(BasicFileInfo file, CancellationToken cancellationToken, bool compressed = false)
         {
             //if (file.RelativePath != "n1.bin")
             //    return;
@@ -307,34 +393,97 @@ namespace ServerPublisher.Client
             var fsr = await network.FileStart(new PublishProjectFileStartRequestModel()
             {
                 RelativePath = file.RelativePath,
+                Length = file.FileInfo.Length,
                 CreateTime = file.FileInfo.CreationTime,
                 UpdateTime = file.FileInfo.LastWriteTime
             });
 
             var fs = file.FileInfo.OpenRead();
 
-            int len = uploadBufferLen;
+            //int len = uploadBufferLen;
 
-            byte[] buf = new byte[len];
+            //ConcurrentBag<Task> temp = new();
 
-            int currLen = default;
+            SemaphoreSlim locker = new(1);
 
-            do
+            var cnt = fs.Length / uploadBufferLen;
+
+            if (fs.Length > cnt * uploadBufferLen)
+                ++cnt;
+
+            ConcurrentBag<long> readInvoke = new ConcurrentBag<long>();
+            ConcurrentBag<long> uploadInvoke = new ConcurrentBag<long>();
+
+            ConcurrentBag<Task> tasks = new();
+
+            for (int _i = 0; _i < cnt; _i++)
             {
-                currLen = fs.Read(buf, 0, buf.Length);
+                var i = _i;
+                //var t = Task.Run(async () =>
+                //{
+                //    await uploadBalancing.WaitAsync();
 
-                if (currLen < buf.Length)
-                    Array.Resize(ref buf, currLen);
+                    byte[] buf = new byte[uploadBufferLen];
 
-                Console.WriteLine($"Uploading {file.RelativePath}: {100.0 / fs.Length * fs.Position}%");
+                    int currLen = default;
 
-                await network.UploadFilePart(new PublishProjectUploadFileBytesRequestModel() { Bytes = buf, EOF = fs.Length == fs.Position, FileId = fsr.FileId });
+                    var r = Stopwatch.StartNew();
 
-            } while (buf.Length == len);
+                    //await locker.WaitAsync();
 
-            fs.Close();
+                    var offset = fs.Position = i * uploadBufferLen;
 
-            ss.Release();
+                    currLen = fs.Read(buf, 0, buf.Length);
+
+                    //locker.Release();
+
+                    readInvoke.Add(r.ElapsedMilliseconds);
+                    //Console.WriteLine($"Read {readInvoke.Min()}/{readInvoke.Average()}/{readInvoke.Max()}");
+
+                    if (currLen < buf.Length)
+                        Array.Resize(ref buf, currLen);
+
+                    //Console.WriteLine($"Uploading {file.RelativePath}: {100.0 / fs.Length * fs.Position}%");
+
+
+                    var u = Stopwatch.StartNew();
+                        Interlocked.Increment(ref uploadingCount);
+
+                    await network.UploadFilePart(new PublishProjectUploadFileBytesRequestModel()
+                    {
+                        Bytes = buf,
+                        Offset = offset,
+                        FileId = fsr.FileId
+                    });
+
+                    uploadInvoke.Add(u.ElapsedMilliseconds);
+                    //Console.WriteLine($"Upload {uploadInvoke.Min()}/{uploadInvoke.Average()}/{uploadInvoke.Max()}");
+
+                    //uploadBalancing.Release();
+
+                    //Interlocked.Decrement(ref uploadingCount);
+
+                    //Interlocked.Add(ref uploadedLen, currLen);
+
+
+                //}).ContinueWith(t =>
+                //{
+                //    if (!t.IsCompletedSuccessfully)
+                //        return;
+
+                //});
+
+                //waitUploadTasks.Add(t);
+                //tasks.Add(t);
+            }
+
+            await Task.WhenAll(tasks);
+
+            //Console.WriteLine($"Uploaded file {file.RelativePath}");
+
+            //Task.WhenAll(waitUploadTasks).ContinueWith(t => { 
+                fs.Close(); 
+            //}).RunAsync();
         }
 
         private List<BasicFileInfo> GetFiles(string dir)

@@ -52,6 +52,8 @@
         ExplorerPathRemove,
         ExplorerRemoveSignFile,
         ExplorerSignIn,
-        ExplorerUploadFile
+        ExplorerUploadFile,
+
+        UploadPartIncrementMessage
     }
 }
