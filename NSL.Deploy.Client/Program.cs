@@ -10,22 +10,16 @@ namespace ServerPublisher.Client
     {
         public static ConfigurationInfoModel Configuration { get; private set; } = new ConfigurationInfoModel();
 
+        public static string ConfigurationPath { get; private set; }
+
         static void Main(string[] args)
         {
             var appPath = AppDomain.CurrentDomain.BaseDirectory;
 
-            var configurationPath = Path.Combine(appPath, "config.json");
+            ConfigurationPath = Path.Combine(appPath, "config.json");
 
-            if (File.Exists(configurationPath))
-                Configuration = JsonConvert.DeserializeObject<ConfigurationInfoModel>(File.ReadAllText(configurationPath));
-            else
-                File.WriteAllText(configurationPath, JsonConvert.SerializeObject(Configuration));
-
-            if (!Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Environment.ExpandEnvironmentVariables(Configuration.TemplatesPath))))
-                Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Environment.ExpandEnvironmentVariables(Configuration.TemplatesPath)));
-
-            if (!Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Environment.ExpandEnvironmentVariables(Configuration.KeysPath))))
-                Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Environment.ExpandEnvironmentVariables(Configuration.KeysPath)));
+            if (File.Exists(ConfigurationPath))
+                Configuration = JsonConvert.DeserializeObject<ConfigurationInfoModel>(File.ReadAllText(ConfigurationPath));
 
             Commands.Process();
         }

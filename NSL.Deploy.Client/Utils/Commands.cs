@@ -1,4 +1,5 @@
-﻿using NSL.Logger;
+﻿using Newtonsoft.Json;
+using NSL.Logger;
 using NSL.Logger.Interface;
 using NSL.Utils;
 using ServerPublisher.Shared.Utils;
@@ -7,6 +8,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.AccessControl;
 using System.Security.Principal;
 
 namespace ServerPublisher.Client.Utils
@@ -36,6 +38,7 @@ has_compression:bool - mark for compression data to transport
 Command for install or update app, configure for integrate app in your os for fast execute, parameters:
 path:string? - path for install app, have default value specific for your os
 """) },
+            { "init", new Command(InitCommand, "check or init folders/configuration for app", "") },
             { "copy_template", new Command(DeployTemplateCommand, "obsolete. see deploy_template", string.Empty) },
             { "deploy_template", new Command(DeployTemplateCommand,"deploy template to current directory", """
 Command for copy template to current folder, parameters:
@@ -72,6 +75,8 @@ Command for clone all *.pubuk from current directory to app key library
             if (!cmd.ConfirmAction(Logger))
                 return;
 
+            IOUtils.CreateDirectoryIfNoExists(templatePath);
+
             foreach (var item in Directory.GetFiles(dir, "*.pubuk", SearchOption.AllDirectories))
             {
                 var epath = Path.Combine(templatePath, Path.GetFileName(item));
@@ -92,6 +97,8 @@ Command for clone all *.pubuk from current directory to app key library
             var appPath = AppDomain.CurrentDomain.BaseDirectory;
 
             string templatePath = Path.Combine(appPath, Environment.ExpandEnvironmentVariables(Program.Configuration.TemplatesPath), Path.GetDirectoryName(dir));
+
+            IOUtils.CreateDirectoryIfNoExists(templatePath);
 
             Logger.AppendInfo($"Move from {dir} to {templatePath}?");
 
@@ -115,14 +122,14 @@ Command for clone all *.pubuk from current directory to app key library
             {
                 if (Environment.OSVersion.Platform == PlatformID.Unix)
                 {
-                    path = "/etc/publisherclient";
+                    path = "/etc/nsldeployclient";
                 }
                 else
                 {
                     //if (Environment.Is64BitProcess)
                     //    path = @"C:\Program Files (x86)\Publisher.Client";
                     //else
-                    path = @"C:\Program Files\Publisher.Client";
+                    path = @"C:\Program Files\NSL.Deploy.Client";
                 }
 
                 if (!isDefault)
@@ -132,14 +139,25 @@ Command for clone all *.pubuk from current directory to app key library
             if (!Directory.Exists(path))
                 Directory.CreateDirectory(path);
 
-            CopyDirectory(appPath, path, true, true, ["config.json"]);
+            CopyDirectory(appPath, path, true, true, []);
+
+            InitData(path);
+
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+            {
+                foreach (var item in Directory.GetFiles(path, "*", SearchOption.AllDirectories))
+                {
+                    FileSystemAccessRule rule = new("Everyone", FileSystemRights.ReadAndExecute, AccessControlType.Allow);
+                    new FileInfo(item).GetAccessControl().AddAccessRule(rule);
+                }
+            }
 
             if (!Directory.Exists(Path.Combine(path, Environment.ExpandEnvironmentVariables(Program.Configuration.KeysPath))))
                 Directory.CreateDirectory(Path.Combine(path, Environment.ExpandEnvironmentVariables(Program.Configuration.KeysPath)));
 
             if (Environment.OSVersion.Platform == PlatformID.Unix)
             {
-                System.Diagnostics.Process.Start("ln", $"-s \"{Path.Combine(path, "publisherclient")}\" /bin/publc");
+                System.Diagnostics.Process.Start("ln", $"-s \"{Path.Combine(path, "deployclient")}\" /bin/deployc");
 
                 var envs = Environment.GetEnvironmentVariable("PATH");
 
@@ -153,6 +171,30 @@ Command for clone all *.pubuk from current directory to app key library
                 if (!envs.Contains(path))
                     Environment.SetEnvironmentVariable("Path", $"{path};{envs}", EnvironmentVariableTarget.Machine);
             }
+
+            if (!cmd.ContainsKey("q"))
+                Console.ReadKey();
+        }
+
+        private static void InitCommand(CommandLineArgs cmd)
+        {
+            var appPath = AppDomain.CurrentDomain.BaseDirectory;
+
+            InitData(appPath);
+        }
+
+        private static void InitData(string path)
+        {
+            var configurationPath = Path.Combine(path, "config.json");
+
+            if (!File.Exists(configurationPath))
+                File.WriteAllText(configurationPath, JsonConvert.SerializeObject(Program.Configuration));
+
+            if (!Directory.Exists(Path.Combine(path, Environment.ExpandEnvironmentVariables(Program.Configuration.TemplatesPath))))
+                Directory.CreateDirectory(Path.Combine(path, Environment.ExpandEnvironmentVariables(Program.Configuration.TemplatesPath)));
+
+            if (!Directory.Exists(Path.Combine(path, Environment.ExpandEnvironmentVariables(Program.Configuration.KeysPath))))
+                Directory.CreateDirectory(Path.Combine(path, Environment.ExpandEnvironmentVariables(Program.Configuration.KeysPath)));
         }
 
         private static void DeployTemplateCommand(CommandLineArgs cmd)
@@ -178,23 +220,23 @@ Command for clone all *.pubuk from current directory to app key library
 
             string templatePath = Path.Combine(templatesPath, name);
 
-
-            foreach (var item in Directory.GetFiles(templatePath))
-            {
-                var targetPath = Path.Combine(Directory.GetCurrentDirectory().GetNormalizedPath(), Path.GetRelativePath(templatePath, item).GetNormalizedPath()).GetNormalizedPath();
-
-                try
+            if (Directory.Exists(templatePath))
+                foreach (var item in Directory.GetFiles(templatePath))
                 {
-                    Console.WriteLine($"Copy \"{item}\" to \"{targetPath}\"");
-                    File.Copy(item, targetPath);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"File already exists or cannot access to target path - {ex}");
-                }
+                    var targetPath = Path.Combine(Directory.GetCurrentDirectory().GetNormalizedPath(), Path.GetRelativePath(templatePath, item).GetNormalizedPath()).GetNormalizedPath();
 
-                Console.WriteLine("Finished!!");
-            }
+                    try
+                    {
+                        Console.WriteLine($"Copy \"{item}\" to \"{targetPath}\"");
+                        File.Copy(item, targetPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"File already exists or cannot access to target path - {ex}");
+                    }
+
+                    Console.WriteLine("Finished!!");
+                }
         }
 
         public static bool Process()
@@ -212,6 +254,7 @@ Command for clone all *.pubuk from current directory to app key library
                 }
 
                 Console.WriteLine("Commands is empty");
+                displayHelp(args, null);
                 return false;
             }
             if (!commands.TryGetValue(actionName, out var action))
@@ -295,7 +338,7 @@ Command for clone all *.pubuk from current directory to app key library
 
 
         static bool RequireRunningAsAdministrator()
-        {   
+        {
             using (WindowsIdentity identity = WindowsIdentity.GetCurrent())
             {
                 WindowsPrincipal principal = new WindowsPrincipal(identity);
