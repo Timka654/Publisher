@@ -2,7 +2,7 @@
 {
     public class PublishInfo
     {
-        public int BufferLen { get; set; } = 4090880;
+        public int BufferLen { get; set; } = (64 * 1024) - 64;
 
         public string PublishDirectory { get; set; }
 

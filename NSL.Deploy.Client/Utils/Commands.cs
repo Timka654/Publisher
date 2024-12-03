@@ -1,13 +1,13 @@
 ﻿using NSL.Logger;
 using NSL.Logger.Interface;
-using NSL.SocketCore.Utils.Logger;
 using NSL.Utils;
 using ServerPublisher.Shared.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Xml.Linq;
+using System.Security.Principal;
 
 namespace ServerPublisher.Client.Utils
 {
@@ -58,6 +58,9 @@ Command for clone all *.pubuk from current directory to app key library
 
         private static void InstallGlobalKeysCommand(CommandLineArgs cmd)
         {
+            if (RequireRunningAsAdministrator())
+                return;
+
             var dir = Directory.GetCurrentDirectory();
 
             var appPath = AppDomain.CurrentDomain.BaseDirectory;
@@ -81,6 +84,9 @@ Command for clone all *.pubuk from current directory to app key library
 
         private static void InstallTemplate(CommandLineArgs cmd)
         {
+            if (RequireRunningAsAdministrator())
+                return;
+
             var dir = Directory.GetCurrentDirectory();
 
             var appPath = AppDomain.CurrentDomain.BaseDirectory;
@@ -97,6 +103,9 @@ Command for clone all *.pubuk from current directory to app key library
 
         private static void InstallCommand(CommandLineArgs cmd)
         {
+            if (RequireRunningAsAdministrator())
+                return;
+
             var appPath = AppDomain.CurrentDomain.BaseDirectory;
 
             var isDefault = cmd.ContainsKey("default");
@@ -280,6 +289,50 @@ Command for clone all *.pubuk from current directory to app key library
                     string newDestinationDir = Path.Combine(destinationDir, subDir.Name);
                     CopyDirectory(subDir.FullName, newDestinationDir, true, overwrite);
                 }
+            }
+        }
+
+
+
+        static bool RequireRunningAsAdministrator()
+        {   
+            using (WindowsIdentity identity = WindowsIdentity.GetCurrent())
+            {
+                WindowsPrincipal principal = new WindowsPrincipal(identity);
+                if (!principal.IsInRole(WindowsBuiltInRole.Administrator))
+                {
+                    RestartAsAdministrator(Environment.GetCommandLineArgs());
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        static void RestartAsAdministrator(string[] args)
+        {
+            // Get the current process's executable path
+            string exePath = System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName;
+
+            // Build the arguments string
+            string arguments = string.Join(" ", args);
+
+            // Start the process with administrator privileges
+            ProcessStartInfo startInfo = new ProcessStartInfo
+            {
+                FileName = exePath,
+                Arguments = arguments,
+                UseShellExecute = true,
+                Verb = "runas" // Request administrator privileges
+            };
+
+            try
+            {
+                System.Diagnostics.Process.Start(startInfo);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to restart as administrator: {ex.Message}");
             }
         }
     }

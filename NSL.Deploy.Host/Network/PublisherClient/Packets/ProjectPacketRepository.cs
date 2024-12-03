@@ -74,6 +74,12 @@ namespace ServerPublisher.Server.Network.PublisherClient.Packets.PacketRepositor
 
         public static void PublishProjectUploadFilePartReceive(PublisherNetworkClient client, InputPacketBuffer data)
         {
+
+            //var p = OutputPacketBuffer.Create(PublisherPacketEnum.UploadPartIncrementMessage);
+            //p.WriteInt32(5242880);
+
+            //client.Send(p);
+            //return;
             var context = client.PublishContext;
 
             if (context == null)
@@ -83,6 +89,7 @@ namespace ServerPublisher.Server.Network.PublisherClient.Packets.PacketRepositor
 
             var p = OutputPacketBuffer.Create(PublisherPacketEnum.UploadPartIncrementMessage);
             p.WriteInt32(request.Bytes.Length);
+
 
             context.ProjectInfo.UploadPublishFile(context, request);
 

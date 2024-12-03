@@ -7,7 +7,6 @@ using ServerPublisher.Shared.Enums;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
-using static System.Net.WebRequestMethods;
 
 namespace ServerPublisher.Server.Network.PublisherClient
 {

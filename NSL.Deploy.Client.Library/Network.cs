@@ -22,7 +22,7 @@ namespace ServerPublisher.Client.Library
         public event Action<string> OnServerLogMessage = (d) => { };
         public event Action<int> OnUploadPartMessage = (d) => { };
 
-        public Network(string ip, int port, string inputKey, string outputKey, Action<NetworkClient> disconnectedEvent, int bufferSize = 8196)
+        public Network(string ip, int port, string inputKey, string outputKey, Action<NetworkClient> disconnectedEvent)
         {
             Client = TCPClientEndPointBuilder.Create()
             .WithClientProcessor<NetworkClient>()
@@ -30,17 +30,13 @@ namespace ServerPublisher.Client.Library
             .WithEndPoint(ip, port)
             .WithCode(builder =>
             {
-                builder.WithBufferSize(bufferSize);
+                builder.WithBufferSize(2048);
+
+                builder.GetCoreOptions().SegmentSize = 64 * 1024;
 
                 builder.AddConnectHandle(c => c.InitializeObjectBag());
 
                 builder.GetOptions().ConfigureRequestProcessor();
-
-                builder.AddReceiveHandle((c, p, l) =>
-                {
-                    Console.WriteLine($"receive pid {p}");
-                });
-
 
                 builder.AddPacketHandle(PublisherPacketEnum.PublishProjectStartMessage, (c, d) => OnPublishProjectStartMessage(ProjectFileListResponseModel.ReadDefaultFrom(d)));
                 builder.AddPacketHandle(PublisherPacketEnum.ServerLog, (c, d) => OnServerLogMessage(d.ReadString()));
@@ -52,7 +48,7 @@ namespace ServerPublisher.Client.Library
                 builder.AddDisconnectHandle(c => disconnectedEvent?.Invoke(c));
 
                 builder.AddExceptionHandle((ex, c) =>
-                Console.WriteLine(ex.ToString())
+                    Console.WriteLine(ex.ToString())
                 );
             })
             .Build();
@@ -107,17 +103,9 @@ namespace ServerPublisher.Client.Library
 
         public async Task<bool> UploadFilePart(PublishProjectUploadFileBytesRequestModel request)
         {
-            var req = OutputPacketBuffer.Create(PublisherPacketEnum.PublishProjectUploadFilePart);
-
-            //req.WriteGuid(Guid.Empty);
-
-            request.WriteFullTo(req);
-
-            Client.Send(req);
-
-            //await Task.Delay(20000);
+            await Message(PublisherPacketEnum.PublishProjectUploadFilePart, req=> request.WriteFullTo(req));
+            
             return true;
-            //await Request(PublisherPacketEnum.PublishProjectUploadFilePart, request.WriteFullTo, r => r != null);
         } 
     }
 }

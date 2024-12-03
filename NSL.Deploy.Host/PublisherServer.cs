@@ -43,6 +43,8 @@ namespace ServerPublisher.Server
 
         public static void InitializeApp()
         {
+            ServerLogger.SetUnhandledExCatch(true);
+
             ServerLogger.AppendInfo($"Initialize application");
 
             initializeConfiguration();

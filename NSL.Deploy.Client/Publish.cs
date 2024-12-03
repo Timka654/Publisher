@@ -237,13 +237,7 @@ namespace ServerPublisher.Client
 
         private void Instance_OnReceiveEvent(string value)
         {
-            outputLocker.WaitOne();
-            Console.WriteLine();
-            Console.WriteLine(value);
-            Console.SetCursorPosition(0, Console.CursorTop - 1);
-            Console.WriteLine(value);
-            //outputHave = true;
-            outputLocker.Set();
+            LineLog(value);
         }
 
         private async void PublishProjectStartMessage_OnReceiveEvent(ProjectFileListResponseModel value)
@@ -332,11 +326,15 @@ namespace ServerPublisher.Client
 
         ManualResetEvent uploadLocker = new ManualResetEvent(false);
 
+        DateTime startTime;
 
         private async void statsOutput(CancellationToken token)
         {
             try
             {
+                int i = 0;
+                long speed = 0;
+                startTime = DateTime.UtcNow.AddSeconds(1);
                 while (true)
                 {
                     var c = uploadedLen;
@@ -349,12 +347,17 @@ namespace ServerPublisher.Client
 
                     c = uploadedLen;
 
-                    //if (c == old)
-                    //    continue;
+                    ++i;
 
-                    var speed = c - old;
+                    if (c != old)
+                    {
 
-                    uploadedMarks.Add(speed);
+                        speed = (c - old) / i;
+
+                        i = 0;
+
+                        uploadedMarks.Add(speed);
+                    }
 
                     displayStats(speed);
                 }
@@ -363,22 +366,23 @@ namespace ServerPublisher.Client
             {
             }
         }
-        private AutoResetEvent outputLocker = new AutoResetEvent(true);
-        private int consoleWidth = Console.WindowWidth;
 
         private void displayStats(long? speed)
         {
-            outputLocker.WaitOne();
+            //outputLocker.WaitOne();
 
-            Console.SetCursorPosition(0, Console.CursorTop); // Возврат каретки
-            consoleWidth = Console.WindowWidth;
+            //Console.SetCursorPosition(0, Console.CursorTop - 1);
+
+            var t = $"Uploaded {uploadedLen / 1024:N0}/{uploadLen / 1024:N0} kbytes {(1.0 * uploadedLen / uploadLen ):P}. Speed {speed / 1024:N2}(Max: {uploadedMarks.DefaultIfEmpty()?.Max() / 1024:N2}, Avg: {uploadedMarks.DefaultIfEmpty()?.Average() / 1024:N2}, Min: {uploadedMarks.DefaultIfEmpty()?.Min() / 1024:N2}) kbytes/s, {(DateTime.UtcNow - startTime):hh\\:mm\\:ss}";
+
+            ReplaceLog(t, 1);
 
             //int currentLineCursor = Console.CursorTop;
             //Console.SetCursorPosition(0, Console.CursorTop);
-            Console.Write($"Uploaded {uploadedLen / 1024:N0}/{uploadLen / 1024:N0} kbytes {(1.0 * uploadLen / uploadedLen) / uploadLen:P}. Speed {speed / 1024:N2}(Max: {uploadedMarks.Max() / 1024:N2}, Avg: {uploadedMarks.Average() / 1024:N2}, Min: {uploadedMarks.Min() / 1024:N2}) kbytes/s, {uploadingCount}w".PadRight(consoleWidth - 1));
+            //Console.WriteLine(t.PadRight(consoleWidth - 1));
             //Console.SetCursorPosition(0, currentLineCursor);
 
-            outputLocker.Set();
+            //outputLocker.Set();
         }
 
         private int uploadBufferLen => publishInfo.BufferLen;
@@ -404,7 +408,7 @@ namespace ServerPublisher.Client
 
             //ConcurrentBag<Task> temp = new();
 
-            SemaphoreSlim locker = new(1);
+            //SemaphoreSlim locker = new(1);
 
             var cnt = fs.Length / uploadBufferLen;
 
@@ -423,47 +427,47 @@ namespace ServerPublisher.Client
                 //{
                 //    await uploadBalancing.WaitAsync();
 
-                    byte[] buf = new byte[uploadBufferLen];
+                byte[] buf = new byte[uploadBufferLen];
 
-                    int currLen = default;
+                int currLen = default;
 
-                    var r = Stopwatch.StartNew();
+                var r = Stopwatch.StartNew();
 
-                    //await locker.WaitAsync();
+                //await locker.WaitAsync();
 
-                    var offset = fs.Position = i * uploadBufferLen;
+                var offset = fs.Position = i * uploadBufferLen;
 
-                    currLen = fs.Read(buf, 0, buf.Length);
+                currLen = fs.Read(buf, 0, buf.Length);
 
-                    //locker.Release();
+                //locker.Release();
 
-                    readInvoke.Add(r.ElapsedMilliseconds);
-                    //Console.WriteLine($"Read {readInvoke.Min()}/{readInvoke.Average()}/{readInvoke.Max()}");
+                readInvoke.Add(r.ElapsedMilliseconds);
+                //Console.WriteLine($"Read {readInvoke.Min()}/{readInvoke.Average()}/{readInvoke.Max()}");
 
-                    if (currLen < buf.Length)
-                        Array.Resize(ref buf, currLen);
+                if (currLen < buf.Length)
+                    Array.Resize(ref buf, currLen);
 
-                    //Console.WriteLine($"Uploading {file.RelativePath}: {100.0 / fs.Length * fs.Position}%");
+                //Console.WriteLine($"Uploading {file.RelativePath}: {100.0 / fs.Length * fs.Position}%");
 
 
-                    var u = Stopwatch.StartNew();
-                        Interlocked.Increment(ref uploadingCount);
+                var u = Stopwatch.StartNew();
+                Interlocked.Increment(ref uploadingCount);
 
-                    await network.UploadFilePart(new PublishProjectUploadFileBytesRequestModel()
-                    {
-                        Bytes = buf,
-                        Offset = offset,
-                        FileId = fsr.FileId
-                    });
+                await network.UploadFilePart(new PublishProjectUploadFileBytesRequestModel()
+                {
+                    Bytes = buf,
+                    Offset = offset,
+                    FileId = fsr.FileId
+                });
 
-                    uploadInvoke.Add(u.ElapsedMilliseconds);
-                    //Console.WriteLine($"Upload {uploadInvoke.Min()}/{uploadInvoke.Average()}/{uploadInvoke.Max()}");
+                uploadInvoke.Add(u.ElapsedMilliseconds);
+                //Console.WriteLine($"Upload {uploadInvoke.Min()}/{uploadInvoke.Average()}/{uploadInvoke.Max()}");
 
-                    //uploadBalancing.Release();
+                //uploadBalancing.Release();
 
-                    //Interlocked.Decrement(ref uploadingCount);
+                //Interlocked.Decrement(ref uploadingCount);
 
-                    //Interlocked.Add(ref uploadedLen, currLen);
+                //Interlocked.Add(ref uploadedLen, currLen);
 
 
                 //}).ContinueWith(t =>
@@ -482,7 +486,7 @@ namespace ServerPublisher.Client
             //Console.WriteLine($"Uploaded file {file.RelativePath}");
 
             //Task.WhenAll(waitUploadTasks).ContinueWith(t => { 
-                fs.Close(); 
+            fs.Close();
             //}).RunAsync();
         }
 
@@ -527,6 +531,57 @@ namespace ServerPublisher.Client
             };
 
             return await network.SignIn(request);
+        }
+
+        private AutoResetEvent outputLocker = new AutoResetEvent(true);
+
+        int lastType = -1;
+
+        int outputLen = 0;
+
+        int consoleWidth = Console.WindowWidth;
+
+        private void ReplaceLog(string text, int type)
+        {
+            outputLocker.WaitOne();
+
+            if (lastType != type)
+            {
+                Console.WriteLine();
+                outputLen = 0;
+                lastType = type;
+            }
+
+            consoleWidth = Console.WindowWidth;
+
+
+            var top = outputLen / consoleWidth;
+
+
+            var curPos = Console.GetCursorPosition();
+
+
+            Console.SetCursorPosition(0, curPos.Top - top);
+
+
+            text = text.PadRight(outputLen > text.Length ? outputLen : text.Length);
+
+            Console.Write(text);
+
+            outputLen = text.Length;
+
+            outputLocker.Set();
+        }
+
+        private void LineLog(string text)
+        {
+            outputLocker.WaitOne();
+
+            lastType = -1;
+
+            Console.WriteLine(text);
+
+            outputLocker.Set();
         }
     }
 }

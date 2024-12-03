@@ -113,6 +113,9 @@ namespace ServerPublisher.Server.Network.PublisherClient
 
                             client?.Network?.Disconnect();
                         });
+
+                        builder.GetCoreOptions().ReceiveBufferSize = 512 * 1024;
+                        builder.GetCoreOptions().SegmentSize = 512;
                     })
                     .WithBindingPoint(addr, BindingPort)
                     .WithBacklog(Backlog)
