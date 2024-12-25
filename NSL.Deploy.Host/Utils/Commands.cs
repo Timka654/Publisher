@@ -374,13 +374,14 @@ WantedBy=multi-user.target
                 projectInfo.UpdatePatchInfo(template.ProjectInfo.PatchInfo);
             }
 
-            foreach (var item in template.Users)
-            {
-                var user = UserInfo.CreateUser(item.Name);
+            if (template.Users != null)
+                foreach (var item in template.Users)
+                {
+                    var user = UserInfo.CreateUser(item.Name);
 
-                if (projectInfo.AddUser(user))
-                    Logger.AppendInfo($"Success append new user {user.Name}");
-            }
+                    if (projectInfo.AddUser(user))
+                        Logger.AppendInfo($"Success append new user {user.Name}");
+                }
 
 
         }
