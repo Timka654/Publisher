@@ -27,6 +27,7 @@ using Microsoft.CodeAnalysis;
 using ServerPublisher.Server.Utils;
 using ServerPublisher.Server.Dev.Test.Utils;
 using System.ComponentModel;
+using NSL.Utils.CommandLine;
 
 namespace ServerPublisher.Server.Info
 {
@@ -1038,16 +1039,16 @@ namespace ServerPublisher.Server.Info
             SaveProjectInfo();
         }
 
-        public ServerProjectInfo(CommandLineArgs args, string directory)
+        public ServerProjectInfo(string? id, string name, bool fullReplace, bool backup, string directory)
         {
             PublisherServer.ServerLogger.AppendInfo("project creating");
 
             Info = new ProjectInfoData()
             {
-                Id = args.ContainsKey("project_id") ? args["project_id"] : Guid.NewGuid().ToString(),
-                Name = args["name"],
-                FullReplace = args.ContainsKey("full_replace") && Convert.ToBoolean(args["full_replace"]),
-                Backup = (args.ContainsKey("backup") && Convert.ToBoolean(args["backup"])) || !args.ContainsKey("backup"),
+                Id = id ?? Guid.NewGuid().ToString(),
+                Name = name,
+                FullReplace = fullReplace,
+                Backup = backup,
                 IgnoreFilePaths = PublisherServer.Configuration.Publisher.ProjectConfiguration.Default.IgnoreFilePaths.ToList()
             };
 

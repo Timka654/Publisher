@@ -19,6 +19,7 @@ using Newtonsoft.Json.Linq;
 using ServerPublisher.Shared.Models.RequestModels;
 using ServerPublisher.Shared.Utils;
 using System.Diagnostics;
+using NSL.Utils.CommandLine;
 
 namespace ServerPublisher.Client
 {
@@ -237,7 +238,7 @@ namespace ServerPublisher.Client
 
         private void Instance_OnReceiveEvent(string value)
         {
-            LineLog(value);
+            logOutput.LineLog(value);
         }
 
         private async void PublishProjectStartMessage_OnReceiveEvent(ProjectFileListResponseModel value)
@@ -367,6 +368,8 @@ namespace ServerPublisher.Client
             }
         }
 
+        private NSLConsoleOutput logOutput => NSLConsoleOutput.Instance;
+
         private void displayStats(long? speed)
         {
             //outputLocker.WaitOne();
@@ -375,7 +378,7 @@ namespace ServerPublisher.Client
 
             var t = $"Uploaded {uploadedLen / 1024:N0}/{uploadLen / 1024:N0} kbytes {(1.0 * uploadedLen / uploadLen ):P}. Speed {speed / 1024:N2}(Max: {uploadedMarks.DefaultIfEmpty()?.Max() / 1024:N2}, Avg: {uploadedMarks.DefaultIfEmpty()?.Average() / 1024:N2}, Min: {uploadedMarks.DefaultIfEmpty()?.Min() / 1024:N2}) kbytes/s, {(DateTime.UtcNow - startTime):hh\\:mm\\:ss}";
 
-            ReplaceLog(t, 1);
+            logOutput.ReplaceLog(t, 1);
 
             //int currentLineCursor = Console.CursorTop;
             //Console.SetCursorPosition(0, Console.CursorTop);
@@ -531,57 +534,6 @@ namespace ServerPublisher.Client
             };
 
             return await network.SignIn(request);
-        }
-
-        private AutoResetEvent outputLocker = new AutoResetEvent(true);
-
-        int lastType = -1;
-
-        int outputLen = 0;
-
-        int consoleWidth = Console.WindowWidth;
-
-        private void ReplaceLog(string text, int type)
-        {
-            outputLocker.WaitOne();
-
-            if (lastType != type)
-            {
-                Console.WriteLine();
-                outputLen = 0;
-                lastType = type;
-            }
-
-            consoleWidth = Console.WindowWidth;
-
-
-            var top = outputLen / consoleWidth;
-
-
-            var curPos = Console.GetCursorPosition();
-
-
-            Console.SetCursorPosition(0, curPos.Top - top);
-
-
-            text = text.PadRight(outputLen > text.Length ? outputLen : text.Length);
-
-            Console.Write(text);
-
-            outputLen = text.Length;
-
-            outputLocker.Set();
-        }
-
-        private void LineLog(string text)
-        {
-            outputLocker.WaitOne();
-
-            lastType = -1;
-
-            Console.WriteLine(text);
-
-            outputLocker.Set();
         }
     }
 }

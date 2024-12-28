@@ -1,19 +1,19 @@
-﻿using NSL.Logger;
-using ServerPublisher.Server.Utils;
+﻿using NSL.Deploy.Host.Utils.Commands;
+using NSL.Logger;
+using NSL.Utils.CommandLine.CLHandles;
 using System;
+using System.Threading.Tasks;
 
 namespace ServerPublisher.Server
 {
     public class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             PublisherServer.InitializeApp();
 
-            if (Commands.Process())
-                return;
-
-            PublisherServer.ServerLogger.AppendError($"Unknown args {string.Join(" ", args)}");
+            await CLHandler<AppCommands>.Instance
+                .ProcessCommand(new NSL.Utils.CommandLine.CommandLineArgsReader(new NSL.Utils.CommandLine.CommandLineArgs()));
         }
     }
 }

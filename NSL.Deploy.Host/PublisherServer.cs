@@ -14,6 +14,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.ServiceProcess;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace ServerPublisher.Server
 {
@@ -74,12 +75,12 @@ namespace ServerPublisher.Server
             Configuration = JsonConvert.DeserializeObject<ConfigurationSettingsInfo>(File.ReadAllText(path));
         }
 
-        public static void RunServer()
+        public static async Task RunServer()
         {
 #if DEBUG
             PublisherNetworkServer.Initialize();
             PublisherNetworkServer.Run();
-            Thread.Sleep(Timeout.Infinite);
+            await Task.Delay(Timeout.Infinite);
 #endif
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -89,7 +90,7 @@ namespace ServerPublisher.Server
                 PublisherNetworkServer.Initialize();
                 PublisherNetworkServer.Run();
 
-                Thread.Sleep(Timeout.Infinite);
+                await Task.Delay(Timeout.Infinite);
             }
         }
     }

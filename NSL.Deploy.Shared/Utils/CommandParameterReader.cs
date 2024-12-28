@@ -1,6 +1,9 @@
 ﻿using Newtonsoft.Json.Linq;
 using NSL.SocketCore.Utils.Logger;
 using NSL.Utils;
+using NSL.Utils.CommandLine;
+using NSL.Utils.CommandLine.CLHandles;
+using NSL.Utils.CommandLine.CLHandles.Arguments;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -57,9 +60,9 @@ namespace ServerPublisher.Shared.Utils
             }
         }
 
-        public static bool CheckHaveCommandFlag(this CommandLineArgs args, IBasicLogger logger, string key)
+        public static bool CheckCommandHaveFlag(this CLArgumentValues values, IBasicLogger logger, string key)
         {
-            if (args.ContainsKey(key))
+            if (values.ContainsArg(key))
             {
                 logger.Append(NSL.SocketCore.Utils.Logger.Enums.LoggerLevel.Info, $"flag \"{key}\" = y");
 
@@ -71,9 +74,9 @@ namespace ServerPublisher.Shared.Utils
             return false;
         }
 
-        public static bool ConfirmAction(this CommandLineArgs args, IBasicLogger logger)
+        public static bool ConfirmCommandAction(this CLArgumentValues args, IBasicLogger logger)
         {
-            if (args.TryGetOutValue("flags", out string flags))
+            if (args.TryGetValue("flags", out string flags))
             {
                 if (flags.Contains("y", StringComparison.OrdinalIgnoreCase))
                 {
@@ -82,7 +85,7 @@ namespace ServerPublisher.Shared.Utils
                 }
             }
 
-            if (CheckHaveCommandFlag(args, logger, "y"))
+            if (CheckCommandHaveFlag(args, logger, "y"))
             {
                 logger.Append(NSL.SocketCore.Utils.Logger.Enums.LoggerLevel.Info, $"Flags contains 'y' - confirm action");
                 return true;

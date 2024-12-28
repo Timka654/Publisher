@@ -2,6 +2,7 @@
 using NSL.Cipher.RSA;
 using NSL.Logger;
 using NSL.Utils;
+using NSL.Utils.CommandLine;
 using ServerPublisher.Server.Dev.Test.Utils;
 using ServerPublisher.Server.Utils;
 using ServerPublisher.Shared.Info;
@@ -44,11 +45,6 @@ namespace ServerPublisher.Server.Info
         public UserInfo()
         {
 
-        }
-
-        public static UserInfo CreateUser(CommandLineArgs args)
-        {
-            return CreateUser(args["name"]);
         }
 
         public static UserInfo CreateUser(string name)

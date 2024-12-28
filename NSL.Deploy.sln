@@ -7,8 +7,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NSL.Deploy.Client", "NSL.De
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NSL.Deploy.Client.Library", "NSL.Deploy.Client.Library\NSL.Deploy.Client.Library.csproj", "{6E42AB66-4E3F-4634-A8D6-401CCD785FD7}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NSL.Deploy.QuickUpdater", "NSL.Deploy.QuickUpdater\NSL.Deploy.QuickUpdater.csproj", "{5EE86906-FAAA-48F9-AEEB-BBC392B955A3}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NSL.Deploy.Host", "NSL.Deploy.Host\NSL.Deploy.Host.csproj", "{756304ED-8940-4312-AD3A-5EFCDE9A7AF8}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NSL.Deploy.Shared", "NSL.Deploy.Shared\NSL.Deploy.Shared.csproj", "{326156E5-0DF6-4C04-B006-81802DAE9C05}"
@@ -46,16 +44,6 @@ Global
 		{6E42AB66-4E3F-4634-A8D6-401CCD785FD7}.Unity|Any CPU.Build.0 = Release|Any CPU
 		{6E42AB66-4E3F-4634-A8D6-401CCD785FD7}.UnityDebug|Any CPU.ActiveCfg = Debug|Any CPU
 		{6E42AB66-4E3F-4634-A8D6-401CCD785FD7}.UnityDebug|Any CPU.Build.0 = Debug|Any CPU
-		{5EE86906-FAAA-48F9-AEEB-BBC392B955A3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{5EE86906-FAAA-48F9-AEEB-BBC392B955A3}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{5EE86906-FAAA-48F9-AEEB-BBC392B955A3}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{5EE86906-FAAA-48F9-AEEB-BBC392B955A3}.Release|Any CPU.Build.0 = Release|Any CPU
-		{5EE86906-FAAA-48F9-AEEB-BBC392B955A3}.ScriptsDebugging|Any CPU.ActiveCfg = ScriptsDebugging|Any CPU
-		{5EE86906-FAAA-48F9-AEEB-BBC392B955A3}.ScriptsDebugging|Any CPU.Build.0 = ScriptsDebugging|Any CPU
-		{5EE86906-FAAA-48F9-AEEB-BBC392B955A3}.Unity|Any CPU.ActiveCfg = Release|Any CPU
-		{5EE86906-FAAA-48F9-AEEB-BBC392B955A3}.Unity|Any CPU.Build.0 = Release|Any CPU
-		{5EE86906-FAAA-48F9-AEEB-BBC392B955A3}.UnityDebug|Any CPU.ActiveCfg = Debug|Any CPU
-		{5EE86906-FAAA-48F9-AEEB-BBC392B955A3}.UnityDebug|Any CPU.Build.0 = Debug|Any CPU
 		{756304ED-8940-4312-AD3A-5EFCDE9A7AF8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{756304ED-8940-4312-AD3A-5EFCDE9A7AF8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{756304ED-8940-4312-AD3A-5EFCDE9A7AF8}.Release|Any CPU.ActiveCfg = Release|Any CPU

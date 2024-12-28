@@ -73,5 +73,10 @@ namespace ServerPublisher.Server.Managers.Storages
         {
             return storage.Any(x => x.Value.ProjectDirPath.Equals(directory, StringComparison.OrdinalIgnoreCase));
         }
+
+        internal bool ExistProjectById(string projectId)
+        {
+            return storage.ContainsKey(projectId);
+        }
     }
 }
