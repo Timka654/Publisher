@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using NSL.Logger;
 using NSL.Logger.Interface;
+using NSL.ServiceUpdater.Shared;
 using NSL.Utils.CommandLine.CLHandles;
 using ServerPublisher.Client;
 using System;
@@ -33,6 +34,17 @@ namespace NSL.Deploy.Client.Utils.Commands
 
             if (!Directory.Exists(Path.Combine(path, Environment.ExpandEnvironmentVariables(Program.Configuration.KeysPath))))
                 Directory.CreateDirectory(Path.Combine(path, Environment.ExpandEnvironmentVariables(Program.Configuration.KeysPath)));
+
+            var versionPath = Path.Combine(path, "nsl_version.json");
+
+            var cfg = new UpdaterConfig();
+
+            cfg
+                .SetValue(() => cfg.UpdateUrl = "https://pubstorage.mtvworld.net/update/deployclient/")
+                .SetValue(() => cfg.IgnorePathPatterns = ["(\\s\\S)*config.json"])
+                .SetValue(() => cfg.Log = false)
+                .SetValue(() => cfg.ProcessKill = true)
+                .Save(versionPath);
         }
     }
 }

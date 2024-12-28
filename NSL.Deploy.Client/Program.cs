@@ -16,16 +16,14 @@ namespace ServerPublisher.Client
 
         public static string ConfigurationPath { get; private set; }
 
-        static async Task Main(string[] args)
+        #region Updater
+
+        static async Task LoadUpdater(string appPath)
         {
-            var appPath = AppDomain.CurrentDomain.BaseDirectory;
-
-            ConfigurationPath = Path.Combine(appPath, "config.json");
-
-            if (File.Exists(ConfigurationPath))
-                Configuration = JsonConvert.DeserializeObject<ConfigurationInfoModel>(File.ReadAllText(ConfigurationPath));
-
             var updateFilePath = Path.Combine(appPath, "nsl_version.json");
+
+            if (!File.Exists(updateFilePath))
+                return;
 
             if (await UpdateChecker.CheckStartUpdateBaseScenario())
             {
@@ -39,13 +37,10 @@ namespace ServerPublisher.Client
                 return;
             }
 
-            if (await NSL.ServiceUpdater.Shared.UpdateChecker.CheckUpdatesBaseScenario(updateFilePath, configurePostprocessing: configureVersionHandle, createIfDoesNotExists: true))
+            if (await UpdateChecker.CheckUpdatesBaseScenario(updateFilePath, configurePostprocessing: configureVersionHandle, createIfDoesNotExists: true))
             {
                 await Task.Delay(3_000);
             }
-
-            await CLHandler<AppCommands>.Instance
-                .ProcessCommand(new CommandLineArgs().CreateReader());
         }
 
         private static async Task exceptionVersionHandle(UpdaterStepEnum step, Exception ex)
@@ -55,12 +50,34 @@ namespace ServerPublisher.Client
 
         private static void configureVersionHandle(UpdaterConfig config)
         {
-            config.UpdateVersion("basic", c => c
-            .SetValue(() => c.UpdateUrl = "https://pubstorage.twicepricegroup.com/update/deployclient/")
-            .SetValue(() => c.IgnorePathPatterns = ["(\\s\\S)*config.json"])
-            .SetValue(() => c.Log = false)
-            .SetValue(() => c.ProcessKill = true)
+            config.UpdateVersion("update1", c => c
+            .SetValue(() => c.UpdateUrl = "https://pubstorage.mtvworld.net/update/deployclient/")
             );
+        }
+
+        #endregion
+
+        static void LoadConfiguration(string appPath)
+        {
+            ConfigurationPath = Path.Combine(appPath, "config.json");
+
+            if (File.Exists(ConfigurationPath))
+                Configuration = JsonConvert.DeserializeObject<ConfigurationInfoModel>(File.ReadAllText(ConfigurationPath));
+            else
+                Configuration = new ConfigurationInfoModel();
+        }
+
+
+        static async Task Main(string[] args)
+        {
+            var appPath = AppDomain.CurrentDomain.BaseDirectory;
+
+            LoadConfiguration(appPath);
+
+            await LoadUpdater(appPath);
+
+            await CLHandler<AppCommands>.Instance
+                .ProcessCommand(new CommandLineArgs().CreateReader());
         }
     }
 }
