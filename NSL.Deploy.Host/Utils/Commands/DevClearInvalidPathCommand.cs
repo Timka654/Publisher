@@ -8,6 +8,7 @@ using NSL.Utils.CommandLine.CLHandles.Arguments;
 
 namespace NSL.Deploy.Host.Utils.Commands
 {
+    [CLHandleSelect("default")]
     internal class DevClearInvalidPathCommand : CLHandler
     {
         public override string Command => "dev_clear_invalid_path";

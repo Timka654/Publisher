@@ -20,7 +20,7 @@ namespace NSL.Deploy.Client.Utils.Commands
 
         public InstallGlobalKeysCommand()
         {
-
+            AddArguments(SelectArguments());
         }
 
         public override async Task<CommandReadStateEnum> ProcessCommand(CommandLineArgsReader reader, CLArgumentValues values)

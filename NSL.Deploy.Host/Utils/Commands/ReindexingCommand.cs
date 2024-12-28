@@ -7,6 +7,9 @@ using NSL.Utils.CommandLine.CLHandles.Arguments;
 
 namespace NSL.Deploy.Host.Utils.Commands
 {
+    [CLHandleSelect("default")]
+    [CLArgument("projectId", typeof(string), optional: true)]
+    [CLArgument("directory", typeof(string), optional: true)]
     internal class ReindexingCommand : CLHandler
     {
         public override string Command => "reindexing";

@@ -11,6 +11,7 @@ using NSL.Utils.CommandLine.CLHandles.Arguments;
 namespace NSL.Deploy.Host.Utils.Commands
 {
     [CLHandleSelect("default")]
+    [CLArgument("directory", typeof(string))]
     [CLArgument("name", typeof(string))]
     [CLArgument("project_id", typeof(string), true)]
     [CLArgument("full_replace", typeof(bool))]

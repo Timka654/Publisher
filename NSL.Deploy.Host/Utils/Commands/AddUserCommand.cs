@@ -11,6 +11,8 @@ namespace NSL.Deploy.Host.Utils.Commands
 {
     [CLHandleSelect("default")]
     [CLArgument("path", typeof(string))]
+    [CLArgument("projectId", typeof(string), optional: true)]
+    [CLArgument("directory", typeof(string), optional: true)]
     internal class AddUserCommand : CLHandler
     {
         public override string Command => "add_user";
@@ -19,7 +21,7 @@ namespace NSL.Deploy.Host.Utils.Commands
 
         public AddUserCommand()
         {
-
+            AddArguments(SelectArguments());
         }
 
         [CLArgumentValue("path")] private string path { get; set; }

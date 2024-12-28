@@ -6,6 +6,7 @@ using NSL.Utils.CommandLine.CLHandles.Arguments;
 
 namespace NSL.Deploy.Host.Utils.Commands
 {
+    [CLHandleSelect("default")]
     internal class RunServiceCommand : CLHandler
     {
         public override string Command => "service";

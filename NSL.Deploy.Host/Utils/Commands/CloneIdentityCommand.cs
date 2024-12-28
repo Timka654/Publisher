@@ -13,6 +13,8 @@ namespace NSL.Deploy.Host.Utils.Commands
     [CLHandleSelect("default")]
     [CLArgument("source_project_id", typeof(string))]
     [CLArgument("only_private", typeof(bool))]
+    [CLArgument("projectId", typeof(string), optional: true)]
+    [CLArgument("directory", typeof(string), optional: true)]
     internal class CloneIdentityCommand : CLHandler
     {
         public override string Command => "clone_identity";

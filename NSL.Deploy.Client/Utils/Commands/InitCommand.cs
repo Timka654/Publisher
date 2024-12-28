@@ -15,11 +15,13 @@ namespace NSL.Deploy.Client.Utils.Commands
 
         public InitCommand()
         {
-
+            AddArguments(SelectArguments());
         }
 
         public override async Task<CommandReadStateEnum> ProcessCommand(CommandLineArgsReader reader, CLArgumentValues values)
         {
+            ProcessingAutoArgs(values);
+
             var appPath = AppDomain.CurrentDomain.BaseDirectory;
 
             AppCommands.InitData(appPath);

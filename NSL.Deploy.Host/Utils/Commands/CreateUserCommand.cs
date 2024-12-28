@@ -15,6 +15,8 @@ namespace NSL.Deploy.Host.Utils.Commands
     [CLArgument("publisher", typeof(CLContainsType))]
     [CLArgument("proxy", typeof(CLContainsType))]
     [CLArgument("both", typeof(CLContainsType))]
+    [CLArgument("projectId", typeof(string), optional: true)]
+    [CLArgument("directory", typeof(string), optional: true)]
     internal class CreateUserCommand : CLHandler
     {
         public override string Command => "create_user";

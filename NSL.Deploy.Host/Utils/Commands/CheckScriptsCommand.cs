@@ -8,6 +8,8 @@ using NSL.Utils.CommandLine.CLHandles.Arguments;
 namespace NSL.Deploy.Host.Utils.Commands
 {
     [CLHandleSelect("default")]
+    [CLArgument("projectId", typeof(string), optional: true)]
+    [CLArgument("directory", typeof(string), optional: true)]
     internal class CheckScriptsCommand : CLHandler
     {
         public override string Command => "check_scripts";
@@ -16,11 +18,13 @@ namespace NSL.Deploy.Host.Utils.Commands
 
         public CheckScriptsCommand()
         {
-
+            AddArguments(SelectArguments());
         }
 
         public override async Task<CommandReadStateEnum> ProcessCommand(CommandLineArgsReader reader, CLArgumentValues values)
         {
+            base.ProcessingAutoArgs(values);
+
             AppCommands.Logger.AppendInfo("Check Scripts");
 
             if (!values.ConfirmCommandAction(AppCommands.Logger))

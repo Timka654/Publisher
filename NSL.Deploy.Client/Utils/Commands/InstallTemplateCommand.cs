@@ -20,13 +20,15 @@ namespace NSL.Deploy.Client.Utils.Commands
 
         public InstallTemplateCommand()
         {
-
+            AddArguments(SelectArguments());
         }
 
         public override async Task<CommandReadStateEnum> ProcessCommand(CommandLineArgsReader reader, CLArgumentValues values)
         {
             if (PermissionUtils.RequireRunningAsAdministrator())
                 return CommandReadStateEnum.Success;
+
+            ProcessingAutoArgs(values);
 
             var dir = Directory.GetCurrentDirectory();
 

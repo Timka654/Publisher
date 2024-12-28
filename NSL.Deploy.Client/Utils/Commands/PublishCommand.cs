@@ -15,11 +15,13 @@ namespace NSL.Deploy.Client.Utils.Commands
 
         public PublishCommand()
         {
-
+            AddArguments(SelectArguments());
         }
 
         public override async Task<CommandReadStateEnum> ProcessCommand(CommandLineArgsReader reader, CLArgumentValues values)
         {
+            ProcessingAutoArgs(values);
+
             await new Publish()
             .Run(reader.Args);
 

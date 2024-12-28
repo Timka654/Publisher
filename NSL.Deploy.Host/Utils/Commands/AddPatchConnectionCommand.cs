@@ -16,6 +16,8 @@ namespace NSL.Deploy.Host.Utils.Commands
     [CLArgument("identity_name", typeof(string))]
     [CLArgument("input_cipher_key", typeof(string), true)]
     [CLArgument("output_cipher_key", typeof(string), true)]
+    [CLArgument("projectId", typeof(string), optional: true)]
+    [CLArgument("directory", typeof(string), optional: true)]
     internal class AddPatchConnectionCommand : CLHandler
     {
         public override string Command => "add_patch_connection";
@@ -60,12 +62,6 @@ namespace NSL.Deploy.Host.Utils.Commands
                 AppCommands.Logger.AppendInfo($"Not contains \"output_cipher_key\" parameter. Set from configuration {OutputCipherKey}");
             }
 
-            if (!values.TryGetValue("identity_name", out string identity_name))
-            {
-                AppCommands.Logger.AppendError($"Add Patch Connection must have \"identity_name\" parameter");
-                return CommandReadStateEnum.Failed;
-            }
-
             ServerProjectInfo projectInfo = values.GetProject();
 
             if (projectInfo != null)
@@ -79,7 +75,7 @@ namespace NSL.Deploy.Host.Utils.Commands
                     Port = Port,
                     InputCipherKey = InputCipherKey,
                     OutputCipherKey = OutputCipherKey,
-                    SignName = identity_name
+                    SignName = IdentityName
                 });
 
                 AppCommands.Logger.AppendInfo($"Patch connection info changed in {projectInfo.Info.Name}({projectInfo.Info.Id}) project");

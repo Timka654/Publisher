@@ -11,6 +11,8 @@ using NSL.Utils.CommandLine.CLHandles.Arguments;
 
 namespace NSL.Deploy.Host.Utils.Commands
 {
+    [CLHandleSelect("default")]
+    [CLArgument("template_path", typeof(string))]
     internal class UpdateProjectCommand : CLHandler
     {
         public override string Command => "update_project";

@@ -33,23 +33,34 @@ namespace NSL.Deploy.Host.Utils.Commands
             AddArguments(SelectArguments());
         }
 
+        [CLArgumentExists("default")] bool isDefault { get; set; }
+
+        [CLArgumentExists("service")] bool isService { get; set; }
+
+        [CLArgumentExists("reinit")] bool reInit { get; set; }
+
+        [CLArgumentValue("path")] string path { get; set; }
+
+        [CLArgumentExists("path")] bool havePath { get; set; }
+
+        [CLArgumentValue("service_name", "Deploy Host")] string serviceName { get; set; }
+
+        [CLArgumentExists("service_name")] bool haveServiceName { get; set; }
+
+        [CLArgumentValue("service_file_name", "deployhost.service")] string serviceFileName { get; set; }
+
+        [CLArgumentExists("service_file_name")] bool haveServiceFileName { get; set; }
+
+
+        [CLArgumentExists("q")] bool quit { get; set; }
+
         public override async Task<CommandReadStateEnum> ProcessCommand(CommandLineArgsReader reader, CLArgumentValues values)
         {
             base.ProcessingAutoArgs(values);
 
             var appPath = AppDomain.CurrentDomain.BaseDirectory;
 
-            bool isDefault = values.ContainsArg("default");
-
-            bool isService = values.ContainsArg("service");
-
-            bool reInit = values.ContainsArg("reinit");
-
-            bool haveServiceName = values.TryGetValue("service_name", out string serviceName, "Deploy Host");
-            bool haveServicePath = values.TryGetValue("service_file_name", out string serviceFileName, "deployhost.service");
-
-
-            if (!values.TryGetValue("path", out string path))
+            if (!havePath)
             {
                 if (Environment.OSVersion.Platform == PlatformID.Unix)
                 {
@@ -80,7 +91,7 @@ namespace NSL.Deploy.Host.Utils.Commands
 
                 if (Environment.OSVersion.Platform == PlatformID.Unix)
                 {
-                    if (!haveServicePath)
+                    if (!haveServiceFileName)
                     {
                         if (!isDefault)
                             serviceFileName = CommandParameterReader.Read("Service file name", AppCommands.Logger, serviceFileName);
@@ -234,6 +245,9 @@ WantedBy=multi-user.target
                     Process.Start("sc.exe", $"create \"{serviceName}\" binPath=\"{execPath} / action:service\"\"\" start=auto");
                 }
             }
+
+            if (!quit)
+                Console.ReadKey();
 
             return CommandReadStateEnum.Success;
         }

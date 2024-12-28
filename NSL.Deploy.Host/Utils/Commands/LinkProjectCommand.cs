@@ -10,6 +10,8 @@ using NSL.Utils.CommandLine.CLHandles.Arguments;
 
 namespace NSL.Deploy.Host.Utils.Commands
 {
+    [CLHandleSelect("default")]
+    [CLArgument("directory", typeof(string))]
     internal class LinkProjectCommand : CLHandler
     {
         public override string Command => "link_project";
