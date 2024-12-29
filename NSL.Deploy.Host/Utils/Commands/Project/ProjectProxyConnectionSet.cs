@@ -8,9 +8,9 @@ using System.Threading.Tasks;
 using ServerPublisher.Server;
 using NSL.Utils.CommandLine.CLHandles.Arguments;
 
-namespace NSL.Deploy.Host.Utils.Commands
+namespace NSL.Deploy.Host.Utils.Commands.Project
 {
-    [CLHandleSelect("default")]
+    [CLHandleSelect("projects")]
     [CLArgument("ip_address", typeof(string))]
     [CLArgument("port", typeof(int))]
     [CLArgument("identity_name", typeof(string))]
@@ -18,13 +18,15 @@ namespace NSL.Deploy.Host.Utils.Commands
     [CLArgument("output_cipher_key", typeof(string), true)]
     [CLArgument("projectId", typeof(string), optional: true)]
     [CLArgument("directory", typeof(string), optional: true)]
-    internal class AddPatchConnectionCommand : CLHandler
+    [CLArgument("y", typeof(CLContainsType), true)]
+    [CLArgument("flags", typeof(string), true)]
+    internal class ProjectProxyConnectionSet : CLHandler
     {
-        public override string Command => "add_patch_connection";
+        public override string Command => "set_patch_connection";
 
         public override string Description { get => ""; set => base.Description = value; }
 
-        public AddPatchConnectionCommand()
+        public ProjectProxyConnectionSet()
         {
             AddArguments(SelectArguments());
         }
@@ -44,7 +46,7 @@ namespace NSL.Deploy.Host.Utils.Commands
 
         public override async Task<CommandReadStateEnum> ProcessCommand(CommandLineArgsReader reader, CLArgumentValues values)
         {
-            base.ProcessingAutoArgs(values);
+            ProcessingAutoArgs(values);
 
             AppCommands.Logger.AppendInfo("Add Patch Connection");
 

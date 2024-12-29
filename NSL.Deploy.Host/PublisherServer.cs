@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NSL.Logger;
 using NSL.SocketCore.Utils.Logger;
-using ServerPublisher.Server.Dev.Test.Utils;
+using NSL.Utils;
 using ServerPublisher.Server.Info;
 using ServerPublisher.Server.Managers;
 using ServerPublisher.Server.Network.PublisherClient;
@@ -42,7 +42,7 @@ namespace ServerPublisher.Server
 
         public static bool CommandExecutor { get; set; } = false;
 
-        public static void InitializeApp()
+        public static void InitializeApp(string appPath)
         {
             ServerLogger.SetUnhandledExCatch(true);
 
@@ -56,7 +56,7 @@ namespace ServerPublisher.Server
 
             //AppLogger = new NSL.Logger.AspNet.ILoggerWrapper(logger);
 
-            DirectoryUtils.CreateNoExistsDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Configuration.Publisher.ProjectConfiguration.Server.GlobalScriptsFolderPath));
+            IOUtils.CreateDirectoryIfNoExists(Path.Combine(appPath, Configuration.Publisher.ProjectConfiguration.Server.GlobalScriptsFolderPath));
         }
 
         static void initializeConfiguration()

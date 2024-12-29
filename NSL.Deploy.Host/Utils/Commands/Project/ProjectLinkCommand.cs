@@ -8,24 +8,26 @@ using System.Threading.Tasks;
 using ServerPublisher.Server;
 using NSL.Utils.CommandLine.CLHandles.Arguments;
 
-namespace NSL.Deploy.Host.Utils.Commands
+namespace NSL.Deploy.Host.Utils.Commands.Project
 {
-    [CLHandleSelect("default")]
+    [CLHandleSelect("projects")]
     [CLArgument("directory", typeof(string))]
-    internal class LinkProjectCommand : CLHandler
+    [CLArgument("y", typeof(CLContainsType), true)]
+    [CLArgument("flags", typeof(string), true)]
+    internal class ProjectLinkCommand : CLHandler
     {
-        public override string Command => "link_project";
+        public override string Command => "link";
 
-        public override string Description { get => ""; set => base.Description = value; }
+        public override string Description { get => "Connect exists project to deploy host"; set => base.Description = value; }
 
-        public LinkProjectCommand()
+        public ProjectLinkCommand()
         {
             AddArguments(SelectArguments());
         }
 
         public override async Task<CommandReadStateEnum> ProcessCommand(CommandLineArgsReader reader, CLArgumentValues values)
         {
-            base.ProcessingAutoArgs(values);
+            ProcessingAutoArgs(values);
 
             AppCommands.Logger.AppendInfo("Link project");
 

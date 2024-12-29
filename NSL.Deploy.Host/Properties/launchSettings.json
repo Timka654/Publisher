@@ -2,8 +2,8 @@
   "profiles": {
     "ServerPublisher.Server": {
       "commandName": "Project",
-      "commandLineArgs": "/action:service",
-      "workingDirectory": "D:\\Temp\\publisher2\\server"
+      "commandLineArgs": "service",
+      "workingDirectory": "C:\\Temp\\publisher2\\server"
     },
     "ServerPublisher.Server.Dev.Test": {
       "commandName": "Project",

@@ -9,24 +9,24 @@ using System.Threading.Tasks;
 using ServerPublisher.Server;
 using NSL.Utils.CommandLine.CLHandles.Arguments;
 
-namespace NSL.Deploy.Host.Utils.Commands
+namespace NSL.Deploy.Host.Utils.Commands.Project.Template
 {
-    [CLHandleSelect("default")]
+    [CLHandleSelect("projects_template")]
     [CLArgument("template_path", typeof(string))]
-    internal class UpdateProjectCommand : CLHandler
+    internal class ProjectTemplateDeployCommand : CLHandler
     {
-        public override string Command => "update_project";
+        public override string Command => "update";
 
-        public override string Description { get => ""; set => base.Description = value; }
+        public override string Description { get => "Update/Create and link project on deploy host with \"Publisher/template.json\" template file"; set => base.Description = value; }
 
-        public UpdateProjectCommand()
+        public ProjectTemplateDeployCommand()
         {
             AddArguments(SelectArguments());
         }
 
         public override async Task<CommandReadStateEnum> ProcessCommand(CommandLineArgsReader reader, CLArgumentValues values)
         {
-            base.ProcessingAutoArgs(values);
+            ProcessingAutoArgs(values);
 
             AppCommands.Logger.AppendInfo("Update project from template");
 

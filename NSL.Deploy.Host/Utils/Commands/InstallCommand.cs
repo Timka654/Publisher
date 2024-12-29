@@ -22,6 +22,8 @@ namespace NSL.Deploy.Host.Utils.Commands
     [CLArgument("service_name", typeof(string), true, Description = "Service name for register and manage")]
     [CLArgument("service_file_name", typeof(string), true, Description = "(Linux only*) Service filename")]
     [CLArgument("q", typeof(CLContainsType), true, Description = "Close console after install")]
+    [CLArgument("y", typeof(CLContainsType), true)]
+    [CLArgument("flags", typeof(string), true)]
     internal class InstallCommand : CLHandler
     {
         public override string Command => "install";
@@ -145,15 +147,24 @@ namespace NSL.Deploy.Host.Utils.Commands
 
             if (!reInit)
             {
+                var dataDirPath = Path.GetFullPath(Path.Combine(path, "data"));
+                var serverSettingsPath = Path.GetFullPath(Path.Combine(path, "ServerSettings.json"));
+
                 foreach (var item in Directory.GetFiles(appPath, "*", SearchOption.AllDirectories))
                 {
                     int i = 0;
 
-                    var ePath = Path.Combine(path, Path.GetRelativePath(appPath, item));
+                    var ePath = Path.GetFullPath(Path.Combine(path, Path.GetRelativePath(appPath, item)));
 
                     var dir = Path.GetDirectoryName(ePath);
 
                     AppCommands.Logger.AppendInfo($"Copy '{item}' -> '{ePath}'");
+
+                    if ((ePath.StartsWith(dataDirPath) || ePath.StartsWith(serverSettingsPath)) && File.Exists(ePath))
+                    {
+                        AppCommands.Logger.AppendError($"'{ePath}' already exists - skip");
+                        continue;
+                    }
 
                     do
                     {
@@ -225,7 +236,7 @@ Description={serviceName}
 
 [Service]
 WorkingDirectory={path}
-ExecStart={execPath} /action:service
+ExecStart={execPath} service
 Restart=always
 # Restart service after 10 seconds if the dotnet service crashes:
 RestartSec=10
@@ -247,7 +258,11 @@ WantedBy=multi-user.target
             }
 
             if (!quit)
+            {
+                AppCommands.Logger.AppendInfo("Press any key to continue...");
+
                 Console.ReadKey();
+            }
 
             return CommandReadStateEnum.Success;
         }

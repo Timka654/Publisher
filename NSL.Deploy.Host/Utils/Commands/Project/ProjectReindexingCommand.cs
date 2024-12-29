@@ -5,25 +5,27 @@ using NSL.Utils.CommandLine.CLHandles;
 using System.Threading.Tasks;
 using NSL.Utils.CommandLine.CLHandles.Arguments;
 
-namespace NSL.Deploy.Host.Utils.Commands
+namespace NSL.Deploy.Host.Utils.Commands.Project
 {
-    [CLHandleSelect("default")]
+    [CLHandleSelect("projects")]
     [CLArgument("projectId", typeof(string), optional: true)]
     [CLArgument("directory", typeof(string), optional: true)]
-    internal class ReindexingCommand : CLHandler
+    [CLArgument("y", typeof(CLContainsType), true)]
+    [CLArgument("flags", typeof(string), true)]
+    internal class ProjectReindexingCommand : CLHandler
     {
         public override string Command => "reindexing";
 
         public override string Description { get => ""; set => base.Description = value; }
 
-        public ReindexingCommand()
+        public ProjectReindexingCommand()
         {
             AddArguments(SelectArguments());
         }
 
         public override async Task<CommandReadStateEnum> ProcessCommand(CommandLineArgsReader reader, CLArgumentValues values)
         {
-            base.ProcessingAutoArgs(values);
+            ProcessingAutoArgs(values);
 
             AppCommands.Logger.AppendInfo("Try reindexing");
 

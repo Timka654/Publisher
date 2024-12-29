@@ -21,30 +21,5 @@ namespace NSL.Deploy.Client.Utils.Commands
         {
             AddCommands(SelectSubCommands<CLHandleSelectAttribute>("default", true));
         }
-
-        public static void InitData(string path)
-        {
-            var configurationPath = Path.Combine(path, "config.json");
-
-            if (!File.Exists(configurationPath))
-                File.WriteAllText(configurationPath, JsonConvert.SerializeObject(Program.Configuration));
-
-            if (!Directory.Exists(Path.Combine(path, Environment.ExpandEnvironmentVariables(Program.Configuration.TemplatesPath))))
-                Directory.CreateDirectory(Path.Combine(path, Environment.ExpandEnvironmentVariables(Program.Configuration.TemplatesPath)));
-
-            if (!Directory.Exists(Path.Combine(path, Environment.ExpandEnvironmentVariables(Program.Configuration.KeysPath))))
-                Directory.CreateDirectory(Path.Combine(path, Environment.ExpandEnvironmentVariables(Program.Configuration.KeysPath)));
-
-            var versionPath = Path.Combine(path, "nsl_version.json");
-
-            var cfg = new UpdaterConfig();
-
-            cfg
-                .SetValue(() => cfg.UpdateUrl = "https://pubstorage.mtvworld.net/update/deployclient/")
-                .SetValue(() => cfg.IgnorePathPatterns = ["(\\s\\S)*config.json"])
-                .SetValue(() => cfg.Log = false)
-                .SetValue(() => cfg.ProcessKill = true)
-                .Save(versionPath);
-        }
     }
 }

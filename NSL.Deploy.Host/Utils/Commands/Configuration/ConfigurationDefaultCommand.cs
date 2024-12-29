@@ -10,9 +10,11 @@ using System.Threading.Tasks;
 using ServerPublisher.Server.Utils;
 using NSL.Utils.CommandLine.CLHandles.Arguments;
 
-namespace NSL.Deploy.Host.Utils.Commands
+namespace NSL.Deploy.Host.Utils.Commands.Configuration
 {
     [CLHandleSelect("default")]
+    [CLArgument("y", typeof(CLContainsType), true)]
+    [CLArgument("flags", typeof(string), true)]
     internal class ConfigurationDefaultCommand : CLHandler
     {
         public override string Command => "cdefault";

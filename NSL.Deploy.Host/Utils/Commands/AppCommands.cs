@@ -14,7 +14,7 @@ namespace NSL.Deploy.Host.Utils.Commands
     {
         public AppCommands()
         {
-
+            AddCommands(SelectSubCommands<CLHandleSelectAttribute>("default", true));
         }
 
         public static FileLogger Logger => PublisherServer.ServerLogger;

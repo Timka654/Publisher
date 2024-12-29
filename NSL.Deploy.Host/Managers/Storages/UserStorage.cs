@@ -1,4 +1,4 @@
-﻿using ServerPublisher.Server.Dev.Test.Utils;
+﻿using NSL.Utils;
 using ServerPublisher.Server.Info;
 using System;
 using System.Collections.Generic;
@@ -25,7 +25,7 @@ namespace ServerPublisher.Server.Managers.Storages
             this.dirPath = dirPath;
             this.watchPattern = watchPattern;
 
-            DirectoryUtils.CreateNoExistsDirectory(dirPath);
+            IOUtils.CreateDirectoryIfNoExists(dirPath);
 
             CreateWatcher();
             LoadUsers();

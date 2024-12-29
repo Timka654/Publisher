@@ -12,6 +12,8 @@ using System.Threading.Tasks;
 namespace NSL.Deploy.Client.Utils.Commands
 {
     [CLHandleSelect("default")]
+    [CLArgument("y", typeof(CLContainsType), true)]
+    [CLArgument("flags", typeof(string), true)]
     internal class InstallGlobalKeysCommand : CLHandler
     {
         public override string Command => "install_global_keys";
@@ -30,20 +32,18 @@ namespace NSL.Deploy.Client.Utils.Commands
 
             var dir = Directory.GetCurrentDirectory();
 
-            var appPath = AppDomain.CurrentDomain.BaseDirectory;
+            string keysPath = Program.KeysPath;
 
-            string templatePath = Path.Combine(appPath, Environment.ExpandEnvironmentVariables(Program.Configuration.KeysPath));
-
-            AppCommands.Logger.AppendInfo($"Move from {dir} to {templatePath}?");
+            AppCommands.Logger.AppendInfo($"Move from {dir} to {keysPath}?");
 
             if (!values.ConfirmCommandAction(AppCommands.Logger))
                 return CommandReadStateEnum.Success;
 
-            IOUtils.CreateDirectoryIfNoExists(templatePath);
+            IOUtils.CreateDirectoryIfNoExists(keysPath);
 
             foreach (var item in Directory.GetFiles(dir, "*.pubuk", SearchOption.AllDirectories))
             {
-                var epath = Path.Combine(templatePath, Path.GetFileName(item));
+                var epath = Path.Combine(keysPath, Path.GetFileName(item));
 
                 AppCommands.Logger.AppendInfo($"Copy \"{item}\" => \"{epath}\"");
 

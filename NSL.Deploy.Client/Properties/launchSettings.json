@@ -3,6 +3,16 @@
     "Publisher.Client": {
       "commandName": "Project",
       "commandLineArgs": "/action:publish /project_id:273a2073-5a66-43aa-ac08-c2e6e7838bb7 /directory:D:\\Temp\\publisher2\\client\\project1 /auth_key_path:dev_user_78d92859-cfe5-432d-9643-5c2e1f5f056e.pubuk /ip:127.0.0.1 /port:6583 /cipher_out_key:\"!{b1HX11R**\" /cipher_in_key:\"!{b1HX11R**\""
+    },
+    "dev_publish": {
+      "commandName": "Project",
+      "commandLineArgs": "publish /project_id:5fab9f9e-2d6c-4db7-9c8a-82c16223e382 /directory:C:\\Users\\relif\\work\\suto\\SweetIslandBackSide\\front\\data /auth_key_path:C:\\Users\\relif\\work\\suto\\SweetIslandBackSide\\front\\keys\\dev_user_65796989-8055-413e-a612-ecb329cfbed5.pubuk /ip:212.47.65.86 /port:6583 /cipher_out_key:\"!{b1HX11R**\" /cipher_in_key:\"!{b1HX11R**\"",
+      "workingDirectory": "C:\\Users\\relif\\work\\suto\\SweetIslandBackSide\\front\\data"
+    },
+    "update_test": {
+      "commandName": "Project",
+      "commandLineArgs": "--nsl-utl",
+      "workingDirectory": "C:\\Users\\relif\\work\\suto\\SweetIslandBackSide\\front\\data"
     }
   }
 }

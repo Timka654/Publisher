@@ -69,13 +69,21 @@ namespace NSL.Deploy.Client.Utils.Commands
 
             IOUtils.CopyDirectory(appPath, path, true, filter: (targetFilePath, file) =>
             {
+                if (!targetFilePath.EndsWith(".pdb") && !targetFilePath.EndsWith(".exe"))
+                {
+                    if (File.Exists(targetFilePath))
+                    {
+                        AppCommands.Logger.AppendError($"'{targetFilePath}' already exists - skip");
+                        return false;
+                    }
+                }
 
                 AppCommands.Logger.AppendInfo($"Copy from {file.FullName} to {targetFilePath}");
 
                 return true;
             });
 
-            AppCommands.InitData(path);
+            Program.InitData();
 
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
             {
@@ -86,8 +94,8 @@ namespace NSL.Deploy.Client.Utils.Commands
                 }
             }
 
-            if (!Directory.Exists(Path.Combine(path, Environment.ExpandEnvironmentVariables(Program.Configuration.KeysPath))))
-                Directory.CreateDirectory(Path.Combine(path, Environment.ExpandEnvironmentVariables(Program.Configuration.KeysPath)));
+            if (!Directory.Exists(Path.Combine(path, Program.KeysPath)))
+                Directory.CreateDirectory(Path.Combine(path, Program.KeysPath));
 
             if (Environment.OSVersion.Platform == PlatformID.Unix)
             {

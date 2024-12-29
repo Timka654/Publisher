@@ -3,7 +3,6 @@ using NSL.Cipher.RSA;
 using NSL.Logger;
 using NSL.Utils;
 using NSL.Utils.CommandLine;
-using ServerPublisher.Server.Dev.Test.Utils;
 using ServerPublisher.Server.Utils;
 using ServerPublisher.Shared.Info;
 using ServerPublisher.Shared.Utils;
@@ -66,7 +65,7 @@ namespace ServerPublisher.Server.Info
 
         public void ProducePublicKey(string dir)
         {
-            DirectoryUtils.CreateNoExistsDirectory(dir);
+            IOUtils.CreateDirectoryIfNoExists(dir);
 
             File.WriteAllText(Path.Combine(dir, $"{Name}_{Id}.pubuk").GetNormalizedPath(), JsonConvert.SerializeObject(new
             {
@@ -78,7 +77,7 @@ namespace ServerPublisher.Server.Info
 
         public void ProducePrivateKey(string dir)
         {
-            DirectoryUtils.CreateNoExistsDirectory(dir);
+            IOUtils.CreateDirectoryIfNoExists(dir);
 
             File.WriteAllText(Path.Combine(dir, $"{Name}_{Id}.priuk").GetNormalizedPath(), JsonConvert.SerializeObject(new
             {

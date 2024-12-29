@@ -31,7 +31,7 @@ namespace NSL.Deploy.Client.Utils.Commands
 
             var appPath = AppDomain.CurrentDomain.BaseDirectory;
 
-            string templatesPath = Path.Combine(appPath, Environment.ExpandEnvironmentVariables(Program.Configuration.TemplatesPath));
+            string templatesPath = Path.Combine(appPath, Program.TemplatesPath);
 
             var name = Name;
 

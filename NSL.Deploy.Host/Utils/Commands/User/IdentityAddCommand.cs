@@ -7,19 +7,21 @@ using NSL.Utils.CommandLine.CLHandles;
 using System.Threading.Tasks;
 using NSL.Utils.CommandLine.CLHandles.Arguments;
 
-namespace NSL.Deploy.Host.Utils.Commands
+namespace NSL.Deploy.Host.Utils.Commands.User
 {
-    [CLHandleSelect("default")]
+    [CLHandleSelect("identity")]
     [CLArgument("path", typeof(string))]
     [CLArgument("projectId", typeof(string), optional: true)]
     [CLArgument("directory", typeof(string), optional: true)]
-    internal class AddUserCommand : CLHandler
+    [CLArgument("y", typeof(CLContainsType), true)]
+    [CLArgument("flags", typeof(string), true)]
+    internal class IdentityAddCommand : CLHandler
     {
-        public override string Command => "add_user";
+        public override string Command => "add";
 
         public override string Description { get => ""; set => base.Description = value; }
 
-        public AddUserCommand()
+        public IdentityAddCommand()
         {
             AddArguments(SelectArguments());
         }
@@ -28,9 +30,9 @@ namespace NSL.Deploy.Host.Utils.Commands
 
         public override async Task<CommandReadStateEnum> ProcessCommand(CommandLineArgsReader reader, CLArgumentValues values)
         {
-            base.ProcessingAutoArgs(values);
+            ProcessingAutoArgs(values);
 
-            AppCommands.Logger.AppendInfo("Add user");
+            AppCommands.Logger.AppendInfo("Add exists identity");
 
             ServerProjectInfo projectInfo = values.GetProject();
 

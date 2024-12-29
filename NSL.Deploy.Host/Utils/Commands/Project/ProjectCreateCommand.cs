@@ -8,23 +8,25 @@ using System.Threading.Tasks;
 using ServerPublisher.Server;
 using NSL.Utils.CommandLine.CLHandles.Arguments;
 
-namespace NSL.Deploy.Host.Utils.Commands
+namespace NSL.Deploy.Host.Utils.Commands.Project
 {
-    [CLHandleSelect("default")]
+    [CLHandleSelect("projects")]
     [CLArgument("directory", typeof(string))]
     [CLArgument("name", typeof(string))]
     [CLArgument("project_id", typeof(string), true)]
     [CLArgument("full_replace", typeof(bool))]
     [CLArgument("backup", typeof(bool))]
-    internal class CreateProjectCommand : CLHandler
+    [CLArgument("y", typeof(CLContainsType), true)]
+    [CLArgument("flags", typeof(string), true)]
+    internal class ProjectCreateCommand : CLHandler
     {
-        public override string Command => "create_project";
+        public override string Command => "create";
 
-        public override string Description { get => ""; set => base.Description = value; }
+        public override string Description { get => "Create and link new project on deploy host"; set => base.Description = value; }
 
-        public CreateProjectCommand()
+        public ProjectCreateCommand()
         {
-            AddCommands(SelectSubCommands<CLHandleSelectAttribute>("createProjectCommands", true));
+            AddCommands(SelectSubCommands<CLHandleSelectAttribute>("projects_create", true));
             AddArguments(SelectArguments());
         }
 
@@ -38,7 +40,7 @@ namespace NSL.Deploy.Host.Utils.Commands
 
         public override async Task<CommandReadStateEnum> ProcessCommand(CommandLineArgsReader reader, CLArgumentValues values)
         {
-            base.ProcessingAutoArgs(values);
+            ProcessingAutoArgs(values);
 
             AppCommands.Logger.AppendInfo("Create project");
 

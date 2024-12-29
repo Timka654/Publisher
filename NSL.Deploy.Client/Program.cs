@@ -5,6 +5,7 @@ using NSL.Utils.CommandLine;
 using NSL.Utils.CommandLine.CLHandles;
 using ServerPublisher.Shared.Utils;
 using System;
+using System.Data.SqlTypes;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -12,7 +13,17 @@ namespace ServerPublisher.Client
 {
     class Program
     {
-        public static ConfigurationInfoModel Configuration { get; private set; } = new ConfigurationInfoModel();
+        private static ConfigurationInfoModel Configuration { get; set; } = new ConfigurationInfoModel();
+
+        public static string TemplatesPath => ExpandPath(Configuration.TemplatesPath);
+
+        public static string KeysPath => ExpandPath(Configuration.KeysPath);
+
+        public static string AppDataFolder { get; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "deployclient");
+
+        private static UpdaterConfig updaterConfig;
+
+        public static string Version => updaterConfig?.CurrentVersion;
 
         public static string ConfigurationPath { get; private set; }
 
@@ -50,12 +61,43 @@ namespace ServerPublisher.Client
 
         private static void configureVersionHandle(UpdaterConfig config)
         {
-            config.UpdateVersion("update1", c => c
-            .SetValue(() => c.UpdateUrl = "https://pubstorage.mtvworld.net/update/deployclient/")
-            );
+            updaterConfig = config;
+
+            if (config.UpdateUrl == "https://pubstorage.twicepricegroup.com/update/deployclient/")
+                config.UpdateVersion("update1", c => c
+                .SetValue(() => c.UpdateUrl = "https://pubstorage.mtvworld.net/update/deployclient/")
+                );
         }
 
         #endregion
+
+        public static void InitData()
+        {
+            if (!Directory.Exists(AppDataFolder))
+                Directory.CreateDirectory(AppDataFolder);
+
+            var configurationPath = Path.Combine(AppDataFolder, "config.json");
+
+            if (!File.Exists(configurationPath))
+                File.WriteAllText(configurationPath, JsonConvert.SerializeObject(Configuration));
+
+            if (!Directory.Exists(TemplatesPath))
+                Directory.CreateDirectory(TemplatesPath);
+
+            if (!Directory.Exists(KeysPath))
+                Directory.CreateDirectory(KeysPath);
+
+            var versionPath = Path.Combine(AppDataFolder, "nsl_version.json");
+
+            var cfg = new UpdaterConfig();
+
+            cfg
+                .SetValue(() => cfg.UpdateUrl = "https://pubstorage.mtvworld.net/update/deployclient/")
+                .SetValue(() => cfg.IgnorePathPatterns = ["(\\s\\S)*config.json"])
+                .SetValue(() => cfg.Log = false)
+                .SetValue(() => cfg.ProcessKill = true)
+                .Save(versionPath);
+        }
 
         static void LoadConfiguration(string appPath)
         {
@@ -63,21 +105,34 @@ namespace ServerPublisher.Client
 
             if (File.Exists(ConfigurationPath))
                 Configuration = JsonConvert.DeserializeObject<ConfigurationInfoModel>(File.ReadAllText(ConfigurationPath));
-            else
-                Configuration = new ConfigurationInfoModel();
         }
 
 
         static async Task Main(string[] args)
         {
             var appPath = AppDomain.CurrentDomain.BaseDirectory;
+            try
+            {
+                LoadConfiguration(AppDataFolder);
 
-            LoadConfiguration(appPath);
+                await LoadUpdater(AppDataFolder);
 
-            await LoadUpdater(appPath);
+                await CLHandler<AppCommands>.Instance
+                    .ProcessCommand(new CommandLineArgs().CreateReader());
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
+        }
 
-            await CLHandler<AppCommands>.Instance
-                .ProcessCommand(new CommandLineArgs().CreateReader());
+        private static string ExpandPath(string path)
+        {
+            path = path.Replace("%APPLICATIONAPPDATA%", AppDataFolder);
+
+            path = Environment.ExpandEnvironmentVariables(path);
+
+            return path;
         }
     }
 }

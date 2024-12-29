@@ -8,20 +8,22 @@ using System.Threading.Tasks;
 using ServerPublisher.Server;
 using NSL.Utils.CommandLine.CLHandles.Arguments;
 
-namespace NSL.Deploy.Host.Utils.Commands
+namespace NSL.Deploy.Host.Utils.Commands.User
 {
-    [CLHandleSelect("default")]
+    [CLHandleSelect("identity")]
     [CLArgument("source_project_id", typeof(string))]
     [CLArgument("only_private", typeof(bool))]
     [CLArgument("projectId", typeof(string), optional: true)]
     [CLArgument("directory", typeof(string), optional: true)]
-    internal class CloneIdentityCommand : CLHandler
+    [CLArgument("y", typeof(CLContainsType), true)]
+    [CLArgument("flags", typeof(string), true)]
+    internal class IdentityCloneCommand : CLHandler
     {
-        public override string Command => "clone_identity";
+        public override string Command => "clone";
 
         public override string Description { get => ""; set => base.Description = value; }
 
-        public CloneIdentityCommand()
+        public IdentityCloneCommand()
         {
             AddArguments(SelectArguments());
         }
@@ -32,7 +34,7 @@ namespace NSL.Deploy.Host.Utils.Commands
 
         public override async Task<CommandReadStateEnum> ProcessCommand(CommandLineArgsReader reader, CLArgumentValues values)
         {
-            base.ProcessingAutoArgs(values);
+            ProcessingAutoArgs(values);
 
             AppCommands.Logger.AppendInfo("Clone identity");
 

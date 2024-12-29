@@ -23,7 +23,6 @@ using NSL.Utils.CommandLine;
 
 namespace ServerPublisher.Client
 {
-
     public class Publish
     {
         public static Publish Instance { get; set; }
@@ -155,7 +154,7 @@ namespace ServerPublisher.Client
             if (!Directory.Exists(publishInfo.PublishDirectory))
                 LogError($"Publish directory {publishInfo.PublishDirectory} not exists");
 
-            userInfo = ReadConfigunation<BasicUserInfo>(Environment.ExpandEnvironmentVariables(Program.Configuration.KeysPath), publishInfo.AuthKeyPath, out string keyPath);
+            userInfo = ReadConfigunation<BasicUserInfo>(Program.KeysPath, publishInfo.AuthKeyPath, out string keyPath);
 
             if (userInfo == default)
             {

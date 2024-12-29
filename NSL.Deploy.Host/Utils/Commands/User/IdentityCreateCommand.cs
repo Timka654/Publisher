@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 using ServerPublisher.Server;
 using NSL.Utils.CommandLine.CLHandles.Arguments;
 
-namespace NSL.Deploy.Host.Utils.Commands
+namespace NSL.Deploy.Host.Utils.Commands.User
 {
-    [CLHandleSelect("default")]
+    [CLHandleSelect("identity")]
     [CLArgument("name", typeof(string))]
     [CLArgument("global", typeof(CLContainsType))]
     [CLArgument("publisher", typeof(CLContainsType))]
@@ -17,13 +17,15 @@ namespace NSL.Deploy.Host.Utils.Commands
     [CLArgument("both", typeof(CLContainsType))]
     [CLArgument("projectId", typeof(string), optional: true)]
     [CLArgument("directory", typeof(string), optional: true)]
-    internal class CreateUserCommand : CLHandler
+    [CLArgument("y", typeof(CLContainsType), true)]
+    [CLArgument("flags", typeof(string), true)]
+    internal class IdentityCreateCommand : CLHandler
     {
-        public override string Command => "create_user";
+        public override string Command => "create";
 
         public override string Description { get => ""; set => base.Description = value; }
 
-        public CreateUserCommand()
+        public IdentityCreateCommand()
         {
             AddArguments(SelectArguments());
         }
@@ -37,61 +39,61 @@ namespace NSL.Deploy.Host.Utils.Commands
 
         public override async Task<CommandReadStateEnum> ProcessCommand(CommandLineArgsReader reader, CLArgumentValues values)
         {
-            base.ProcessingAutoArgs(values);
+            ProcessingAutoArgs(values);
 
-            AppCommands.Logger.AppendInfo("Create user");
+            AppCommands.Logger.AppendInfo("Create identity");
 
             if (global)
             {
-                AppCommands.Logger.AppendInfo("Create global user");
+                AppCommands.Logger.AppendInfo("Create global identity");
 
                 if (publisher)
                 {
-                    AppCommands.Logger.AppendInfo("Create publisher user");
+                    AppCommands.Logger.AppendInfo("Create publisher identity");
 
                     if (!values.ConfirmCommandAction(AppCommands.Logger))
                         return CommandReadStateEnum.Cancelled;
 
-                    var user = UserInfo.CreateUser(name);
+                    var identity = UserInfo.CreateUser(name);
 
-                    if (PublisherServer.ProjectsManager.GlobalPublishUserStorage.AddUser(user))
-                        AppCommands.Logger.AppendInfo($"user {user.Name} by id {user.Id} success created");
+                    if (PublisherServer.ProjectsManager.GlobalPublishUserStorage.AddUser(identity))
+                        AppCommands.Logger.AppendInfo($"Identity {identity.Name} by id {identity.Id} success created");
                     else
                     {
-                        AppCommands.Logger.AppendError($"{user.Name} already exist");
+                        AppCommands.Logger.AppendError($"{identity.Name} already exist");
                     }
 
                 }
                 else if (proxy)
                 {
-                    AppCommands.Logger.AppendInfo("Create proxy user");
+                    AppCommands.Logger.AppendInfo("Create proxy identity");
 
                     if (!values.ConfirmCommandAction(AppCommands.Logger))
                         return CommandReadStateEnum.Cancelled;
 
-                    var user = UserInfo.CreateUser(name);
+                    var identity = UserInfo.CreateUser(name);
 
-                    if (PublisherServer.ProjectsManager.GlobalProxyUserStorage.AddUser(user))
-                        AppCommands.Logger.AppendInfo($"user {user.Name} by id {user.Id} success created");
+                    if (PublisherServer.ProjectsManager.GlobalProxyUserStorage.AddUser(identity))
+                        AppCommands.Logger.AppendInfo($"identity {identity.Name} by id {identity.Id} success created");
                     else
                     {
-                        AppCommands.Logger.AppendError($"{user.Name} already exist");
+                        AppCommands.Logger.AppendError($"{identity.Name} already exist");
                     }
                 }
                 else if (both)
                 {
-                    AppCommands.Logger.AppendInfo("Create publisher/proxy user");
+                    AppCommands.Logger.AppendInfo("Create publisher/proxy identity");
 
                     if (!values.ConfirmCommandAction(AppCommands.Logger))
                         return CommandReadStateEnum.Cancelled;
 
-                    var user = UserInfo.CreateUser(name);
+                    var identity = UserInfo.CreateUser(name);
 
-                    if (PublisherServer.ProjectsManager.GlobalBothUserStorage.AddUser(user))
-                        AppCommands.Logger.AppendInfo($"user {user.Name} by id {user.Id} success created");
+                    if (PublisherServer.ProjectsManager.GlobalBothUserStorage.AddUser(identity))
+                        AppCommands.Logger.AppendInfo($"identity {identity.Name} by id {identity.Id} success created");
                     else
                     {
-                        AppCommands.Logger.AppendError($"{user.Name} already exist");
+                        AppCommands.Logger.AppendError($"{identity.Name} already exist");
                     }
                 }
 
@@ -106,13 +108,13 @@ namespace NSL.Deploy.Host.Utils.Commands
                 if (!values.ConfirmCommandAction(AppCommands.Logger))
                     return CommandReadStateEnum.Cancelled;
 
-                var user = UserInfo.CreateUser(name);
+                var identity = UserInfo.CreateUser(name);
 
-                if (projectInfo.AddUser(user))
-                    AppCommands.Logger.AppendInfo($"user {user.Name} by id {user.Id} success created");
+                if (projectInfo.AddUser(identity))
+                    AppCommands.Logger.AppendInfo($"identity {identity.Name} by id {identity.Id} success created");
                 else
                 {
-                    AppCommands.Logger.AppendError($"{user.Name} already exist in project {projectInfo.Info.Name}({projectInfo.Info.Id})");
+                    AppCommands.Logger.AppendError($"{identity.Name} already exist in project {projectInfo.Info.Name}({projectInfo.Info.Id})");
                 }
             }
 

@@ -1,6 +1,7 @@
 ﻿using NSL.Utils.CommandLine;
 using NSL.Utils.CommandLine.CLHandles;
 using NSL.Utils.CommandLine.CLHandles.Arguments;
+using ServerPublisher.Client;
 using System;
 using System.Threading.Tasks;
 
@@ -24,7 +25,7 @@ namespace NSL.Deploy.Client.Utils.Commands
 
             var appPath = AppDomain.CurrentDomain.BaseDirectory;
 
-            AppCommands.InitData(appPath);
+            Program.InitData();
 
             return CommandReadStateEnum.Success;
         }

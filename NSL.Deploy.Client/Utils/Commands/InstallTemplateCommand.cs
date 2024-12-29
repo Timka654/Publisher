@@ -12,6 +12,8 @@ using System.Threading.Tasks;
 namespace NSL.Deploy.Client.Utils.Commands
 {
     [CLHandleSelect("default")]
+    [CLArgument("y", typeof(CLContainsType), true)]
+    [CLArgument("flags", typeof(string), true)]
     internal class InstallTemplateCommand : CLHandler
     {
         public override string Command => "install_template";
@@ -32,9 +34,7 @@ namespace NSL.Deploy.Client.Utils.Commands
 
             var dir = Directory.GetCurrentDirectory();
 
-            var appPath = AppDomain.CurrentDomain.BaseDirectory;
-
-            string templatePath = Path.Combine(appPath, Environment.ExpandEnvironmentVariables(Program.Configuration.TemplatesPath), Path.GetDirectoryName(dir));
+            string templatePath = Path.Combine(Program.TemplatesPath, new DirectoryInfo(dir).Name);
 
             IOUtils.CreateDirectoryIfNoExists(templatePath);
 
