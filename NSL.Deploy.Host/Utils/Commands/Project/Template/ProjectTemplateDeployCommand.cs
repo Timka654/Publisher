@@ -12,10 +12,10 @@ using NSL.Utils.CommandLine.CLHandles.Arguments;
 namespace NSL.Deploy.Host.Utils.Commands.Project.Template
 {
     [CLHandleSelect("projects_template")]
-    [CLArgument("template_path", typeof(string))]
+    [CLArgument("root_path", typeof(string), true)]
     internal class ProjectTemplateDeployCommand : CLHandler
     {
-        public override string Command => "update";
+        public override string Command => "deploy";
 
         public override string Description { get => "Update/Create and link project on deploy host with \"Publisher/template.json\" template file"; set => base.Description = value; }
 
@@ -23,6 +23,9 @@ namespace NSL.Deploy.Host.Utils.Commands.Project.Template
         {
             AddArguments(SelectArguments());
         }
+
+        [CLArgumentExists("root_path")] private bool RootPathExists { get; set; }
+        [CLArgumentValue("root_path")] private string RootPath { get; set; }
 
         public override async Task<CommandReadStateEnum> ProcessCommand(CommandLineArgsReader reader, CLArgumentValues values)
         {
@@ -32,20 +35,23 @@ namespace NSL.Deploy.Host.Utils.Commands.Project.Template
 
             var basePath = Directory.GetCurrentDirectory();
 
+            if (RootPathExists)
+                basePath = RootPath;
+
             var relPath = Path.Combine(basePath, "Publisher");
 
-            if (!values.GetWorkingDirectory("template_path", out string path))
-                path = Path.Combine(relPath, "template.json");
+            var templatePath = Path.Combine(relPath, "template.json");
 
-            if (!File.Exists(path))
+
+            if (!File.Exists(templatePath))
             {
-                AppCommands.Logger.AppendError($"Project template \"{path}\" does not exists!!");
+                AppCommands.Logger.AppendError($"Project template \"{templatePath}\" does not exists!!");
 
                 return CommandReadStateEnum.Failed;
             }
 
 
-            var template = JsonConvert.DeserializeObject<CreateProjectInfo>(File.ReadAllText(path));
+            var template = JsonConvert.DeserializeObject<CreateProjectInfo>(File.ReadAllText(templatePath));
 
 
             string? projectId = default;

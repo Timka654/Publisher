@@ -8,17 +8,22 @@ using System.IO;
 namespace NSL.Deploy.Host.Utils.Commands.Project.Template
 {
     [CLHandleSelect("projects_template")]
-    [CLArgument("template_path", typeof(string), true)]
+    [CLArgument("root_path", typeof(string), true, Description = "Path to root project directory for produce deploy template content")]
+    [CLArgument("n", typeof(bool), true, Description = "Create new directory if no exists, default = false")]
     internal class ProjectTemplatePublishCommand : CLHandler
     {
         public override string Command => "publish";
 
-        public override string Description { get => "Create template structure and files for deploy/register project"; set => base.Description = value; }
+        public override string Description { get => "Produce template content for deploy/register project"; set => base.Description = value; }
 
         public ProjectTemplatePublishCommand()
         {
             AddArguments(SelectArguments());
         }
+        [CLArgumentExists("root_path")] private bool RootPathExists { get; set; }
+        [CLArgumentValue("root_path")] private string RootPath { get; set; }
+
+        [CLArgumentValue("n")] private bool newDir { get; set; }
 
         public override async Task<CommandReadStateEnum> ProcessCommand(CommandLineArgsReader reader, CLArgumentValues values)
         {
@@ -28,7 +33,21 @@ namespace NSL.Deploy.Host.Utils.Commands.Project.Template
 
             var basePath = Directory.GetCurrentDirectory();
 
-            var endPath = Path.GetFullPath(Path.Combine(basePath, "Publisher", "template.json"));
+            if (RootPathExists)
+                basePath = RootPath;
+
+            if (!Directory.Exists(basePath))
+            {
+                if (newDir)
+                {
+                    Directory.CreateDirectory(basePath);
+                }
+                else throw new IOException($"Directory not exists");
+            }
+
+            var relativePath = Path.Combine(basePath, "Publisher");
+
+            var endPath = Path.GetFullPath(Path.Combine(relativePath, "template.json"));
 
             var fi = new FileInfo(endPath);
 
