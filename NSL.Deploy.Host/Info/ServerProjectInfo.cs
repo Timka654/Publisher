@@ -215,7 +215,7 @@ namespace ServerPublisher.Server.Info
             GlobalScriptsWatch = new FSWatcher(GlobalScriptsDirPath, "*.cs"
                 , onAnyChanges: ScriptsWatch_Changed);
 
-            PublisherServer.ProjectsManager.GlobalBothUserStorage.OnCreated += GlobalBothUserStorage_OnCreated;
+            PublisherServer.ProjectsManager.GlobalBothUserProxyStorage.OnCreated += GlobalBothUserStorage_OnCreated;
             PublisherServer.ProjectsManager.GlobalProxyUserStorage.OnCreated += GlobalBothUserStorage_OnCreated;
         }
 

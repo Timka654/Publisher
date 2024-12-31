@@ -32,7 +32,8 @@ namespace ServerPublisher.Server.Managers
 
         public static string GlobalProxyUsersFolderPath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, PublisherServer.Configuration.Publisher.ProjectConfiguration.Server.GlobalProxyUsersFolderPath);
 
-        public UserStorage GlobalBothUserStorage { get; private set; }
+        public UserStorage GlobalBothUserPublishStorage { get; private set; }
+        public UserStorage GlobalBothUserProxyStorage { get; private set; }
         public UserStorage GlobalPublishUserStorage { get; private set; }
         public UserStorage GlobalProxyUserStorage { get; private set; }
 
@@ -43,7 +44,8 @@ namespace ServerPublisher.Server.Managers
             Instance = this;
             PublisherServer.ServerLogger.AppendInfo("Load projects");
 
-            GlobalBothUserStorage = new UserStorage(GlobalBothUsersFolderPath, "*.priuk|*.pubuk");
+            GlobalBothUserPublishStorage = new UserStorage(GlobalBothUsersFolderPath);
+            GlobalBothUserProxyStorage = new UserStorage(GlobalBothUsersFolderPath, "*.pubuk");
             GlobalPublishUserStorage = new UserStorage(GlobalPublishUsersFolderPath);
             GlobalProxyUserStorage = new UserStorage(GlobalProxyUsersFolderPath, "*.pubuk");
 
@@ -54,7 +56,7 @@ namespace ServerPublisher.Server.Managers
 
         public UserInfo? GetProxyUser(string signName)
         {
-            return GlobalProxyUserStorage.GetUser(signName) ?? GlobalBothUserStorage.GetUser(signName);
+            return GlobalProxyUserStorage.GetUser(signName) ?? GlobalBothUserProxyStorage.GetUser(signName);
         }
 
         internal SignStateEnum SignIn(PublisherNetworkClient client, PublishSignInRequestModel request)
@@ -64,7 +66,7 @@ namespace ServerPublisher.Server.Managers
             if (proj == null) return SignStateEnum.ProjectNotFound;
 
 
-            var user = proj.GetUser(request.UserId) ?? GlobalBothUserStorage.GetUser(request.UserId) ?? GlobalPublishUserStorage.GetUser(request.UserId);
+            var user = proj.GetUser(request.UserId) ?? GlobalBothUserPublishStorage.GetUser(request.UserId) ?? GlobalPublishUserStorage.GetUser(request.UserId);
 
             if (user == null) return SignStateEnum.UserNotFound;
 
@@ -177,7 +179,7 @@ namespace ServerPublisher.Server.Managers
                     if (!Directory.Exists(Path.Combine(item, "Publisher")))
                     {
                         PublisherServer.ServerLogger.AppendError($"Have invalid project path - {item}. No exists Publisher dir");
-                        
+
                         continue;
                     }
 

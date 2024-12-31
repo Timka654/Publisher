@@ -1,10 +1,17 @@
-﻿using NSL.Deploy.Host.Utils.Commands;
+﻿using Microsoft.Extensions.Logging;
+using NSL.Deploy.Host.Utils.Commands;
 using NSL.Logger;
+using NSL.ServerOptions.Extensions.Manager;
 using NSL.ServiceUpdater.Shared;
+using NSL.SocketServer;
 using NSL.Utils.CommandLine.CLHandles;
+using ServerPublisher.Server.Network.PublisherClient;
 using System;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
+using static System.Collections.Specialized.BitVector32;
 
 namespace ServerPublisher.Server
 {
@@ -15,7 +22,7 @@ namespace ServerPublisher.Server
 
         static async Task LoadUpdater(string appPath)
         {
-            var updateFilePath = Path.Combine(appPath, "nsl_version.json");
+            var updateFilePath = Path.Combine(appPath, "data", "nsl_version.json");
 
             if (!File.Exists(updateFilePath))
                 return;
@@ -42,9 +49,10 @@ namespace ServerPublisher.Server
 
         private static void configureVersionHandle(UpdaterConfig config)
         {
-            config.UpdateVersion("update1", c => c
-            .SetValue(() => c.UpdateUrl = "https://pubstorage.mtvworld.net/update/deployserver/")
-            );
+            if (config.ConfigurationVersion == "initial")
+                config.UpdateVersion("update1", c => c
+                .SetValue(() => c.UpdateUrl = "https://pubstorage.mtvworld.net/update/deployserver/")
+                );
         }
 
         #endregion
@@ -56,6 +64,10 @@ namespace ServerPublisher.Server
             await LoadUpdater(appPath);
 
             PublisherServer.InitializeApp(appPath);
+
+            PublisherServer.CommandExecutor = !Equals(args.ElementAtOrDefault(0), "service");
+
+            ManagerHelper.LoadManagers(Assembly.GetExecutingAssembly(), typeof(ManagerLoadAttribute), (a, t) => { });
 
             await CLHandler<AppCommands>.Instance
                 .ProcessCommand(new NSL.Utils.CommandLine.CommandLineArgsReader(new NSL.Utils.CommandLine.CommandLineArgs()));

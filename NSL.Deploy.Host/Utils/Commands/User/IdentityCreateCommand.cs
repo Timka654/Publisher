@@ -89,7 +89,7 @@ namespace NSL.Deploy.Host.Utils.Commands.User
 
                     var identity = UserInfo.CreateUser(name);
 
-                    if (PublisherServer.ProjectsManager.GlobalBothUserStorage.AddUser(identity))
+                    if (PublisherServer.ProjectsManager.GlobalBothUserPublishStorage.AddUser(identity))
                         AppCommands.Logger.AppendInfo($"identity {identity.Name} by id {identity.Id} success created");
                     else
                     {

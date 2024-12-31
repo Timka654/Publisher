@@ -10,7 +10,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="NSL.Generators.BinaryTypeIOGenerator.Attributes" Version="2024.12.3.329" />
+    <PackageReference Include="NSL.Generators.BinaryTypeIOGenerator.Shared" Version="2024.12.29.2215" />
     <PackageReference Include="NSL.SocketCore" Version="2024.12.29.2215" />
     <PackageReference Include="NSL.Utils" Version="2024.12.29.2215" />
   </ItemGroup>

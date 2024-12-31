@@ -7,6 +7,7 @@ using ServerPublisher.Client;
 using ServerPublisher.Shared.Utils;
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Security.AccessControl;
 using System.Threading.Tasks;
 
@@ -42,23 +43,27 @@ namespace NSL.Deploy.Client.Utils.Commands
 
             ProcessingAutoArgs(values);
 
+            var isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+            var isLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
+
             var appPath = AppDomain.CurrentDomain.BaseDirectory;
 
             var path = this.path;
 
             if (!containsPathArg)
             {
-                if (Environment.OSVersion.Platform == PlatformID.Unix)
+                if (isLinux)
                 {
                     path = "/etc/nsldeployclient";
                 }
-                else
+                else if (isWindows)
                 {
                     //if (Environment.Is64BitProcess)
                     //    path = @"C:\Program Files (x86)\Publisher.Client";
                     //else
                     path = @"C:\Program Files\NSL.Deploy.Client";
                 }
+                else throw new PlatformNotSupportedException();
 
                 if (!defaultConfiguration)
                     path = CommandParameterReader.Read("Install directory", AppCommands.Logger, path);
@@ -85,7 +90,7 @@ namespace NSL.Deploy.Client.Utils.Commands
 
             Program.InitData();
 
-            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+            if (isWindows)
             {
                 foreach (var item in Directory.GetFiles(path, "*", SearchOption.AllDirectories))
                 {
@@ -94,10 +99,7 @@ namespace NSL.Deploy.Client.Utils.Commands
                 }
             }
 
-            if (!Directory.Exists(Path.Combine(path, Program.KeysPath)))
-                Directory.CreateDirectory(Path.Combine(path, Program.KeysPath));
-
-            if (Environment.OSVersion.Platform == PlatformID.Unix)
+            if (isLinux)
             {
                 System.Diagnostics.Process.Start("ln", $"-s \"{Path.Combine(path, "deployclient")}\" /bin/deployc");
 
@@ -106,13 +108,14 @@ namespace NSL.Deploy.Client.Utils.Commands
                 if (!envs.Contains(path))
                     Environment.SetEnvironmentVariable("PATH", $"{path};{envs}", EnvironmentVariableTarget.Machine);
             }
-            else
+            else if (isWindows)
             {
                 var envs = Environment.GetEnvironmentVariable("Path");
 
                 if (!envs.Contains(path))
                     Environment.SetEnvironmentVariable("Path", $"{path};{envs}", EnvironmentVariableTarget.Machine);
             }
+            else throw new PlatformNotSupportedException();
 
             AppCommands.Logger.AppendInfo($"Success installed. Can call \"deployclient\" with args from console to execute deploy commands or you can invoke \"deployclient help\" for get available command list");
 

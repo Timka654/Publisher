@@ -11,6 +11,7 @@ using NSL.Utils.CommandLine.CLHandles;
 using System.Threading.Tasks;
 using ServerPublisher.Server.Utils;
 using NSL.Utils.CommandLine.CLHandles.Arguments;
+using NSL.ServiceUpdater.Shared;
 
 namespace NSL.Deploy.Host.Utils.Commands
 {
@@ -60,11 +61,13 @@ namespace NSL.Deploy.Host.Utils.Commands
         {
             base.ProcessingAutoArgs(values);
 
+            bool isLinuxPlatform = Environment.OSVersion.Platform == PlatformID.Unix;
+
             var appPath = AppDomain.CurrentDomain.BaseDirectory;
 
             if (!havePath)
             {
-                if (Environment.OSVersion.Platform == PlatformID.Unix)
+                if (isLinuxPlatform)
                 {
                     path = "/etc/deployhost";
                 }
@@ -91,7 +94,7 @@ namespace NSL.Deploy.Host.Utils.Commands
                         serviceName = CommandParameterReader.Read("Service name", AppCommands.Logger, serviceName);
                 }
 
-                if (Environment.OSVersion.Platform == PlatformID.Unix)
+                if (isLinuxPlatform)
                 {
                     if (!haveServiceFileName)
                     {
@@ -112,7 +115,7 @@ namespace NSL.Deploy.Host.Utils.Commands
             if (Environment.OSVersion.Platform != PlatformID.Unix)
                 execPath += ".exe";
 
-            var configPath = Path.Combine(path, "ServerSettings.json").GetNormalizedPath();
+            var configPath = Path.Combine(path, "data", "ServerSettings.json").GetNormalizedPath();
 
 
             AppCommands.Logger.AppendInfo($"""
@@ -132,9 +135,11 @@ namespace NSL.Deploy.Host.Utils.Commands
             if (!Directory.Exists(path) && !reInit)
                 Directory.CreateDirectory(path);
 
+            var dataDirPath = Path.GetFullPath(Path.Combine(path, "data"));
+
             if (isService)
             {
-                if (Environment.OSVersion.Platform == PlatformID.Unix)
+                if (isLinuxPlatform)
                 {
                     this.TerminalExecute($"systemctl disable {serviceFileName}");
                     this.TerminalExecute($"systemctl stop {serviceFileName}");
@@ -147,8 +152,25 @@ namespace NSL.Deploy.Host.Utils.Commands
 
             if (!reInit)
             {
-                var dataDirPath = Path.GetFullPath(Path.Combine(path, "data"));
-                var serverSettingsPath = Path.GetFullPath(Path.Combine(path, "ServerSettings.json"));
+                var versionPath = Path.Combine(dataDirPath, "nsl_version.json");
+
+                var cfg = new UpdaterConfig();
+
+                if (isService)
+                {
+                    cfg
+                        .SetValue(() => cfg.ServiceName = isLinuxPlatform ? Path.GetFileName(serviceFileName) : serviceName)
+                        .SetValue(() => cfg.ServiceStopping = true)
+                        .SetValue(() => cfg.ServiceRestarting = true);
+                }
+
+                cfg
+                    .SetValue(()=> cfg.ConfigurationVersion = "initial")
+                    .SetValue(() => cfg.UpdateUrl = "https://pubstorage.mtvworld.net/update/deployhost/")
+                    .SetValue(() => cfg.Log = false)
+                    .SetValue(() => cfg.ProcessKill = false)
+                    .Save(versionPath);
+
 
                 foreach (var item in Directory.GetFiles(appPath, "*", SearchOption.AllDirectories))
                 {
@@ -160,7 +182,7 @@ namespace NSL.Deploy.Host.Utils.Commands
 
                     AppCommands.Logger.AppendInfo($"Copy '{item}' -> '{ePath}'");
 
-                    if ((ePath.StartsWith(dataDirPath) || ePath.StartsWith(serverSettingsPath)) && File.Exists(ePath))
+                    if ((ePath.StartsWith(dataDirPath)) && File.Exists(ePath))
                     {
                         AppCommands.Logger.AppendError($"'{ePath}' already exists - skip");
                         continue;
@@ -197,7 +219,7 @@ namespace NSL.Deploy.Host.Utils.Commands
                 }
             }
 
-            if (Environment.OSVersion.Platform == PlatformID.Unix)
+            if (isLinuxPlatform)
             {
                 this.TerminalExecute("rm /bin/deployhost");
                 this.TerminalExecute($"ln -s \\\"{execPath}\\\" /bin/deployhost");
@@ -228,7 +250,7 @@ namespace NSL.Deploy.Host.Utils.Commands
 
             if (isService)
             {
-                if (Environment.OSVersion.Platform == PlatformID.Unix)
+                if (isLinuxPlatform)
                 {
                     File.WriteAllText(Path.Combine("/etc/systemd/system/", serviceFileName), $"""
 [Unit]

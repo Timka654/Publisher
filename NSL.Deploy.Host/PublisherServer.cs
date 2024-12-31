@@ -61,7 +61,7 @@ namespace ServerPublisher.Server
 
         static void initializeConfiguration()
         {
-            var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ServerSettings.json");
+            var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "ServerSettings.json");
 
             if (!File.Exists(path))
             {

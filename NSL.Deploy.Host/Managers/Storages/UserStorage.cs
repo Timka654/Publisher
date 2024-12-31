@@ -1,4 +1,5 @@
-﻿using NSL.Utils;
+﻿using NSL.Logger;
+using NSL.Utils;
 using ServerPublisher.Server.Info;
 using System;
 using System.Collections.Generic;
@@ -15,14 +16,16 @@ namespace ServerPublisher.Server.Managers.Storages
         public UserInfo? GetUser(string userId)
             => userList.Find(x => x.Id == userId);
 
-        private string dirPath;
+        public IReadOnlyList<UserInfo> Users => userList;
+
+        public string DirPath { get; private set; }
         private string watchPattern;
 
         public event Action<UserInfo> OnCreated = (f) => { };
 
         public UserStorage(string dirPath, string watchPattern = "*.priuk")
         {
-            this.dirPath = dirPath;
+            this.DirPath = dirPath;
             this.watchPattern = watchPattern;
 
             IOUtils.CreateDirectoryIfNoExists(dirPath);
@@ -33,20 +36,20 @@ namespace ServerPublisher.Server.Managers.Storages
 
         private void LoadUsers()
         {
-            foreach (var item in Directory.GetFiles(dirPath, watchPattern))
+            foreach (var item in Directory.GetFiles(DirPath, watchPattern, SearchOption.AllDirectories))
             {
                 AddOrUpdateUser(new UserInfo(item));
             }
         }
 
-        private FSWatcher UsersWatch;
+        private FSWatcher[] UsersWatch;
 
         private void CreateWatcher()
         {
             if (PublisherServer.CommandExecutor)
                 return;
 
-            UsersWatch = new FSWatcher(dirPath, watchPattern, onCreated: UsersWatch_Changed, onChanged: UsersWatch_Changed, onDeleted: UsersWatch_Deleted);
+            UsersWatch = [ new FSWatcher(DirPath, watchPattern, onCreated: UsersWatch_Changed, onChanged: UsersWatch_Changed, onDeleted: UsersWatch_Deleted)];
         }
 
         private void UsersWatch_Deleted(FileSystemEventArgs e)
@@ -85,8 +88,8 @@ namespace ServerPublisher.Server.Managers.Storages
                 return false;
             }
 
-            user.ProducePublicKey(Path.Combine(dirPath, "publ"));
-            user.ProducePrivateKey(dirPath);
+            user.ProducePublicKey(Path.Combine(DirPath, "publ"));
+            user.ProducePrivateKey(DirPath);
 
             return true;
         }
