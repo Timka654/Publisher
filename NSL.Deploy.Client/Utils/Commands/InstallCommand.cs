@@ -38,8 +38,10 @@ namespace NSL.Deploy.Client.Utils.Commands
 
         public override async Task<CommandReadStateEnum> ProcessCommand(CommandLineArgsReader reader, CLArgumentValues values)
         {
+#if RELEASE
             if (PermissionUtils.RequireRunningAsAdministrator())
                 return CommandReadStateEnum.Success;
+#endif
 
             ProcessingAutoArgs(values);
 
@@ -90,15 +92,6 @@ namespace NSL.Deploy.Client.Utils.Commands
 
             Program.InitData();
 
-            if (isWindows)
-            {
-                foreach (var item in Directory.GetFiles(path, "*", SearchOption.AllDirectories))
-                {
-                    FileSystemAccessRule rule = new("Everyone", FileSystemRights.ReadAndExecute, AccessControlType.Allow);
-                    new FileInfo(item).GetAccessControl().AddAccessRule(rule);
-                }
-            }
-
             if (isLinux)
             {
                 System.Diagnostics.Process.Start("ln", $"-s \"{Path.Combine(path, "deployclient")}\" /bin/deployc");
@@ -122,8 +115,8 @@ namespace NSL.Deploy.Client.Utils.Commands
 
             if (!quit)
             {
-                Console.ReadKey();
                 AppCommands.Logger.AppendInfo("Press any key for close...");
+                Console.ReadKey();
             }
 
             return CommandReadStateEnum.Success;
