@@ -8,32 +8,23 @@ using System.Threading.Tasks;
 using System.IO.Compression;
 using System.Collections.Concurrent;
 using NSL.Cipher.RSA;
-using Newtonsoft.Json;
 using ServerPublisher.Client.Library;
 using NSL.Utils;
 using ServerPublisher.Shared.Info;
 using ServerPublisher.Shared.Enums;
 using ServerPublisher.Shared.Models.ResponseModel;
 using System.Threading;
-using Newtonsoft.Json.Linq;
 using ServerPublisher.Shared.Models.RequestModels;
 using ServerPublisher.Shared.Utils;
 using System.Diagnostics;
-using NSL.Utils.CommandLine;
 
-namespace ServerPublisher.Client
+namespace NSL.Deploy.Client.Deploy
 {
-    public class Publish
+    public class DeployClient
     {
-        public static Publish Instance { get; set; }
-
-        private CommandLineArgs successArgs = null;
-
         private Network network = null;
 
-        private BasicUserInfo userInfo = null;
-
-        private PublishInfo publishInfo;
+        public required ProjectInfo PublishInfo { get; init; }
 
         private List<string> ignorePatternList = null;
 
@@ -41,133 +32,32 @@ namespace ServerPublisher.Client
 
         private BasicFileInfo[] remoteFileList = null;
 
-        private T ReadConfigunation<T>(string basedir, string path, out string outBasePath)
+        public Action OnConnectionLost { get; set; }
+
+        public Action OnCannotConnected { get; set; }
+
+        public Action<SignStateEnum> OnCannotSignIn { get; set; }
+
+        public async Task<bool> Publish()
         {
-            outBasePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, basedir, path);
-
-            if (File.Exists(path))
-                return JsonConvert.DeserializeObject<T>(File.ReadAllText(path));
-
-            if (!File.Exists(outBasePath))
+            network = new Network(PublishInfo.Ip, PublishInfo.Port, PublishInfo.InputKey, PublishInfo.OutputKey, (e) =>
             {
-                return default;
-            }
+                if (finished) return;
 
-            return JsonConvert.DeserializeObject<T>(File.ReadAllText(outBasePath));
-        }
+                if (OnConnectionLost != null)
+                    OnConnectionLost();
 
-        private void LogError(string text)
-        {
-            var def = Console.ForegroundColor;
+                StepLocker.Set();
+            });
 
-            Console.ForegroundColor = ConsoleColor.Red;
-
-            Console.WriteLine(text);
-
-            Console.ForegroundColor = def;
-
-            Environment.Exit(-1);
-        }
-
-        private void EmptyParameterError(string name)
-        {
-            LogError($"Run command must have \"{name}\" parameter");
-        }
-
-        public async Task Run(CommandLineArgs args)
-        {
-            Console.WriteLine("run");
-
-            if (args.TryGetOutValue("configuration_path", out string configPath))
-            {
-                publishInfo = ReadConfigunation<PublishInfo>("configurations", configPath, out var cpath);
-
-                if (publishInfo == default)
-                {
-                    LogError($"configuration_path file by path {cpath} or {configPath} not exists");
-                }
-            }
-            else
-            {
-                publishInfo = new PublishInfo();
-            }
-
-            if (args.TryGetOutValue("project_id", out string projectId))
-                publishInfo.ProjectId = projectId;
-
-            if (args.TryGetOutValue("directory", out string publishDirectory))
-                publishInfo.PublishDirectory = publishDirectory;
-
-            if (args.TryGetOutValue("auth_key_path", out string authKeyPath))
-                publishInfo.AuthKeyPath = authKeyPath;
-
-            if (args.TryGetOutValue("cipher_out_key", out string inputKey))
-                publishInfo.InputKey = inputKey;
-
-            if (args.TryGetOutValue("cipher_in_key", out string outputKey))
-                publishInfo.OutputKey = outputKey;
-
-            if (args.TryGetOutValue("ip", out string ip))
-                publishInfo.Ip = ip;
-
-            if (args.TryGetOutValue("port", out int port))
-                publishInfo.Port = port;
-
-            if (args.TryGetOutValue("buffer_len", out int bufferLen))
-                publishInfo.BufferLen = bufferLen - 512;
-
-            if (args.TryGetOutValue("success_args", out string successArgs))
-                publishInfo.SuccessArgs = successArgs;
-
-            if (args.TryGetOutValue("has_compression", out bool hasCompression))
-                publishInfo.HasCompression = hasCompression;
-
-            if (publishInfo.ProjectId == default)
-                EmptyParameterError("project_id");
-
-            if (publishInfo.PublishDirectory == default)
-                EmptyParameterError("directory");
-
-            if (publishInfo.Ip == default)
-                EmptyParameterError("ip");
-
-            if (publishInfo.AuthKeyPath == default)
-                EmptyParameterError("auth_key_path");
-
-            if (publishInfo.InputKey == default)
-                EmptyParameterError("cipher_out_key");
-
-            if (publishInfo.OutputKey == default)
-                EmptyParameterError("cipher_in_key");
-
-            if (publishInfo.Port == default)
-                EmptyParameterError("port");
-
-            if (publishInfo.BufferLen == default)
-                EmptyParameterError("buffer_len");
-
-            if (publishInfo.SuccessArgs == default)
-                this.successArgs = new CommandLineArgs(new string[] { }, false);
-            else
-                this.successArgs = new CommandLineArgs(publishInfo.SuccessArgs.Split(" /").Select(x => "/" + x).ToArray(), false);
-
-            if (!Directory.Exists(publishInfo.PublishDirectory))
-                LogError($"Publish directory {publishInfo.PublishDirectory} not exists");
-
-            userInfo = ReadConfigunation<BasicUserInfo>(Program.KeysPath, publishInfo.AuthKeyPath, out string keyPath);
-
-            if (userInfo == default)
-            {
-                LogError($"configuration_path file by path {keyPath} or {publishInfo.AuthKeyPath} not exists");
-            }
-
-            network = new Network(publishInfo.Ip, publishInfo.Port, publishInfo.InputKey, publishInfo.OutputKey, (e) => { if (finished) return; LogError("Server disconnected!!"); StepLocker.Set(); });
-
-            Console.WriteLine($"Try connect to {publishInfo.Ip}:{publishInfo.Port}");
+            Console.WriteLine($"Try connect to {PublishInfo.Ip}:{PublishInfo.Port}");
 
             if (!await network.ConnectAsync())
             {
-                LogError($"Cannot connect");
+                if (OnCannotConnected != null)
+                    OnCannotConnected();
+
+                return false;
             }
 
             Console.WriteLine($"Success connected");
@@ -182,7 +72,10 @@ namespace ServerPublisher.Client
 
             if (result.Result != SignStateEnum.Ok)
             {
-                LogError($"Sign result - {Enum.GetName(result.Result)}, error");
+                if (OnCannotSignIn != null)
+                    OnCannotSignIn(result.Result);
+
+                return false;
             }
 
             if (startDelayToken.IsCancellationRequested)
@@ -208,7 +101,7 @@ namespace ServerPublisher.Client
 
             Console.WriteLine($"Build file list");
 
-            uploadFileList = GetFiles(publishInfo.PublishDirectory);
+            uploadFileList = GetFiles(PublishInfo.PublishDirectory);
 
             remoteFileList = fileList.FileList;
 
@@ -219,6 +112,8 @@ namespace ServerPublisher.Client
             await UploadFiles();
 
             StepLocker.Set();
+
+            return true;
         }
 
         private void Network_OnUploadPartMessage(int len)
@@ -247,7 +142,7 @@ namespace ServerPublisher.Client
             startDelayToken.Cancel();
         }
 
-        private System.Threading.AutoResetEvent StepLocker = new System.Threading.AutoResetEvent(false);
+        private AutoResetEvent StepLocker = new AutoResetEvent(false);
         bool finished = false;
 
         private async Task UploadFiles()
@@ -260,7 +155,7 @@ namespace ServerPublisher.Client
 
                 statsOutput(token);
 
-                if (publishInfo.HasCompression)
+                if (PublishInfo.HasCompression)
                 {
                     var archivePath = Path.GetTempFileName();
 
@@ -304,7 +199,7 @@ namespace ServerPublisher.Client
 
             var result = await network.ProjectFinish(new PublishProjectFinishRequestModel()
             {
-                Args = successArgs.GetArgs().ToDictionary(x => x.Key, x => x.Value)
+                Args = PublishInfo.SuccessArgs
             });
 
             if (result)
@@ -375,7 +270,7 @@ namespace ServerPublisher.Client
 
             //Console.SetCursorPosition(0, Console.CursorTop - 1);
 
-            var t = $"Uploaded {uploadedLen / 1024:N0}/{uploadLen / 1024:N0} kbytes {(1.0 * uploadedLen / uploadLen ):P}. Speed {speed / 1024:N2}(Max: {uploadedMarks.DefaultIfEmpty()?.Max() / 1024:N2}, Avg: {uploadedMarks.DefaultIfEmpty()?.Average() / 1024:N2}, Min: {uploadedMarks.DefaultIfEmpty()?.Min() / 1024:N2}) kbytes/s, {(DateTime.UtcNow - startTime):hh\\:mm\\:ss}";
+            var t = $"Uploaded {uploadedLen / 1024:N0}/{uploadLen / 1024:N0} kbytes {1.0 * uploadedLen / uploadLen:P}. Speed {speed / 1024:N2}(Max: {uploadedMarks.DefaultIfEmpty()?.Max() / 1024:N2}, Avg: {uploadedMarks.DefaultIfEmpty()?.Average() / 1024:N2}, Min: {uploadedMarks.DefaultIfEmpty()?.Min() / 1024:N2}) kbytes/s, {DateTime.UtcNow - startTime:hh\\:mm\\:ss}";
 
             logOutput.ReplaceLog(t, 1);
 
@@ -387,7 +282,7 @@ namespace ServerPublisher.Client
             //outputLocker.Set();
         }
 
-        private int uploadBufferLen => publishInfo.BufferLen;
+        private int uploadBufferLen => PublishInfo.BufferLen;
 
         private SemaphoreSlim uploadBalancing = new SemaphoreSlim(20000);
 
@@ -519,17 +414,17 @@ namespace ServerPublisher.Client
         private async Task<PublishSignInResponseModel> SignIn()
         {
             RSACipher rsa = new RSACipher();
-            rsa.LoadXml(userInfo.RSAPublicKey);
+            rsa.LoadXml(PublishInfo.Identity.RSAPublicKey);
 
-            var temp = Encoding.ASCII.GetBytes(userInfo.Id);
+            var temp = Encoding.ASCII.GetBytes(PublishInfo.Identity.Id);
             temp = rsa.Encode(temp, 0, temp.Length);
 
             var request = new PublishSignInRequestModel()
             {
-                ProjectId = publishInfo.ProjectId,
-                UserId = userInfo.Id,
+                ProjectId = PublishInfo.ProjectId,
+                UserId = PublishInfo.Identity.Id,
                 IdentityKey = temp,
-                UploadMethod = publishInfo.HasCompression ? UploadMethodEnum.SingleArchive : UploadMethodEnum.Default
+                UploadMethod = PublishInfo.HasCompression ? UploadMethodEnum.SingleArchive : UploadMethodEnum.Default
             };
 
             return await network.SignIn(request);

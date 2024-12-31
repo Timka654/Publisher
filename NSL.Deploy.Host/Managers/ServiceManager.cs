@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
-using NSL.ServerOptions.Extensions.Manager;
+﻿using NSL.ServerOptions.Extensions.Manager;
 using ServerPublisher.Server.Info;
 using ServerPublisher.Server.Managers.Storages;
 using System;

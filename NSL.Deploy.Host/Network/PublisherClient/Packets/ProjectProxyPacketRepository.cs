@@ -3,7 +3,6 @@ using ServerPublisher.Shared.Models.RequestModels;
 using ServerPublisher.Shared.Models.ResponseModel;
 using System.Threading.Tasks;
 using ServerPublisher.Server.Info;
-using System.Linq;
 
 namespace ServerPublisher.Server.Network.PublisherClient.Packets
 {

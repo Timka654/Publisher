@@ -63,7 +63,7 @@ namespace ServerPublisher.Server.Network.PublisherClient
             safeLockers.Set();
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             safeLockers.WaitOne(1000);
 
@@ -78,6 +78,7 @@ namespace ServerPublisher.Server.Network.PublisherClient
 
             safeLockers.Set();
 
+            base.Dispose();
         }
     }
 

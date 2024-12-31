@@ -5,7 +5,6 @@ using NSL.SocketServer;
 using System;
 using NSL.BuilderExtensions.TCPServer;
 using NSL.BuilderExtensions.SocketCore;
-using Microsoft.Extensions.Configuration;
 using ServerPublisher.Shared.Enums;
 using NSL.SocketCore.Extensions.Buffer;
 using ServerPublisher.Server.Network.PublisherClient.Packets.PacketRepository;

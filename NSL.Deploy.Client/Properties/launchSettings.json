@@ -6,17 +6,19 @@
     },
     "dev_publish": {
       "commandName": "Project",
-      "commandLineArgs": "publish /project_id:5fab9f9e-2d6c-4db7-9c8a-82c16223e382 /directory:C:\\Users\\relif\\work\\suto\\SweetIslandBackSide\\front\\data /auth_key_path:C:\\Users\\relif\\work\\suto\\SweetIslandBackSide\\front\\keys\\dev_user_65796989-8055-413e-a612-ecb329cfbed5.pubuk /ip:212.47.65.86 /port:6583 /cipher_out_key:\"!{b1HX11R**\" /cipher_in_key:\"!{b1HX11R**\"",
-      "workingDirectory": "C:\\Users\\relif\\work\\suto\\SweetIslandBackSide\\front\\data"
+      "commandLineArgs": "publish /project_id:5fab9f9e-2d6c-4db7-9c8a-82c16223e382 /directory:data /auth_key_path:keys\\dev_user_65796989-8055-413e-a612-ecb329cfbed5.pubuk /ip:212.47.65.86 /port:6583 /cipher_out_key:\"!{b1HX11R**\" /cipher_in_key:\"!{b1HX11R**\""
     },
     "update_test": {
       "commandName": "Project",
-      "commandLineArgs": "--nsl-utl",
-      "workingDirectory": "C:\\Users\\relif\\work\\suto\\SweetIslandBackSide\\front\\data"
+      "commandLineArgs": "--nsl-utl"
     },
     "install_test": {
       "commandName": "Project",
       "commandLineArgs": "install"
+    },
+    "dev_publish_2": {
+      "commandName": "Project",
+      "commandLineArgs": "publish /project_id:7f0ca2a7-9e37-4af1-9d8a-44cd29ccc7de /directory:publish /auth_key_path:my_contabo_49e83e8e-282d-49ac-b7c4-60197090ee18.pubuk /ip:212.47.65.86 /port:6583 /cipher_out_key:\"!{b1HX11R**\" /cipher_in_key:\"!{b1HX11R**\""
     }
   }
 }

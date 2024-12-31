@@ -8,7 +8,6 @@ using ServerPublisher.Shared.Utils;
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Security.AccessControl;
 using System.Threading.Tasks;
 
 namespace NSL.Deploy.Client.Utils.Commands

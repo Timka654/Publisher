@@ -3,9 +3,7 @@ using NSL.Deploy.Client.Utils.Commands;
 using NSL.ServiceUpdater.Shared;
 using NSL.Utils.CommandLine;
 using NSL.Utils.CommandLine.CLHandles;
-using ServerPublisher.Shared.Utils;
 using System;
-using System.Data.SqlTypes;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -111,6 +109,7 @@ namespace ServerPublisher.Client
         static async Task Main(string[] args)
         {
             var appPath = AppDomain.CurrentDomain.BaseDirectory;
+
             try
             {
                 LoadConfiguration(AppDataFolder);
@@ -124,6 +123,8 @@ namespace ServerPublisher.Client
             {
                 Console.WriteLine(ex.ToString());
             }
+
+            await Task.Delay(1_000);
         }
 
         private static string ExpandPath(string path)

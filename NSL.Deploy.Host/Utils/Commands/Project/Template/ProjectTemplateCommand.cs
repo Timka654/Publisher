@@ -1,8 +1,4 @@
-﻿using NSL.Logger;
-using NSL.Utils.CommandLine;
-using NSL.Utils.CommandLine.CLHandles;
-using System.Threading.Tasks;
-using NSL.Utils.CommandLine.CLHandles.Arguments;
+﻿using NSL.Utils.CommandLine.CLHandles;
 
 namespace NSL.Deploy.Host.Utils.Commands.Project.Template
 {

@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using NSL.Cipher.RSA;
 using NSL.Logger;
 using NSL.ServerOptions.Extensions.Manager;
@@ -14,8 +13,6 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace ServerPublisher.Server.Managers
 {

@@ -5,7 +5,6 @@ using NSL.Logger;
 using ServerPublisher.Shared.Utils;
 using Newtonsoft.Json;
 using System.Diagnostics;
-using System.Threading;
 using NSL.Utils.CommandLine;
 using NSL.Utils.CommandLine.CLHandles;
 using System.Threading.Tasks;
@@ -42,15 +41,15 @@ namespace NSL.Deploy.Host.Utils.Commands
 
         [CLArgumentExists("reinit")] bool reInit { get; set; }
 
-        [CLArgumentValue("path")] string path { get; set; }
+        [CLArgumentValue("path")] string? path { get; set; }
 
         [CLArgumentExists("path")] bool havePath { get; set; }
 
-        [CLArgumentValue("service_name", "Deploy Host")] string serviceName { get; set; }
+        [CLArgumentValue("service_name", "Deploy Host")] string? serviceName { get; set; }
 
         [CLArgumentExists("service_name")] bool haveServiceName { get; set; }
 
-        [CLArgumentValue("service_file_name", "deployhost.service")] string serviceFileName { get; set; }
+        [CLArgumentValue("service_file_name", "deployhost.service")] string? serviceFileName { get; set; }
 
         [CLArgumentExists("service_file_name")] bool haveServiceFileName { get; set; }
 

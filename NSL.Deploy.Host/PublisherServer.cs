@@ -1,15 +1,11 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using NSL.Logger;
-using NSL.SocketCore.Utils.Logger;
 using NSL.Utils;
 using ServerPublisher.Server.Info;
 using ServerPublisher.Server.Managers;
 using ServerPublisher.Server.Network.PublisherClient;
 using ServerPublisher.Shared.Utils;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.ServiceProcess;

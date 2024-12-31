@@ -6,13 +6,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="NSL.Generators.BinaryTypeIOGenerator" Version="2024.12.29.2215">
+    <PackageReference Include="NSL.Generators.BinaryTypeIOGenerator" Version="2024.12.31.1457">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="NSL.Generators.BinaryTypeIOGenerator.Shared" Version="2024.12.29.2215" />
-    <PackageReference Include="NSL.SocketCore" Version="2024.12.29.2215" />
-    <PackageReference Include="NSL.Utils" Version="2024.12.29.2215" />
+    <PackageReference Include="NSL.Generators.BinaryTypeIOGenerator.Shared" Version="2024.12.31.1457" />
+    <PackageReference Include="NSL.SocketCore" Version="2024.12.31.1457" />
+    <PackageReference Include="NSL.Utils" Version="2024.12.31.1457" />
   </ItemGroup>
 
 </Project>
