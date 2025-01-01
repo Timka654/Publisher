@@ -46,8 +46,6 @@ namespace NSL.Deploy.Client.Deploy
 
                 if (OnConnectionLost != null)
                     OnConnectionLost();
-
-                StepLocker.Set();
             });
 
             Console.WriteLine($"Try connect to {PublishInfo.Ip}:{PublishInfo.Port}");
@@ -111,8 +109,6 @@ namespace NSL.Deploy.Client.Deploy
 
             await UploadFiles();
 
-            StepLocker.Set();
-
             return true;
         }
 
@@ -142,7 +138,6 @@ namespace NSL.Deploy.Client.Deploy
             startDelayToken.Cancel();
         }
 
-        private AutoResetEvent StepLocker = new AutoResetEvent(false);
         bool finished = false;
 
         private async Task UploadFiles()
@@ -266,31 +261,15 @@ namespace NSL.Deploy.Client.Deploy
 
         private void displayStats(long? speed)
         {
-            //outputLocker.WaitOne();
-
-            //Console.SetCursorPosition(0, Console.CursorTop - 1);
-
             var t = $"Uploaded {uploadedLen / 1024:N0}/{uploadLen / 1024:N0} kbytes {1.0 * uploadedLen / uploadLen:P}. Speed {speed / 1024:N2}(Max: {uploadedMarks.DefaultIfEmpty()?.Max() / 1024:N2}, Avg: {uploadedMarks.DefaultIfEmpty()?.Average() / 1024:N2}, Min: {uploadedMarks.DefaultIfEmpty()?.Min() / 1024:N2}) kbytes/s, {DateTime.UtcNow - startTime:hh\\:mm\\:ss}";
 
             logOutput.ReplaceLog(t, 1);
-
-            //int currentLineCursor = Console.CursorTop;
-            //Console.SetCursorPosition(0, Console.CursorTop);
-            //Console.WriteLine(t.PadRight(consoleWidth - 1));
-            //Console.SetCursorPosition(0, currentLineCursor);
-
-            //outputLocker.Set();
         }
 
         private int uploadBufferLen => PublishInfo.BufferLen;
 
-        private SemaphoreSlim uploadBalancing = new SemaphoreSlim(20000);
-
         private async Task UploadFile(BasicFileInfo file, CancellationToken cancellationToken, bool compressed = false)
         {
-            //if (file.RelativePath != "n1.bin")
-            //    return;
-
             var fsr = await network.FileStart(new PublishProjectFileStartRequestModel()
             {
                 RelativePath = file.RelativePath,
@@ -300,12 +279,6 @@ namespace NSL.Deploy.Client.Deploy
             });
 
             var fs = file.FileInfo.OpenRead();
-
-            //int len = uploadBufferLen;
-
-            //ConcurrentBag<Task> temp = new();
-
-            //SemaphoreSlim locker = new(1);
 
             var cnt = fs.Length / uploadBufferLen;
 
@@ -320,9 +293,6 @@ namespace NSL.Deploy.Client.Deploy
             for (int _i = 0; _i < cnt; _i++)
             {
                 var i = _i;
-                //var t = Task.Run(async () =>
-                //{
-                //    await uploadBalancing.WaitAsync();
 
                 byte[] buf = new byte[uploadBufferLen];
 
@@ -330,22 +300,14 @@ namespace NSL.Deploy.Client.Deploy
 
                 var r = Stopwatch.StartNew();
 
-                //await locker.WaitAsync();
-
                 var offset = fs.Position = i * uploadBufferLen;
 
                 currLen = fs.Read(buf, 0, buf.Length);
 
-                //locker.Release();
-
                 readInvoke.Add(r.ElapsedMilliseconds);
-                //Console.WriteLine($"Read {readInvoke.Min()}/{readInvoke.Average()}/{readInvoke.Max()}");
 
                 if (currLen < buf.Length)
                     Array.Resize(ref buf, currLen);
-
-                //Console.WriteLine($"Uploading {file.RelativePath}: {100.0 / fs.Length * fs.Position}%");
-
 
                 var u = Stopwatch.StartNew();
                 Interlocked.Increment(ref uploadingCount);
@@ -358,33 +320,11 @@ namespace NSL.Deploy.Client.Deploy
                 });
 
                 uploadInvoke.Add(u.ElapsedMilliseconds);
-                //Console.WriteLine($"Upload {uploadInvoke.Min()}/{uploadInvoke.Average()}/{uploadInvoke.Max()}");
-
-                //uploadBalancing.Release();
-
-                //Interlocked.Decrement(ref uploadingCount);
-
-                //Interlocked.Add(ref uploadedLen, currLen);
-
-
-                //}).ContinueWith(t =>
-                //{
-                //    if (!t.IsCompletedSuccessfully)
-                //        return;
-
-                //});
-
-                //waitUploadTasks.Add(t);
-                //tasks.Add(t);
             }
 
             await Task.WhenAll(tasks);
 
-            //Console.WriteLine($"Uploaded file {file.RelativePath}");
-
-            //Task.WhenAll(waitUploadTasks).ContinueWith(t => { 
             fs.Close();
-            //}).RunAsync();
         }
 
         private List<BasicFileInfo> GetFiles(string dir)

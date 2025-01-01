@@ -44,7 +44,7 @@ namespace ServerPublisher.Server.Managers.Storages
 
         private void CreateWatcher()
         {
-            if (PublisherServer.CommandExecutor)
+            if (!PublisherServer.ServiceInvokable)
                 return;
 
             UsersWatch = [ new FSWatcher(DirPath, watchPattern, onCreated: UsersWatch_Changed, onChanged: UsersWatch_Changed, onDeleted: UsersWatch_Deleted)];

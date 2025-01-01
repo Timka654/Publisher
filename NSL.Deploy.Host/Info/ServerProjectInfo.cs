@@ -191,7 +191,7 @@ namespace ServerPublisher.Server.Info
 
         #region Watchers
 
-        private void CreateWatchers()
+        private void CreateWatchers(ProjectsManager projectsManager)
         {
             PubUsersWatch = new FSWatcher(UsersPublicsDirPath, "*.pubuk"
                 , onCreated: PubUsersWatch_Changed
@@ -212,8 +212,8 @@ namespace ServerPublisher.Server.Info
             GlobalScriptsWatch = new FSWatcher(GlobalScriptsDirPath, "*.cs"
                 , onAnyChanges: ScriptsWatch_Changed);
 
-            PublisherServer.ProjectsManager.GlobalBothUserProxyStorage.OnCreated += GlobalBothUserStorage_OnCreated;
-            PublisherServer.ProjectsManager.GlobalProxyUserStorage.OnCreated += GlobalBothUserStorage_OnCreated;
+            projectsManager.GlobalBothUserProxyStorage.OnCreated += GlobalBothUserStorage_OnCreated;
+            projectsManager.GlobalProxyUserStorage.OnCreated += GlobalBothUserStorage_OnCreated;
         }
 
         private void GlobalBothUserStorage_OnCreated(UserInfo obj)
@@ -231,7 +231,7 @@ namespace ServerPublisher.Server.Info
 
         private void SettingsWatch_Deleted(FileSystemEventArgs e)
         {
-            ProjectsManager.Instance.RemoveProject(this);
+            projectsManager.RemoveProject(this);
         }
 
         private void SettingsWatch_Changed(FileSystemEventArgs e)
@@ -589,6 +589,7 @@ namespace ServerPublisher.Server.Info
 
                 return false;
             }
+            context.FinishProcessing = true;
 
             bool successProcess = true;
 
@@ -953,7 +954,7 @@ namespace ServerPublisher.Server.Info
 
 
         private readonly List<UserInfo> users = new List<UserInfo>();
-
+        private readonly ProjectsManager projectsManager;
         public FSWatcher PubUsersWatch;
 
         public FSWatcher UsersWatch;
@@ -1000,12 +1001,12 @@ namespace ServerPublisher.Server.Info
         public string[] IgnorePathsPatters
             => Info.IgnoreFilePaths.Concat(PublisherServer.Configuration.Publisher.ProjectConfiguration.Base.IgnoreFilePaths).ToArray();
 
-        public ServerProjectInfo(string projectPath)
+        public ServerProjectInfo(string projectPath, ProjectsManager projectsManager)
         {
             ProjectDirPath = projectPath;
-
+            this.projectsManager = projectsManager;
             CheckDefault();
-            CreateWatchers();
+            CreateWatchers(projectsManager);
             LoadUsers();
 
             WaitPublishQueue = new();
@@ -1197,6 +1198,8 @@ namespace ServerPublisher.Server.Info
 
         public UploadMethodEnum UploadMethod { get; set; }
 
+        public bool FinishProcessing { get; set; }
+
         public ConcurrentDictionary<Guid, (UploadFileInfo upload, ProjectFileInfo file)> FileMap { get; } = new();
 
         public record UploadFileInfo(long len)
@@ -1218,15 +1221,17 @@ namespace ServerPublisher.Server.Info
         {
             ProjectInfo.ConnectedPublishers.TryRemove(Id, out _);
 
-            foreach (var item in FileMap.Values)
+            if (!FinishProcessing)
             {
-                item.file.ReleaseIO();
+                foreach (var item in FileMap.Values)
+                {
+                    item.file.ReleaseIO();
+                }
+
+                FileMap.Clear();
+                if (TempPath != default)
+                    Directory.Delete(TempPath, true);
             }
-
-            FileMap.Clear();
-
-            if (TempPath != default)
-                Directory.Delete(TempPath, true);
 
             ProjectInfo?.FinishPublishProcess(this, false);
 

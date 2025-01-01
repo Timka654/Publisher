@@ -46,7 +46,7 @@ namespace ServerPublisher.Server
         {
             if (config.ConfigurationVersion == "initial")
                 config.UpdateVersion("update1", c => c
-                .SetValue(() => c.UpdateUrl = "https://pubstorage.mtvworld.net/update/deployserver/")
+                .SetValue(() => c.UpdateUrl = "https://pubstorage.mtvworld.net/update/deployhost/")
                 );
         }
 
@@ -59,10 +59,6 @@ namespace ServerPublisher.Server
             await LoadUpdater(appPath);
 
             PublisherServer.InitializeApp(appPath);
-
-            PublisherServer.CommandExecutor = !Equals(args.ElementAtOrDefault(0), "service");
-
-            ManagerHelper.LoadManagers(Assembly.GetExecutingAssembly(), typeof(ManagerLoadAttribute), (a, t) => { });
 
             await CLHandler<AppCommands>.Instance
                 .ProcessCommand(new NSL.Utils.CommandLine.CommandLineArgsReader(new NSL.Utils.CommandLine.CommandLineArgs()));

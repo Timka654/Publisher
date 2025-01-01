@@ -32,11 +32,7 @@ namespace ServerPublisher.Server
 
         internal static ProjectProxyManager ProjectProxyManager => ProjectProxyManager.Instance;
 
-        public static ServiceManager ServiceManager => ServiceManager.Instance;
-
-        public static ExplorerManager ExplorerManager => ExplorerManager.Instance;
-
-        public static bool CommandExecutor { get; set; } = false;
+        public static bool ServiceInvokable { get; set; } = false;
 
         public static void InitializeApp(string appPath)
         {
@@ -45,12 +41,6 @@ namespace ServerPublisher.Server
             ServerLogger.AppendInfo($"Initialize application");
 
             initializeConfiguration();
-
-            //var loggerFactory = LoggerFactory.Create(b => b.AddConsole());
-
-            //var logger = loggerFactory.CreateLogger("Application");
-
-            //AppLogger = new NSL.Logger.AspNet.ILoggerWrapper(logger);
 
             IOUtils.CreateDirectoryIfNoExists(Path.Combine(appPath, Configuration.Publisher.ProjectConfiguration.Server.GlobalScriptsFolderPath));
         }

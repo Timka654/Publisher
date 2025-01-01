@@ -38,7 +38,7 @@ namespace NSL.Deploy.Host.Utils.Commands.Project
 
             try
             {
-                var proj = new ServerProjectInfo(directory);
+                var proj = new ServerProjectInfo(directory, PublisherServer.ProjectsManager);
 
                 var exists = PublisherServer.ProjectsManager.GetProject(proj);
 

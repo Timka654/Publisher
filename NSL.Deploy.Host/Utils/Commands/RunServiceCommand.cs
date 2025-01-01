@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using ServerPublisher.Server;
 using NSL.Utils.CommandLine.CLHandles.Arguments;
 using System;
+using ServerPublisher.Server.Managers;
 
 namespace NSL.Deploy.Host.Utils.Commands
 {
@@ -22,6 +23,12 @@ namespace NSL.Deploy.Host.Utils.Commands
         public override async Task<CommandReadStateEnum> ProcessCommand(CommandLineArgsReader reader, CLArgumentValues values)
         {
             base.ProcessingAutoArgs(values);
+
+            PublisherServer.ServiceInvokable = true;
+
+            ClearManager.Initialize();
+            ProjectsManager.Initialize();
+
             try
             {
                 await PublisherServer.RunServer();

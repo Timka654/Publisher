@@ -16,10 +16,11 @@ using System.Text;
 
 namespace ServerPublisher.Server.Managers
 {
-    [ManagerLoad(1)]
-    internal class ProjectsManager : ProjectsStorage
+    public class ProjectsManager : ProjectsStorage
     {
-        public static ProjectsManager Instance { get; private set; }
+        static Lazy<ProjectsManager> instance = new(()=> new ProjectsManager());
+
+        public static ProjectsManager Instance => instance.Value;
 
         public static string ProjectsFilePath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, PublisherServer.Configuration.Publisher.ProjectConfiguration.Server.LibraryFilePath);
 
@@ -38,7 +39,16 @@ namespace ServerPublisher.Server.Managers
 
         public ProjectsManager()
         {
-            Instance = this;
+            _initialize();
+        }
+
+        public static void Initialize()
+        {
+            _ = Instance;
+        }
+
+        private void _initialize()
+        { 
             PublisherServer.ServerLogger.AppendInfo("Load projects");
 
             GlobalBothUserPublishStorage = new UserStorage(GlobalBothUsersFolderPath);
@@ -100,7 +110,7 @@ namespace ServerPublisher.Server.Managers
 
         private void LoadWatcher()
         {
-            if (PublisherServer.CommandExecutor)
+            if (!PublisherServer.ServiceInvokable)
                 return;
 
             var fi = new FileInfo(ProjectsFilePath);
@@ -135,7 +145,7 @@ namespace ServerPublisher.Server.Managers
 
                 if (exist == null)
                 {
-                    exist = new ServerProjectInfo(item);
+                    exist = new ServerProjectInfo(item, this);
                     AddProject(exist);
                     PublisherServer.ServerLogger.AppendInfo($"Project {exist.Info.Name}({exist.Info.Id}) appended");
                 }
@@ -187,7 +197,7 @@ namespace ServerPublisher.Server.Managers
                         continue;
                     }
 
-                    var proj = new ServerProjectInfo(item);
+                    var proj = new ServerProjectInfo(item, this);
 
                     AddProject(proj);
 

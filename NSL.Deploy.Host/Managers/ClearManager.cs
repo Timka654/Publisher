@@ -6,12 +6,16 @@ using System.Threading;
 
 namespace ServerPublisher.Server.Managers
 {
-    [ManagerLoad(0)]
     internal class ClearManager
     {
+        static ClearManager instance;
+
         Timer timer;
-        public ClearManager()
+
+        private ClearManager()
         {
+            instance = this;
+
             timer = new Timer((e) =>
             {
                 ClearSummaryLogs();
@@ -19,6 +23,13 @@ namespace ServerPublisher.Server.Managers
             });
 
             timer.Change(TimeSpan.FromMinutes(10), TimeSpan.FromHours(4));
+        }
+
+        public static void Initialize()
+        {
+            if (instance != null)
+                return; 
+            instance = new ClearManager();
         }
 
         private void ClearSummaryLogs()

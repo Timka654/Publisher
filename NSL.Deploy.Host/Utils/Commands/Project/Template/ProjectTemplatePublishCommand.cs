@@ -9,7 +9,7 @@ namespace NSL.Deploy.Host.Utils.Commands.Project.Template
 {
     [CLHandleSelect("projects_template")]
     [CLArgument("root_path", typeof(string), true, Description = "Path to root project directory for produce deploy template content")]
-    [CLArgument("n", typeof(bool), true, Description = "Create new directory if no exists, default = false")]
+    [CLArgument("n", typeof(CLContainsType), true, Description = "Create new directory if no exists, default = false")]
     internal class ProjectTemplatePublishCommand : CLHandler
     {
         public override string Command => "publish";
@@ -23,7 +23,7 @@ namespace NSL.Deploy.Host.Utils.Commands.Project.Template
         [CLArgumentExists("root_path")] private bool RootPathExists { get; set; }
         [CLArgumentValue("root_path")] private string RootPath { get; set; }
 
-        [CLArgumentValue("n")] private bool newDir { get; set; }
+        [CLArgumentExists("n")] private bool newDir { get; set; }
 
         public override async Task<CommandReadStateEnum> ProcessCommand(CommandLineArgsReader reader, CLArgumentValues values)
         {

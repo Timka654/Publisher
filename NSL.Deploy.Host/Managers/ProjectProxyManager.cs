@@ -7,18 +7,15 @@ using NSL.ServerOptions.Extensions.Manager;
 using ServerPublisher.Shared.Enums;
 using ServerPublisher.Shared.Models.RequestModels;
 using ServerPublisher.Shared.Models.ResponseModel;
+using System;
 
 namespace ServerPublisher.Server.Managers
 {
-    [ManagerLoad(0)]
     internal class ProjectProxyManager : ProjectProxyStorage
     {
-        public static ProjectProxyManager Instance { get; private set; }
+        static Lazy<ProjectProxyManager> instance = new(() => new ProjectProxyManager());
 
-        public ProjectProxyManager()
-        {
-            Instance = this;
-        }
+        public static ProjectProxyManager Instance => instance.Value;
 
         internal ProjectProxyEndDownloadResponseModel FinishDownload(PublisherNetworkClient client, ProjectProxyEndDownloadRequestModel request)
         {
