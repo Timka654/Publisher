@@ -38,6 +38,8 @@ namespace NSL.Deploy.Host.Utils.Commands.Project.Template
             if (RootPathExists)
                 basePath = RootPath;
 
+            basePath = Path.GetFullPath(basePath);
+
             var relPath = Path.Combine(basePath, "Publisher");
 
             var templatePath = Path.Combine(relPath, "template.json");

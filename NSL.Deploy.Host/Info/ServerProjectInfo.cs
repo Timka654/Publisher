@@ -1090,7 +1090,7 @@ namespace ServerPublisher.Server.Info
                 PatchClient.SignOutProject(this);
         }
 
-        private static void DirectoryCopy(string sourceDirName, string destDirName, bool copySubDirs)
+        private static void DirectoryCopy(string sourceDirName, string destDirName, bool copySubDirs, bool overwrite = false)
         {
             // Get the subdirectories for the specified directory.
             DirectoryInfo dir = new DirectoryInfo(sourceDirName);
@@ -1112,7 +1112,11 @@ namespace ServerPublisher.Server.Info
             foreach (FileInfo file in files)
             {
                 string tempPath = Path.Combine(destDirName, file.Name).GetNormalizedPath();
-                file.CopyTo(tempPath, false);
+                
+                if (File.Exists(tempPath) && !overwrite)
+                    continue;
+
+                file.CopyTo(tempPath, overwrite);
             }
 
             // If copying subdirectories, copy them and their contents to new location.
