@@ -12,6 +12,17 @@ public partial class PublisherScript
         //}
         //if (success && postProcessingSuccess && context.Executor.AnyFiles())
         //{
+
+        //    var dockerFilesPath = System.IO.Path.Combine(context.Project.ProjectDirPath, "LocalDockerDeploy");
+
+        //    if (System.IO.Directory.Exists(dockerFilesPath))
+        //    {
+        //        foreach (var file in System.IO.Directory.GetFiles(dockerFilesPath))
+        //        {
+        //            System.IO.File.Copy(file, System.IO.Path.Combine(context.Project.ProjectDirPath, System.IO.Path.GetRelativePath//    (dockerFilesPath, file)), true);
+        //        }
+        //    }
+
         //    // create/upload docker image
         //    Utils.CmdExec(context, [
         //        $"cd \"{context.Project.ProjectDirPath}\"",
