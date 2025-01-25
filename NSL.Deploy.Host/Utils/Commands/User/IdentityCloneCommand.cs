@@ -13,7 +13,7 @@ namespace NSL.Deploy.Host.Utils.Commands.User
     [CLHandleSelect("identity")]
     [CLArgument("source_project_id", typeof(string))]
     [CLArgument("only_private", typeof(bool))]
-    [CLArgument("projectId", typeof(string), optional: true)]
+    [CLArgument("project_id", typeof(string), optional: true)]
     [CLArgument("directory", typeof(string), optional: true)]
     [CLArgument("y", typeof(CLContainsType), true)]
     [CLArgument("flags", typeof(string), true)]

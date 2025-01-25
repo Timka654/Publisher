@@ -11,11 +11,11 @@ namespace NSL.Deploy.Host.Utils.Commands.User
 {
     [CLHandleSelect("identity")]
     [CLArgument("name", typeof(string))]
-    [CLArgument("global", typeof(CLContainsType))]
-    [CLArgument("publisher", typeof(CLContainsType))]
-    [CLArgument("proxy", typeof(CLContainsType))]
-    [CLArgument("both", typeof(CLContainsType))]
-    [CLArgument("projectId", typeof(string), optional: true)]
+    [CLArgument("global", typeof(CLContainsType), true)]
+    [CLArgument("publisher", typeof(CLContainsType), true)]
+    [CLArgument("proxy", typeof(CLContainsType), true)]
+    [CLArgument("both", typeof(CLContainsType), true)]
+    [CLArgument("project_id", typeof(string), optional: true)]
     [CLArgument("directory", typeof(string), optional: true)]
     [CLArgument("y", typeof(CLContainsType), true)]
     [CLArgument("flags", typeof(string), true)]
@@ -32,9 +32,13 @@ namespace NSL.Deploy.Host.Utils.Commands.User
 
         [CLArgumentValue("name")] string name { get; set; }
 
+
         [CLArgumentExists("global")] bool global { get; set; }
+
         [CLArgumentExists("proxy")] bool proxy { get; set; }
+
         [CLArgumentExists("both")] bool both { get; set; }
+
         [CLArgumentExists("publisher")] bool publisher { get; set; }
 
         public override async Task<CommandReadStateEnum> ProcessCommand(CommandLineArgsReader reader, CLArgumentValues values)

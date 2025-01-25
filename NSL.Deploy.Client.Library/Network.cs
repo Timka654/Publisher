@@ -10,6 +10,7 @@ using NSL.SocketCore.Extensions.Buffer;
 using ServerPublisher.Shared.Models.ResponseModel;
 using ServerPublisher.Shared.Models.RequestModels;
 using NSL.SocketCore.Utils.Buffer;
+using NSL.Cipher;
 
 namespace ServerPublisher.Client.Library
 {
@@ -42,8 +43,8 @@ namespace ServerPublisher.Client.Library
                 builder.AddPacketHandle(PublisherPacketEnum.ServerLog, (c, d) => OnServerLogMessage(d.ReadString()));
                 builder.AddPacketHandle(PublisherPacketEnum.UploadPartIncrementMessage, (c, d) => OnUploadPartMessage(d.ReadInt32()));
 
-                builder.WithInputCipher(new XRC4Cipher(inputKey));
-                builder.WithOutputCipher(new XRC4Cipher(outputKey));
+                builder.WithInputCipher(new XorCipher(inputKey));
+                builder.WithOutputCipher(new XorCipher(outputKey));
 
                 builder.AddDisconnectHandle(c => disconnectedEvent?.Invoke(c));
 

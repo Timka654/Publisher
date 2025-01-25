@@ -18,7 +18,8 @@
     },
     "dev_publish_2": {
       "commandName": "Project",
-      "commandLineArgs": "publish /project_id:7f0ca2a7-9e37-4af1-9d8a-44cd29ccc7de /directory:publish /auth_key_path:my_contabo_49e83e8e-282d-49ac-b7c4-60197090ee18.pubuk /ip:212.47.65.86 /port:6583 /cipher_out_key:\"!{b1HX11R**\" /cipher_in_key:\"!{b1HX11R**\""
+      "commandLineArgs": "publish /project_id:273a2073-5a66-43aa-ac08-c2e6e7838bb7 /directory:publish /auth_key_path:keys/dev_user2_6618838d-048f-4508-b562-54113783c3e9.pubuk /ip:176.105.203.101 /port:6583 /cipher_out_key:\"!{b1HX11R**\" /cipher_in_key:\"!{b1HX11R**\" /has_compression:false",
+      "workingDirectory": "../develop/client"
     }
   }
 }

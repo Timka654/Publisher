@@ -60,26 +60,8 @@ namespace ServerPublisher.Server.Network.PublisherClient.Packets.PacketRepositor
             return true;
         }
 
-        //public static async Task<bool> PublishProjectUploadFilePartReceive(PublisherNetworkClient client, InputPacketBuffer data, OutputPacketBuffer response)
-        //{
-        //    var context = client.PublishContext;
-
-        //    if (context == null)
-        //        return false;
-
-        //    var request = PublishProjectUploadFileBytesRequestModel.ReadFullFrom(data);
-
-        //    return context.ProjectInfo.UploadPublishFile(context, request);
-        //}
-
         public static void PublishProjectUploadFilePartReceive(PublisherNetworkClient client, InputPacketBuffer data)
         {
-
-            //var p = OutputPacketBuffer.Create(PublisherPacketEnum.UploadPartIncrementMessage);
-            //p.WriteInt32(5242880);
-
-            //client.Send(p);
-            //return;
             var context = client.PublishContext;
 
             if (context == null)

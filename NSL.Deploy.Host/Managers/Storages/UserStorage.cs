@@ -47,7 +47,13 @@ namespace ServerPublisher.Server.Managers.Storages
             if (!PublisherServer.ServiceInvokable)
                 return;
 
-            UsersWatch = [ new FSWatcher(DirPath, watchPattern, onCreated: UsersWatch_Changed, onChanged: UsersWatch_Changed, onDeleted: UsersWatch_Deleted)];
+            UsersWatch = [
+                new FSWatcher(() => new FileSystemWatcher(DirPath, watchPattern)) {
+                    OnCreated = UsersWatch_Changed,
+                    OnChanged = UsersWatch_Changed,
+                    OnDeleted = UsersWatch_Deleted
+                }
+            ];
         }
 
         private void UsersWatch_Deleted(FileSystemEventArgs e)

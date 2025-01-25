@@ -8,7 +8,7 @@ using NSL.Utils.CommandLine.CLHandles.Arguments;
 namespace NSL.Deploy.Host.Utils.Commands.Project
 {
     [CLHandleSelect("projects")]
-    [CLArgument("projectId", typeof(string), optional: true)]
+    [CLArgument("project_id", typeof(string), optional: true)]
     [CLArgument("directory", typeof(string), optional: true)]
     [CLArgument("y", typeof(CLContainsType), true)]
     [CLArgument("flags", typeof(string), true)]

@@ -18,7 +18,7 @@ namespace ServerPublisher.Server.Managers
 {
     public class ProjectsManager : ProjectsStorage
     {
-        static Lazy<ProjectsManager> instance = new(()=> new ProjectsManager());
+        static Lazy<ProjectsManager> instance = new(() => new ProjectsManager());
 
         public static ProjectsManager Instance => instance.Value;
 
@@ -48,7 +48,7 @@ namespace ServerPublisher.Server.Managers
         }
 
         private void _initialize()
-        { 
+        {
             PublisherServer.ServerLogger.AppendInfo("Load projects");
 
             GlobalBothUserPublishStorage = new UserStorage(GlobalBothUsersFolderPath);
@@ -115,10 +115,12 @@ namespace ServerPublisher.Server.Managers
 
             var fi = new FileInfo(ProjectsFilePath);
 
-            projectsLibraryWatcher = new FSWatcher(fi.Directory.GetNormalizedDirectoryPath(), fi.Name
-                , onDeleted: DirectoryWatcher_Deleted
-                , onChanged: DirectoryWatcher_Changed
-                , onCreated: DirectoryWatcher_Changed);
+            projectsLibraryWatcher = new FSWatcher(() => new FileSystemWatcher(fi.Directory.GetNormalizedDirectoryPath(), fi.Name))
+            {
+                OnDeleted = DirectoryWatcher_Deleted,
+                OnChanged = DirectoryWatcher_Changed,
+                OnCreated = DirectoryWatcher_Changed
+            };
         }
 
         private void DirectoryWatcher_Changed(FileSystemEventArgs e)

@@ -193,24 +193,33 @@ namespace ServerPublisher.Server.Info
 
         private void CreateWatchers(ProjectsManager projectsManager)
         {
-            PubUsersWatch = new FSWatcher(UsersPublicsDirPath, "*.pubuk"
-                , onCreated: PubUsersWatch_Changed
-                , onChanged: PubUsersWatch_Changed
-                , onDeleted: PubUsersWatch_Deleted);
+            PubUsersWatch = new FSWatcher(() => new FileSystemWatcher(UsersPublicsDirPath, "*.pubuk"))
+            {
+                OnCreated = PubUsersWatch_Changed,
+                OnChanged = PubUsersWatch_Changed,
+                OnDeleted = PubUsersWatch_Deleted
+            };
 
-            UsersWatch = new FSWatcher(UsersDirPath, "*.priuk"
-                , onChanged: UsersWatch_Changed
-                , onDeleted: UsersWatch_Deleted);
+            UsersWatch = new FSWatcher(() => new FileSystemWatcher(UsersDirPath, "*.priuk"))
+            {
+                OnChanged = UsersWatch_Changed,
+                OnDeleted = UsersWatch_Deleted
 
-            SettingsWatch = new FSWatcher(PublisherDirPath, new FileInfo(ProjectFilePath).Name
-                , onChanged: SettingsWatch_Changed
-                , onDeleted: SettingsWatch_Deleted);
+            };
+            SettingsWatch = new FSWatcher(() => new FileSystemWatcher(PublisherDirPath, new FileInfo(ProjectFilePath).Name))
+            {
+                OnChanged = SettingsWatch_Changed,
+                OnDeleted = SettingsWatch_Deleted
+            };
+            ScriptsWatch = new FSWatcher(() => new FileSystemWatcher(ScriptsDirPath, "*.cs"))
+            {
+                OnAnyChanges = ScriptsWatch_Changed
+            };
 
-            ScriptsWatch = new FSWatcher(ScriptsDirPath, "*.cs"
-                , onAnyChanges: ScriptsWatch_Changed);
-
-            GlobalScriptsWatch = new FSWatcher(GlobalScriptsDirPath, "*.cs"
-                , onAnyChanges: ScriptsWatch_Changed);
+            GlobalScriptsWatch = new FSWatcher(() => new FileSystemWatcher(GlobalScriptsDirPath, "*.cs"))
+            {
+                OnAnyChanges = ScriptsWatch_Changed
+            };
 
             projectsManager.GlobalBothUserProxyStorage.OnCreated += GlobalBothUserStorage_OnCreated;
             projectsManager.GlobalProxyUserStorage.OnCreated += GlobalBothUserStorage_OnCreated;
@@ -1112,7 +1121,7 @@ namespace ServerPublisher.Server.Info
             foreach (FileInfo file in files)
             {
                 string tempPath = Path.Combine(destDirName, file.Name).GetNormalizedPath();
-                
+
                 if (File.Exists(tempPath) && !overwrite)
                     continue;
 

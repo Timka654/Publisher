@@ -12,6 +12,7 @@ using NSL.SocketCore.Utils.Logger;
 using ServerPublisher.Server.Info;
 using NSL.SocketCore.Utils.Exceptions;
 using System.Net;
+using NSL.Cipher;
 
 namespace ServerPublisher.Server.Network.PublisherClient
 {
@@ -86,9 +87,9 @@ namespace ServerPublisher.Server.Network.PublisherClient
                             , pid => Enum.GetName((PublisherPacketEnum)pid)
                             , pid => Enum.GetName((PublisherPacketEnum)pid));
 
-                        builder.WithOutputCipher(new XRC4Cipher(CipherOutputKey));
+                        builder.WithOutputCipher(new XorCipher(CipherOutputKey));
 
-                        builder.WithInputCipher(new XRC4Cipher(CipherInputKey));
+                        builder.WithInputCipher(new XorCipher(CipherInputKey));
 
                         builder.AddDisconnectHandle(client =>
                         {

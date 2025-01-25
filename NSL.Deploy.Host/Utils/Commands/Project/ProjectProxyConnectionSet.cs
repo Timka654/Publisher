@@ -16,7 +16,7 @@ namespace NSL.Deploy.Host.Utils.Commands.Project
     [CLArgument("identity_name", typeof(string))]
     [CLArgument("input_cipher_key", typeof(string), true)]
     [CLArgument("output_cipher_key", typeof(string), true)]
-    [CLArgument("projectId", typeof(string), optional: true)]
+    [CLArgument("project_id", typeof(string), optional: true)]
     [CLArgument("directory", typeof(string), optional: true)]
     [CLArgument("y", typeof(CLContainsType), true)]
     [CLArgument("flags", typeof(string), true)]

@@ -62,6 +62,11 @@ namespace ServerPublisher.Server
 
             await CLHandler<AppCommands>.Instance
                 .ProcessCommand(new NSL.Utils.CommandLine.CommandLineArgsReader(new NSL.Utils.CommandLine.CommandLineArgs()));
+
+#if DEBUG
+
+            Console.ReadKey();
+#endif
         }
     }
 }

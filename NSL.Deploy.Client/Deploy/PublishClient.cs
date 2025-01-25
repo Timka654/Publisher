@@ -288,7 +288,7 @@ namespace NSL.Deploy.Client.Deploy
             ConcurrentBag<long> readInvoke = new ConcurrentBag<long>();
             ConcurrentBag<long> uploadInvoke = new ConcurrentBag<long>();
 
-            ConcurrentBag<Task> tasks = new();
+            //ConcurrentBag<Task> tasks = new();
 
             for (int _i = 0; _i < cnt; _i++)
             {
@@ -322,7 +322,7 @@ namespace NSL.Deploy.Client.Deploy
                 uploadInvoke.Add(u.ElapsedMilliseconds);
             }
 
-            await Task.WhenAll(tasks);
+            //await Task.WhenAll(tasks);
 
             fs.Close();
         }

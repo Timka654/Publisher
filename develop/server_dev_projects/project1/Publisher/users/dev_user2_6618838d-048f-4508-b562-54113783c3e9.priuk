@@ -1,0 +1,6 @@
+{
+  "Id": "6618838d-048f-4508-b562-54113783c3e9",
+  "Name": "dev_user2",
+  "RSAPublicKey": "<RSAKeyValue><Modulus>7Hne6B9+TE9NRMrAVOgV1qvGW/DoZqodsKnuBfKQYH83THyJlQEUolKrTLPKymnkVafg65a68jOWXI1T73oMYwVAyr6wegbmWEiKxu/CHL6RGtFpwGC5zdPU3r4ASP40wak9gPAgDYRq7SzI5q7AwAIojm2u1a2Bxnl3FcmIeyU=</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>",
+  "RSAPrivateKey": "<RSAKeyValue><Modulus>7Hne6B9+TE9NRMrAVOgV1qvGW/DoZqodsKnuBfKQYH83THyJlQEUolKrTLPKymnkVafg65a68jOWXI1T73oMYwVAyr6wegbmWEiKxu/CHL6RGtFpwGC5zdPU3r4ASP40wak9gPAgDYRq7SzI5q7AwAIojm2u1a2Bxnl3FcmIeyU=</Modulus><Exponent>AQAB</Exponent><P>/FXZT9X0ujEam5PnOIAW+LukZ7qAy6pvpOY0263lfe7xNL1RxTcKEi+fcF4mtO8KH2/AsifBS5Tvy5MBF8Z/lw==</P><Q>7+kPGyjhTXyUmM98jGRvEUvK5ESVm3UeaCoqfMKhphF3fwtQW+pkxFnsMNfBREwDm0LhOM1Cc839CVT/s8xyow==</Q><DP>vw3tNRKFcnh9cfCBcHkja37/kv5WSF6qm4sl2HMJQNmqzcjOYekzeeOO79CJtBMNchH2L64EH8sL6PJMMIk9zw==</DP><DQ>IDxqoTWfAHBq7xWCIMMmAWbzvjRQ/fCAw3JW/yiP2+ag7dsxUwhtvcxvZii3eVvVaDlWVfGOqkzVYTmgmiIwjQ==</DQ><InverseQ>O2F9olCttsK3Xiac7W9JVN+5bURHemC6/1L1eHevXlENBmrEKAI3ILUH08DJX+qmMC3mM1XP8xiI35wE0bpb5g==</InverseQ><D>iczi1kUz5ef4UPQNa+zqfPQQXRdfdiP/tSjw6UpWU8UORmX0Dn5YtdaSt9m1fIqEYl23tdFaEzV4k2pP1Sc7+4EFFgxLYhOhwvVZlnIuOlnuN6NBatdmyW9cphha004CXyx59DSPL4yH373j5MWGqUL3NuFewzSNiapZLpRm9mk=</D></RSAKeyValue>"
+}
