@@ -15,6 +15,8 @@ namespace ServerPublisher.Server
 
         #region Updater
 
+        public static string? Version { get; private set; }
+
         static async Task LoadUpdater(string appPath)
         {
             var updateFilePath = Path.Combine(appPath, "data", "nsl_version.json");
@@ -48,6 +50,8 @@ namespace ServerPublisher.Server
                 config.UpdateVersion("update1", c => c
                 .SetValue(() => c.UpdateUrl = "https://pubstorage.mtvworld.net/update/deployhost/")
                 );
+
+            Version = config.CurrentVersion;
         }
 
         #endregion
