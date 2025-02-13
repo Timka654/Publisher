@@ -15,5 +15,7 @@ namespace ServerPublisher.Shared.Models.RequestModels
         public OSTypeEnum OSType { get; set; }
 
         public UploadMethodEnum UploadMethod { get; set; }
+
+        public string OutputRelativePath { get; set; }
     }
 }

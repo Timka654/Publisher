@@ -7,6 +7,30 @@ using System.Security.Cryptography;
 
 namespace ServerPublisher.Shared.Info
 {
+    public class UploadFileInfo : BasicFileInfo
+    {
+        public string OutputRelativePath { get; set; }
+
+        public UploadFileInfo(string outputRelativePath, string relativePath, string dir, FileInfo fi) : base(dir, fi)
+        {
+            if (!string.IsNullOrWhiteSpace(outputRelativePath))
+                OutputRelativePath = Path.Combine(outputRelativePath, relativePath).GetNormalizedPath();
+            else
+                OutputRelativePath = relativePath;
+        }
+
+        public UploadFileInfo(string outputRelativePath, string relativePath)
+        {
+            if (string.IsNullOrWhiteSpace(outputRelativePath))
+            {
+                OutputRelativePath = relativePath;
+                return;
+            }
+
+            OutputRelativePath = Path.Combine(outputRelativePath, relativePath);
+        }
+    }
+
     public class BasicFileInfo
     {
         [NSLBIOInclude("Get")]

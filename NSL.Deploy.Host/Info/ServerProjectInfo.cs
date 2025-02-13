@@ -360,7 +360,7 @@ namespace ServerPublisher.Server.Info
                     var id = startPublishFile(
                          context, new PublishProjectFileStartRequestModel()
                          {
-                             RelativePath = CorrectCompressedPath(context, archiveEntry.FullName),
+                             RelativePath = Path.Combine(context.OutputRelativePath ??string.Empty, CorrectCompressedPath(context, archiveEntry.FullName)).GetNormalizedPath(),
                              CreateTime = archiveEntry.LastWriteTime.DateTime,
                              UpdateTime = archiveEntry.LastWriteTime.DateTime
                          });
@@ -406,9 +406,21 @@ namespace ServerPublisher.Server.Info
         {
             try
             {
+                bool canBackup = initializeBackup();
+
+                if (Info.FullReplace)
+                {
+                    foreach (var item in FileInfoList)
+                    {
+                        if (canBackup)
+                            createFileBackup(item);
+
+                        item.RemoveFile();
+                    }
+                }
+
                 var execContext = new ScriptInvokingContext(this, context);
 
-                initializeBackup();
 
                 var updateFiles = context.GetFiles();
 
@@ -416,7 +428,8 @@ namespace ServerPublisher.Server.Info
                 {
                     context.Log($"-> Start file processing");
 
-                    createFileBackup(item);
+                    if (!Info.FullReplace && canBackup)
+                        createFileBackup(item);
 
                     OnFileStartMethod?.Invoke(execContext, item);
 
@@ -445,12 +458,13 @@ namespace ServerPublisher.Server.Info
 
         private string? currentBackupDirPath = null;
 
-        private void initializeBackup()
+        private bool initializeBackup()
         {
             if (Info.Backup == false)
-                return;
+                return false;
 
             currentBackupDirPath = Path.Combine(ProjectBackupPath, DateTime.UtcNow.ToString("yyyy-MM-ddTHH_mm_ss")).GetNormalizedPath();
+            return true;
         }
 
         private void createFileBackup(ProjectFileInfo file)
@@ -556,7 +570,7 @@ namespace ServerPublisher.Server.Info
 
             new ProjectFileListResponseModel()
             {
-                FileList = FileInfoList.Cast<BasicFileInfo>().ToArray()
+                FileList = Info.FullReplace ? [] : FileInfoList.Cast<BasicFileInfo>().ToArray()
             }
 
             .WriteDefaultTo(packet);
@@ -1210,6 +1224,8 @@ namespace ServerPublisher.Server.Info
         public OSTypeEnum Platform { get; set; }
 
         public UploadMethodEnum UploadMethod { get; set; }
+
+        public string? OutputRelativePath { get; set; }
 
         public bool FinishProcessing { get; set; }
 

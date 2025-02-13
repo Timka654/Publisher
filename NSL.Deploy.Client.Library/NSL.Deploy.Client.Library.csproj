@@ -6,8 +6,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="NSL.BuilderExtensions.TCPClient" Version="2025.1.25.2034" />
-		<PackageReference Include="NSL.Cipher" Version="2025.1.25.2034" />
+		<PackageReference Include="NSL.BuilderExtensions.TCPClient" Version="2025.2.5.1702" />
+		<PackageReference Include="NSL.Cipher" Version="2025.2.5.1702" />
 	</ItemGroup>
 
 	<ItemGroup>

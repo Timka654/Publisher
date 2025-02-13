@@ -149,6 +149,9 @@ namespace NSL.Deploy.Host.Utils.Commands
                 }
             }
 
+            if(!Directory.Exists(dataDirPath))
+                Directory.CreateDirectory(dataDirPath);
+
             if (!reInit)
             {
                 var versionPath = Path.Combine(dataDirPath, "nsl_version.json");

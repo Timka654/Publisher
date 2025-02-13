@@ -8,8 +8,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="NSL.Logger" Version="2025.1.25.2034" />
-	  <PackageReference Include="NSL.ServiceUpdater.Shared" Version="2024.12.31.1632" />
+	  <PackageReference Include="NSL.Logger" Version="2025.2.5.1702" />
+	  <PackageReference Include="NSL.ServiceUpdater.Shared" Version="2025.2.5.1641" />
 	</ItemGroup>
 
 	<ItemGroup>

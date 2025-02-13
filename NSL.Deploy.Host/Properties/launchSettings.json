@@ -2,7 +2,7 @@
   "profiles": {
     "ServerPublisher.Server": {
       "commandName": "Project",
-      "commandLineArgs": "service",
+      "commandLineArgs": "info",
       "workingDirectory": "..\\develop\\server"
     },
     "ServerPublisher.Server.Dev.Test": {

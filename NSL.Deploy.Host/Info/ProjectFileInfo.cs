@@ -69,6 +69,11 @@ namespace ServerPublisher.Server.Info
             WriteIO = null;
         }
 
+        public void RemoveFile()
+        {
+            FileInfo.Delete();
+        }
+
 
         public bool TempRelease(IProcessingFilesContext context)
         {

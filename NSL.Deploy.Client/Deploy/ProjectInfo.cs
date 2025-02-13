@@ -15,6 +15,8 @@ namespace NSL.Deploy.Client.Deploy
 
         public string OutputKey { get; set; }
 
+        public string OutputRelativePath { get; set; }
+
         public BasicUserInfo Identity { get; set; }
 
 

@@ -96,7 +96,8 @@ namespace ServerPublisher.Server.Managers
                     Network = client,
                     Actual = false,
                     Platform = request.OSType,
-                    UploadMethod = request.UploadMethod
+                    UploadMethod = request.UploadMethod,
+                    OutputRelativePath = request.OutputRelativePath
                 };
 
                 proj.StartPublishProcess(client);

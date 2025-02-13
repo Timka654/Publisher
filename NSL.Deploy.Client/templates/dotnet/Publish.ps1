@@ -21,6 +21,9 @@ $publisher_in_cipher_key = "!{b1HX11R**"
 #dotnet publish output folder path
 $publisher_release_dir = "Publish"
 
+#path for upload to server, relative to project root
+$project_relative_output_path = ""
+
 # dotnet project build
 dotnet publish $clientSolutionPath -c Release -o "$publisher_release_dir" /p:PublishProfile="$clientPublishProfileName"
 
@@ -29,7 +32,7 @@ if($LASTEXITCODE -eq 0)
 {
 	Write-Host "build success" -ForegroundColor Green
 		
-	deployclient publish /project_id:$publisher_project_id /directory:$publisher_release_dir /auth_key_path:$publisher_auth_key_file /ip:$publisher_ip /port:$publisher_port /cipher_out_key:$publisher_out_cipher_key /cipher_in_key:$publisher_in_cipher_key /has_compression:true
+	deployclient publish /project_id:$publisher_project_id /directory:$publisher_release_dir /auth_key_path:$publisher_auth_key_file /ip:$publisher_ip /port:$publisher_port /cipher_out_key:$publisher_out_cipher_key /cipher_in_key:$publisher_in_cipher_key /has_compression:true/output_relative_path:"$project_relative_output_path"
 		
 	Write-Host "Finished" -ForegroundColor Green
 }

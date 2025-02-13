@@ -28,7 +28,7 @@ namespace NSL.Deploy.Client.Deploy
 
         private List<string> ignorePatternList = null;
 
-        private List<BasicFileInfo> uploadFileList = null;
+        private List<UploadFileInfo> uploadFileList = null;
 
         private BasicFileInfo[] remoteFileList = null;
 
@@ -99,11 +99,11 @@ namespace NSL.Deploy.Client.Deploy
 
             Console.WriteLine($"Build file list");
 
-            uploadFileList = GetFiles(PublishInfo.PublishDirectory);
+            uploadFileList = GetFiles(PublishInfo.OutputRelativePath, PublishInfo.PublishDirectory);
 
             remoteFileList = fileList.FileList;
 
-            uploadFileList.RemoveAll(x => remoteFileList.Any(r => r.RelativePath == x.RelativePath && r.Hash == x.Hash));
+            uploadFileList.RemoveAll(x => remoteFileList.Any(r => r.RelativePath == x.OutputRelativePath && r.Hash == x.Hash));
 
             Console.WriteLine($"Start upload - {uploadFileList.Count} files");
 
@@ -166,7 +166,7 @@ namespace NSL.Deploy.Client.Deploy
 
                     uploadLen = archiveFileInfo.Length;
 
-                    await UploadFile(new BasicFileInfo(archiveFileInfo.Directory.GetNormalizedDirectoryPath(), archiveFileInfo), token, true);
+                    await UploadFile(new UploadFileInfo(string.Empty, "upload.zip", archiveFileInfo.Directory.GetNormalizedDirectoryPath(), archiveFileInfo), token, true);
                 }
                 else
                 {
@@ -268,11 +268,11 @@ namespace NSL.Deploy.Client.Deploy
 
         private int uploadBufferLen => PublishInfo.BufferLen;
 
-        private async Task UploadFile(BasicFileInfo file, CancellationToken cancellationToken, bool compressed = false)
+        private async Task UploadFile(UploadFileInfo file, CancellationToken cancellationToken, bool compressed = false)
         {
             var fsr = await network.FileStart(new PublishProjectFileStartRequestModel()
             {
-                RelativePath = file.RelativePath,
+                RelativePath = file.OutputRelativePath,
                 Length = file.FileInfo.Length,
                 CreateTime = file.FileInfo.CreationTime,
                 UpdateTime = file.FileInfo.LastWriteTime
@@ -327,19 +327,21 @@ namespace NSL.Deploy.Client.Deploy
             fs.Close();
         }
 
-        private List<BasicFileInfo> GetFiles(string dir)
+        private List<UploadFileInfo> GetFiles(string outputDir, string dir)
         {
-            ConcurrentBag<BasicFileInfo> result = new ConcurrentBag<BasicFileInfo>();
+            ConcurrentBag<UploadFileInfo> result = new ConcurrentBag<UploadFileInfo>();
 
             var fileList = Directory.GetFiles(dir, "*", SearchOption.AllDirectories);
 
             Parallel.ForEach(fileList,
                 item =>
             {
-                if (ignorePatternList.Any(x => Regex.IsMatch(Path.GetRelativePath(dir, item).GetNormalizedPath(), x)))
+                var relPath = Path.GetRelativePath(dir, item).GetNormalizedPath();
+
+                if (ignorePatternList.Any(x => Regex.IsMatch(relPath, x)))
                     return;
 
-                BasicFileInfo temp = new BasicFileInfo(dir, new FileInfo(item));
+                var temp = new UploadFileInfo(outputDir, relPath, dir, new FileInfo(item));
 
                 temp.CalculateHash();
 
@@ -364,7 +366,8 @@ namespace NSL.Deploy.Client.Deploy
                 ProjectId = PublishInfo.ProjectId,
                 UserId = PublishInfo.Identity.Id,
                 IdentityKey = temp,
-                UploadMethod = PublishInfo.HasCompression ? UploadMethodEnum.SingleArchive : UploadMethodEnum.Default
+                UploadMethod = PublishInfo.HasCompression ? UploadMethodEnum.SingleArchive : UploadMethodEnum.Default,
+                OutputRelativePath = PublishInfo.OutputRelativePath
             };
 
             return await network.SignIn(request);

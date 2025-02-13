@@ -15,6 +15,7 @@ namespace NSL.Deploy.Client.Utils.Commands
     [CLHandleSelect("default")]
     [CLArgument("config_path", typeof(string), true)]
     [CLArgument("project_id", typeof(string), true)]
+    [CLArgument("output_relative_path", typeof(string), true)]
     [CLArgument("directory", typeof(string), true)]
     [CLArgument("auth_key_path", typeof(string), true)]
     [CLArgument("cipher_out_key", typeof(string), true)]
@@ -36,6 +37,8 @@ namespace NSL.Deploy.Client.Utils.Commands
         }
 
         [CLArgumentValue("config_path")] private string ConfigurationPath { get; set; }
+
+        [CLArgumentValue("output_relative_path")] private string OutputRelativePath { get; set; }
 
         [CLArgumentValue("project_id")] private string ProjectId { get; set; }
 
@@ -59,6 +62,8 @@ namespace NSL.Deploy.Client.Utils.Commands
 
 
         [CLArgumentExists("config_path")] private bool ConfigurationPathExists { get; set; }
+
+        [CLArgumentExists("output_relative_path")] private bool OutputRelativePathExists { get; set; }
 
         [CLArgumentExists("project_id")] private bool ProjectIdExists { get; set; }
 
@@ -109,6 +114,9 @@ namespace NSL.Deploy.Client.Utils.Commands
 
             if (PublishDirectoryExists)
                 publishInfo.PublishDirectory = PublishDirectory;
+
+            if (OutputRelativePathExists && !string.IsNullOrWhiteSpace(OutputRelativePath))
+                publishInfo.OutputRelativePath = OutputRelativePath;
 
             if (InputKeyExists)
                 publishInfo.InputKey = InputKey;
