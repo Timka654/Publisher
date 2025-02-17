@@ -13,6 +13,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace ServerPublisher.Server.Managers
 {
@@ -66,7 +67,7 @@ namespace ServerPublisher.Server.Managers
             return GlobalProxyUserStorage.GetUser(signName) ?? GlobalBothUserProxyStorage.GetUser(signName);
         }
 
-        internal SignStateEnum SignIn(PublisherNetworkClient client, PublishSignInRequestModel request)
+        internal async Task<SignStateEnum> SignIn(PublisherNetworkClient client, PublishSignInRequestModel request)
         {
             var proj = GetProject(request.ProjectId);
 
@@ -100,7 +101,7 @@ namespace ServerPublisher.Server.Managers
                     OutputRelativePath = request.OutputRelativePath
                 };
 
-                proj.StartPublishProcess(client);
+                await proj.StartPublishProcess(client);
 
 
                 return SignStateEnum.Ok;

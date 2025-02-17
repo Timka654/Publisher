@@ -37,7 +37,7 @@ namespace ServerPublisher.Server.Network.PublisherClient.Packets.PacketRepositor
 
             var project = context?.ProjectInfo;
 
-            response.WriteBool(project?.FinishPublishProcess(context, true, request.Args) == true);
+            response.WriteBool(await project?.FinishPublishProcess(context, true, request.Args) == true);
 
             return true;
         }
@@ -49,7 +49,7 @@ namespace ServerPublisher.Server.Network.PublisherClient.Packets.PacketRepositor
             SignStateEnum result = client.PublishContext != null ? SignStateEnum.Ok : default;
 
             if (result == default)
-                result = PublisherServer.ProjectsManager.SignIn(client, request);
+                result = await PublisherServer.ProjectsManager.SignIn(client, request);
 
             new PublishSignInResponseModel
             {
@@ -60,7 +60,7 @@ namespace ServerPublisher.Server.Network.PublisherClient.Packets.PacketRepositor
             return true;
         }
 
-        public static void PublishProjectUploadFilePartReceive(PublisherNetworkClient client, InputPacketBuffer data)
+        public static async Task PublishProjectUploadFilePartReceive(PublisherNetworkClient client, InputPacketBuffer data)
         {
             var context = client.PublishContext;
 
@@ -73,7 +73,7 @@ namespace ServerPublisher.Server.Network.PublisherClient.Packets.PacketRepositor
             p.WriteInt32(request.Bytes.Length);
 
 
-            context.ProjectInfo.UploadPublishFile(context, request);
+            await context.ProjectInfo.UploadPublishFile(context, request);
 
             client.Send(p);
         }

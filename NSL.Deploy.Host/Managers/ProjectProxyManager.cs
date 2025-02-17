@@ -42,7 +42,7 @@ namespace ServerPublisher.Server.Managers
                 return c;
             });
 
-            client.SignProject(project);
+            await client.SignProject(project);
 
             return client;
         }

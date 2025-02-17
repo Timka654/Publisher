@@ -1,4 +1,6 @@
-﻿using NSL.Generators.FillTypeGenerator.Attributes;
+﻿using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
+using NSL.Generators.FillTypeGenerator.Attributes;
 using ServerPublisher.Shared.Info;
 using System;
 using System.Collections.Generic;
@@ -28,5 +30,8 @@ namespace ServerPublisher.Server.Info
         public ProjectPatchInfo PatchInfo { get; set; }
 
         public Dictionary<string, string> Variables { get; set; } = new Dictionary<string, string>();
+
+        [ConfigurationKeyName("scripts.references"), JsonProperty("scripts.references")]
+        public ConfigurationSettingsInfo__Project_Configuration__Server__ScriptReference[] ScriptsReferences { get; set; } = [];
     }
 }

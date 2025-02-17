@@ -3,6 +3,8 @@ using ServerPublisher.Shared.Info;
 using ServerPublisher.Shared.Utils;
 using System;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace ServerPublisher.Server.Info
 {
@@ -12,7 +14,7 @@ namespace ServerPublisher.Server.Info
 
         public override DateTime LastChanged => FileInfo.LastWriteTimeUtc;
 
-        public FileStream WriteIO { get; set; }
+        private FileStream? WriteIO { get; set; }
 
         public ServerProjectInfo Project { get; set; }
 
@@ -25,17 +27,21 @@ namespace ServerPublisher.Server.Info
         private DateTime? updateTime;
         private FileInfo fi;
 
-        public void StartFile(ProjectPublishContext context, DateTime createTime, DateTime updateTime)
+        private SemaphoreSlim? IOLocker;
+
+        public void StartFile(ProjectPublishContext context, DateTime createTime, DateTime updateTime, string hash)
         {
             fi = new FileInfo(System.IO.Path.Combine(context.TempPath, RelativePath).GetNormalizedPath());
 
             if (fi.Directory.Exists == false)
                 fi.Directory.Create();
 
+            IOLocker = new SemaphoreSlim(1);
             WriteIO = fi.Create();
 
             this.createTime = createTime;
             this.updateTime = updateTime;
+            this.Hash = hash;
 
             context.Log($"starting -> {RelativePath}");
         }
@@ -44,19 +50,52 @@ namespace ServerPublisher.Server.Info
         {
             if (WriteIO == null)
                 return false;
+
             WriteIO.Flush();
             WriteIO.Dispose();
             WriteIO = null;
+
             try { fi.CreationTimeUtc = createTime.Value; } catch (Exception ex) { context.Log($"finishing error -> {ex}"); }
             createTime = null;
+
             try { fi.LastWriteTimeUtc = updateTime.Value; } catch (Exception ex) { context.Log($"finishing error -> {ex}"); }
             updateTime = null;
 
             fi = null;
+            IOLocker?.Dispose();
+            IOLocker = null;
 
             context?.Log($"uploaded -> {RelativePath}");
 
             return true;
+        }
+
+        public async Task WriteAsync(Stream fromStream)
+        {
+            if (WriteIO == null)
+                return;
+
+            await IOLocker.WaitAsync();
+
+            fromStream.CopyTo(WriteIO);
+
+            IOLocker.Release();
+        }
+
+        public async Task WriteAsync(byte[] fromStream, long offset, Func<Task>? threadSafeAction = null)
+        {
+            if (WriteIO == null)
+                return;
+
+            await IOLocker.WaitAsync();
+
+            WriteIO.Position = offset;
+            await WriteIO.WriteAsync(fromStream);
+
+            if (threadSafeAction != null)
+                await threadSafeAction();
+
+            IOLocker.Release();
         }
 
         public void ReleaseIO()
@@ -67,6 +106,8 @@ namespace ServerPublisher.Server.Info
             WriteIO.Flush();
             WriteIO.Dispose();
             WriteIO = null;
+            IOLocker?.Dispose();
+            IOLocker = null;
         }
 
         public void RemoveFile()
@@ -75,7 +116,7 @@ namespace ServerPublisher.Server.Info
         }
 
 
-        public bool TempRelease(IProcessingFilesContext context)
+        public bool TempRelease(IProcessingFilesContext context, bool checkHash)
         {
             var fi = new FileInfo(System.IO.Path.Combine(context.TempPath, RelativePath).GetNormalizedPath());
 
@@ -94,7 +135,15 @@ namespace ServerPublisher.Server.Info
             if (!FileInfo.Exists)
                 FileInfo = new FileInfo(FileInfo.GetNormalizedFilePath());
 
+            var oldHash = Hash;
+            
             CalculateHash();
+
+            if (checkHash && oldHash != Hash)
+            {
+                context.Log($"{RelativePath} hash not match -> {oldHash} != {Hash}");
+                return false;
+            }
 
             context.Log($"{RelativePath} new hash -> {Hash}");
 

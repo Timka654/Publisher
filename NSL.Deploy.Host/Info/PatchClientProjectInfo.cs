@@ -178,7 +178,7 @@ namespace ServerPublisher.Server.Info
 
                     return ex == null || x.Hash != ex.Hash;
                 })
-                .Select(x => new ProjectFileInfo(ProjectDirPath, new FileInfo(Path.Combine(ProjectDirPath, x.RelativePath).GetNormalizedPath()), this))
+                .Select(x => new ProjectFileInfo(ProjectDirPath, new FileInfo(Path.Combine(ProjectDirPath, x.RelativePath).GetNormalizedPath()), this) { Hash = x.Hash})
                 .ToList();
 
             int offset = 0;
@@ -211,7 +211,7 @@ namespace ServerPublisher.Server.Info
             }
 
 
-            EndPatchReceive(context);
+            await EndPatchReceive(context);
         }
 
         private async Task<bool> downloadFile(ProjectDownloadContext context, ProjectFileInfo file)
@@ -256,7 +256,7 @@ namespace ServerPublisher.Server.Info
             return true;
         }
 
-        private void EndPatchReceive(ProjectDownloadContext context)
+        private async Task EndPatchReceive(ProjectDownloadContext context)
         {
             bool success = true;
 
@@ -270,7 +270,7 @@ namespace ServerPublisher.Server.Info
 
             if (success)
             {
-                processTemp(context, ref success);
+                success = await processTemp(context, true);
 
                 if (!success)
                     recoveryBackup();

@@ -41,7 +41,7 @@
 		<PackageReference Include="NSL.Logger" Version="2025.2.5.1702" />
 		<PackageReference Include="NSL.Logger.AspNet" Version="2025.2.5.1702" />
 		<PackageReference Include="NSL.ServerOptions.Extensions.Packet" Version="2025.2.5.1702" />
-		<PackageReference Include="NSL.ServiceUpdater.Shared" Version="2025.2.5.1641" />
+		<PackageReference Include="NSL.ServiceUpdater.Shared" Version="2025.2.17.1804" />
 		<PackageReference Include="NSL.SocketCore.Extensions.Manager" Version="2025.2.5.1702" />
 		<PackageReference Include="NSL.SocketCore.Extensions.Packet" Version="2025.2.5.1702" />
 		<PackageReference Include="NSL.SocketServer" Version="2025.2.5.1702" />

@@ -13,5 +13,7 @@ namespace ServerPublisher.Shared.Models.RequestModels
         public DateTime CreateTime { get; set; }
 
         public DateTime UpdateTime { get; set; }
+
+        public string Hash { get; set; }
     }
 }

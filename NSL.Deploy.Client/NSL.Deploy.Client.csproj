@@ -9,7 +9,7 @@
 
 	<ItemGroup>
 	  <PackageReference Include="NSL.Logger" Version="2025.2.5.1702" />
-	  <PackageReference Include="NSL.ServiceUpdater.Shared" Version="2025.2.5.1641" />
+	  <PackageReference Include="NSL.ServiceUpdater.Shared" Version="2025.2.17.1804" />
 	</ItemGroup>
 
 	<ItemGroup>

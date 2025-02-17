@@ -36,12 +36,72 @@ namespace ServerPublisher.Client
 
             if (await UpdateChecker.CheckStartUpdateBaseScenario())
             {
-                if (await UpdateChecker.CheckUpdate(updateFilePath, configurePostprocessing: configureVersionHandle, exception: exceptionVersionHandle, createIfDoesNotExists: true))
+                if (await UpdateChecker.CheckUpdate(updateFilePath, configurePostprocessing: configureVersionHandle, buildContext: context =>
+                {
+                    context.OnChangeCheckState = state =>
+                    {
+                        switch (state)
+                        {
+                            case UpdaterCheckStepEnum.Start:
+                                Console.WriteLine($"Version checking starting...");
+                                break;
+                            case UpdaterCheckStepEnum.Finish:
+                                Console.WriteLine($"Check version finish");
+                                break;
+                            case UpdaterCheckStepEnum.NewVersionDetected:
+                                Console.WriteLine($"Detected new version");
+                                break;
+                            case UpdaterCheckStepEnum.NotAnyNewVersion:
+                                Console.WriteLine($"No available new version");
+                                break;
+                            case UpdaterCheckStepEnum.FailedCheck:
+                                Console.WriteLine($"Failed check version web request");
+                                break;
+                            default:
+                                break;
+                        }
+
+                        return Task.CompletedTask;
+                    };
+                    context.OnChangeDownloadState = state =>
+                    {
+                        switch (state)
+                        {
+                            case UpdaterDownloadStepEnum.Start:
+                                Console.WriteLine($"Starting download...");
+                                break;
+                            case UpdaterDownloadStepEnum.StartDownloadingUpdater:
+                                Console.WriteLine($"Download updater started...");
+                                break;
+                            case UpdaterDownloadStepEnum.FinishDownloadingUpdater:
+                                Console.WriteLine($"Download updater finished");
+                                break;
+                            case UpdaterDownloadStepEnum.FailedDownloadingUpdater:
+                                Console.WriteLine($"Failed download updater web request");
+                                break;
+                            case UpdaterDownloadStepEnum.StartDownloadingVersion:
+                                Console.WriteLine($"Download new version started...");
+                                break;
+                            case UpdaterDownloadStepEnum.FinishDownloadingVersion:
+                                Console.WriteLine($"Download new version finished");
+                                break;
+                            case UpdaterDownloadStepEnum.FailedDownloadingVersion:
+                                Console.WriteLine($"Failed download version web request");
+                                break;
+                            default:
+                                break;
+                        }
+
+                        return Task.CompletedTask;
+                    };
+                    context.OnException = exceptionVersionHandle;
+                    return Task.CompletedTask;
+                }, createIfDoesNotExists: true))
                 {
                     Console.WriteLine("Update started...");
                 }
                 else
-                    Console.WriteLine("Cannot found any updates... Try again/later");
+                    Console.WriteLine("Cannot found any updates or have errors... Try again/later");
 
                 return;
             }

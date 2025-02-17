@@ -24,6 +24,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis;
 using ServerPublisher.Server.Utils;
 using System.ComponentModel;
+using System.Threading;
 
 namespace ServerPublisher.Server.Info
 {
@@ -120,6 +121,59 @@ namespace ServerPublisher.Server.Info
             .AddReferences(MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location))
             .AddReferences(MetadataReference.CreateFromFile(typeof(IScriptableServerProjectInfo).Assembly.Location))
             .AddReferences(MetadataReference.CreateFromFile(typeof(ServerProjectInfo).Assembly.Location));
+
+            try
+            {
+                foreach (var item in PublisherServer.Configuration.Publisher.ProjectConfiguration.Server.ScriptsReferences.Concat(this.Info.ScriptsReferences))
+                {
+                    if (!string.IsNullOrWhiteSpace(item.DllAbsolutePath))
+                    {
+                        var path = item.DllAbsolutePath;
+
+                        if(File.Exists(path))
+                            throw new Exception($"Cannot absolute path \"{path}\"");
+
+                        compilation = compilation.AddReferences(MetadataReference.CreateFromFile(path));
+                    }
+                    if (!string.IsNullOrWhiteSpace(item.DllProjectPath))
+                    {
+                        var path = Path.Combine(ProjectDirPath, item.DllProjectPath.TrimStart('/', '\\'));
+
+                        if(File.Exists(path))
+                            throw new Exception($"Cannot relative path \"{path}({item.DllProjectPath})\"");
+
+                        compilation = compilation.AddReferences(MetadataReference.CreateFromFile(path));
+                    }
+                    if (!string.IsNullOrWhiteSpace(item.DllRelativePath))
+                    {
+                        var path = Path.Combine(coreDir.FullName, item.DllRelativePath.TrimStart('/', '\\'));
+
+                        if(File.Exists(path))
+                            throw new Exception($"Cannot relative path \"{path}({item.DllRelativePath})\"");
+
+                        compilation = compilation.AddReferences(MetadataReference.CreateFromFile(path));
+                    }
+                    else if (!string.IsNullOrWhiteSpace(item.ImportType))
+                    {
+                        var type = Type.GetType(item.ImportType, true);
+
+                        if (type == null)
+                            throw new Exception($"Cannot found type \"{item.ImportType}\"");
+
+                        compilation = compilation.AddReferences(MetadataReference.CreateFromFile(type.Assembly.Location));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                var err = $"Project ({Info.Id}) references error - {ex}";
+
+                PublisherServer.ServerLogger.AppendError(err);
+
+                BroadcastMessage(err);
+                return false;
+            }
+
 
             if (Directory.Exists(ScriptsDirPath))
                 compilation = compilation.AddSyntaxTrees(Directory.GetFiles(ScriptsDirPath, "*.cs").Select(x => CSharpSyntaxTree.ParseText(scriptUsings + File.ReadAllText(x), path: x)));
@@ -343,7 +397,7 @@ namespace ServerPublisher.Server.Info
             return di.CreateSubdirectory($"{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid()}").GetNormalizedDirectoryPath();
         }
 
-        private void processCompressedTemp(ProjectPublishContext context, ref bool success)
+        private async Task<bool> processCompressedTemp(ProjectPublishContext context)
         {
             var archiveFile = context.FileMap.Values.First();
 
@@ -360,33 +414,34 @@ namespace ServerPublisher.Server.Info
                     var id = startPublishFile(
                          context, new PublishProjectFileStartRequestModel()
                          {
-                             RelativePath = Path.Combine(context.OutputRelativePath ??string.Empty, CorrectCompressedPath(context, archiveEntry.FullName)).GetNormalizedPath(),
+                             RelativePath = Path.Combine(context.OutputRelativePath ?? string.Empty, CorrectCompressedPath(context, archiveEntry.FullName)).GetNormalizedPath(),
                              CreateTime = archiveEntry.LastWriteTime.DateTime,
-                             UpdateTime = archiveEntry.LastWriteTime.DateTime
+                             UpdateTime = archiveEntry.LastWriteTime.DateTime,
                          });
 
                     if (!id.HasValue)
                     {
-                        success = false;
-                        return;
+                        return false;
                     }
 
                     var file = context.FileMap[id.Value];
 
                     using (var ex = archiveEntry.Open())
                     {
-                        ex.CopyTo(file.file.WriteIO);
+                        await file.file.WriteAsync(ex);
                     }
 
                     endPublishFile(context, file.file);
                 }
             }
 
+            await Task.Delay(1_000);
+
             File.Delete(archivePath);
 
             context.Log("-> Finish Archive processing");
 
-            processTemp(context, ref success);
+            return await processTemp(context, false);
         }
 
         private string CorrectCompressedPath(ProjectPublishContext context, string path)
@@ -402,7 +457,7 @@ namespace ServerPublisher.Server.Info
             return path.Replace('/', '\\');
         }
 
-        private void processTemp(IProcessingFilesContext context, ref bool success)
+        private async Task<bool> processTemp(IProcessingFilesContext context, bool checkHash)
         {
             try
             {
@@ -424,32 +479,42 @@ namespace ServerPublisher.Server.Info
 
                 var updateFiles = context.GetFiles();
 
-                foreach (var item in updateFiles)
+                var results = await Task.WhenAll(updateFiles.Select(item => Task.Run(() =>
                 {
-                    context.Log($"-> Start file processing");
+
+
+                    context.Log($"-> Start file processing {item.RelativePath}");
 
                     if (!Info.FullReplace && canBackup)
                         createFileBackup(item);
 
                     OnFileStartMethod?.Invoke(execContext, item);
 
-                    if (item.TempRelease(context) == false)
+                    if (item.TempRelease(context, checkHash) == false)
                     {
                         context.Log($"Error!! cannot move file from temp {item.RelativePath}!!");
-                        success = false;
-                        return;
+
+                        return false;
                     }
 
                     OnFileEndMethod?.Invoke(execContext, item);
 
-                    context.Log($"-> Finish file processing");
-                }
+                    context.Log($"-> Finish file processing {item.RelativePath}");
+
+                    return true;
+                })));
+
+                if (results.Any())
+                    return !results.Any(x => x == false);
+
             }
             catch (Exception ex)
             {
-                success = false;
                 context.Log(ex.ToString(), true);
+                return false;
             }
+
+            return true;
         }
 
         #endregion
@@ -517,24 +582,43 @@ namespace ServerPublisher.Server.Info
 
         private ProjectPublishContext? CurrentPublishContext { get; set; }
 
-        public bool StartPublishProcess(PublisherNetworkClient client)
+        private AutoResetEvent signProcessLocker = new AutoResetEvent(true);
+
+        public async Task<bool> StartPublishProcess(PublisherNetworkClient client)
         {
             var context = client.PublishContext;
 
             if (context.ProjectInfo != this)
                 return false;
 
+            signProcessLocker.WaitOne();
+
             ConnectedPublishers.TryAdd(context.Id, client);
 
             if (!patchLocker.WaitOne(0))
             {
-                if (!WaitPublishQueue.Contains(client))
-                    WaitPublishQueue.Enqueue(client);
+                await Task.Delay(1_000);
 
-                return false;
+                var cpc = CurrentPublishContext;
+
+                if (cpc?.Network?.GetState(true) == true)
+                {
+                    if (!WaitPublishQueue.Contains(client))
+                        WaitPublishQueue.Enqueue(client);
+
+                    return false;
+                }
+                else if (cpc != null && cpc.FinishProcessing != true)
+                {
+                    await FinishPublishProcess(cpc, false, null);
+                }
             }
 
-            return StartPublishProcess(context);
+            var s = StartPublishProcess(context);
+
+            signProcessLocker.Set();
+
+            return s;
         }
 
         public bool StartPublishProcess(ProjectPublishContext context)
@@ -580,13 +664,13 @@ namespace ServerPublisher.Server.Info
             return true;
         }
 
-        private void NextPublisherOrUnlock()
+        private async void NextPublisherOrUnlock()
         {
             while (WaitPublishQueue.TryDequeue(out var newUser))
             {
                 if (newUser?.GetState(true) == true)
                 {
-                    StartPublishProcess(newUser);
+                    await StartPublishProcess(newUser);
                     return;
                 }
             }
@@ -595,16 +679,13 @@ namespace ServerPublisher.Server.Info
         }
 
 
-        public bool FinishPublishProcess(ProjectPublishContext context, bool success, Dictionary<string, string>? args = null)
+        public async Task<bool> FinishPublishProcess(ProjectPublishContext context, bool success, Dictionary<string, string>? args = null)
         {
             if (!context.Actual || CurrentPublishContext != context)
             {
                 context.Actual = false;
                 return false;
             }
-
-            context.Actual = false;
-            CurrentPublishContext = null;
 
             if (!loadScripts())
             {
@@ -620,7 +701,7 @@ namespace ServerPublisher.Server.Info
 
             if (success && successProcess)
             {
-                finishPublishProcessProduceFiles(context, ref successProcess);
+                successProcess = await finishPublishProcessProduceFiles(context);
             }
 
             FinishPublishProcessOnEndScript(context, success, ref successProcess, args);
@@ -642,6 +723,9 @@ namespace ServerPublisher.Server.Info
                 FinishPublishProcessOnEndScript(context, success, ref successProcess, args);
             }
 
+            context.Actual = false;
+            CurrentPublishContext = null;
+
             NextPublisherOrUnlock();
 
             return successProcess;
@@ -652,23 +736,24 @@ namespace ServerPublisher.Server.Info
             try { OnStartMethod?.Invoke(new ScriptInvokingContext(this, context), success, false); } catch (Exception ex) { context.Log(ex.ToString()); successProcess = false; }
         }
 
-        private void finishPublishProcessProduceFiles(ProjectPublishContext context, ref bool successProcess)
+        private async Task<bool> finishPublishProcessProduceFiles(ProjectPublishContext context)
         {
             if (!context.FileMap.Any())
-                return;
+                return true;
 
             try
             {
                 if (context.UploadMethod == UploadMethodEnum.SingleArchive)
-                    processCompressedTemp(context, ref successProcess);
+                    return await processCompressedTemp(context);
                 else
-                    processTemp(context, ref successProcess);
+                    return await processTemp(context, true);
             }
             catch (Exception ex)
             {
                 context.Log(ex.ToString());
-                successProcess = false;
             }
+
+            return false;
         }
 
         private void FinishPublishProcessRecoveryBackup()
@@ -700,12 +785,12 @@ namespace ServerPublisher.Server.Info
 
             while (!context.FileMap.TryAdd(id = Guid.NewGuid(), (new ProjectPublishContext.UploadFileInfo(data.Length), file))) ;
 
-            file.StartFile(context, data.CreateTime, data.UpdateTime);
+            file.StartFile(context, data.CreateTime, data.UpdateTime, data.Hash);
 
             return id;
         }
 
-        internal bool UploadPublishFile(ProjectPublishContext context, PublishProjectUploadFileBytesRequestModel request)
+        internal async Task<bool> UploadPublishFile(ProjectPublishContext context, PublishProjectUploadFileBytesRequestModel request)
         {
             if (!context.Actual || CurrentPublishContext != context)
             {
@@ -716,11 +801,12 @@ namespace ServerPublisher.Server.Info
             if (!context.FileMap.TryGetValue(request.FileId, out var file))
                 return false;
 
-            file.file.WriteIO.Position = request.Offset;
+            await file.file.WriteAsync(request.Bytes, request.Offset, () =>
+            {
+                file.upload.Offset += request.Bytes.Length;
+                return Task.CompletedTask;
+            });
 
-            file.file.WriteIO?.Write(request.Bytes);
-
-            file.upload.Offset += request.Bytes.Length;
 
             request.Bytes = null;
 

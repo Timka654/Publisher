@@ -107,6 +107,24 @@ namespace ServerPublisher.Server.Info
             "ServerPublisher.Server.Info",
             "ServerPublisher.Server.Scripts"
             ];
+
+        [ConfigurationKeyName("scripts.references"), JsonProperty("scripts.references")]
+        public ConfigurationSettingsInfo__Project_Configuration__Server__ScriptReference[] ScriptsReferences { get; set; } = [];
+    }
+
+    public class ConfigurationSettingsInfo__Project_Configuration__Server__ScriptReference
+    {
+        [ConfigurationKeyName("relative_path"), JsonProperty("relative_path")]
+        public string? DllRelativePath { get; set; }
+
+        [ConfigurationKeyName("absolute_path"), JsonProperty("absolute_path")]
+        public string? DllAbsolutePath { get; set; }
+
+        [ConfigurationKeyName("project_path"), JsonProperty("project_path")]
+        public string? DllProjectPath { get; set; }
+
+        [ConfigurationKeyName("import_type"), JsonProperty("import_type")]
+        public string? ImportType { get; set; }
     }
 
     public class ConfigurationSettingsInfo__Project_Configuration__Values

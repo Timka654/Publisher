@@ -26,7 +26,11 @@ namespace ServerPublisher.Server
 
             if (await UpdateChecker.CheckStartUpdateBaseScenario())
             {
-                if (await UpdateChecker.CheckUpdate(updateFilePath, configurePostprocessing: configureVersionHandle, exception: exceptionVersionHandle, createIfDoesNotExists: true))
+                if (await UpdateChecker.CheckUpdate(updateFilePath, configurePostprocessing: configureVersionHandle, buildContext: context =>
+                {
+                    context.OnException = exceptionVersionHandle;
+                    return Task.CompletedTask;
+                }, createIfDoesNotExists: true))
                 {
                     Console.WriteLine("Update started...");
                 }

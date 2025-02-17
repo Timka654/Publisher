@@ -148,10 +148,10 @@ namespace NSL.Deploy.Client.Deploy
 
                 var token = tokenSource.Token;
 
-                statsOutput(token);
-
                 if (PublishInfo.HasCompression)
                 {
+                    Console.WriteLine($"Start compression. Wait...");
+
                     var archivePath = Path.GetTempFileName();
 
                     using (var archive = ZipFile.Open(archivePath, ZipArchiveMode.Update))
@@ -166,19 +166,18 @@ namespace NSL.Deploy.Client.Deploy
 
                     uploadLen = archiveFileInfo.Length;
 
+
+                    statsOutput(token);
+
                     await UploadFile(new UploadFileInfo(string.Empty, "upload.zip", archiveFileInfo.Directory.GetNormalizedDirectoryPath(), archiveFileInfo), token, true);
                 }
                 else
                 {
                     uploadLen = uploadFileList.Sum(x => x.FileInfo.Length);
 
-                    //await Parallel.ForEachAsync(uploadFileList, async (item, token) =>
-                    //{
-                    foreach (var item in uploadFileList)
-                    {
-                        await UploadFile(item, token);
-                    }
-                    //});
+                    statsOutput(token);
+
+                    await Task.WhenAll(uploadFileList.Select(item => UploadFile(item, token)));
                 }
 
 
@@ -241,7 +240,6 @@ namespace NSL.Deploy.Client.Deploy
 
                     if (c != old)
                     {
-
                         speed = (c - old) / i;
 
                         i = 0;
@@ -250,6 +248,7 @@ namespace NSL.Deploy.Client.Deploy
                     }
 
                     displayStats(speed);
+
                 }
             }
             catch (Exception)
@@ -275,7 +274,8 @@ namespace NSL.Deploy.Client.Deploy
                 RelativePath = file.OutputRelativePath,
                 Length = file.FileInfo.Length,
                 CreateTime = file.FileInfo.CreationTime,
-                UpdateTime = file.FileInfo.LastWriteTime
+                UpdateTime = file.FileInfo.LastWriteTime,
+                Hash = file.Hash
             });
 
             var fs = file.FileInfo.OpenRead();
@@ -284,10 +284,10 @@ namespace NSL.Deploy.Client.Deploy
 
             if (fs.Length > cnt * uploadBufferLen)
                 ++cnt;
-
+#if DEBUG
             ConcurrentBag<long> readInvoke = new ConcurrentBag<long>();
             ConcurrentBag<long> uploadInvoke = new ConcurrentBag<long>();
-
+#endif
             //ConcurrentBag<Task> tasks = new();
 
             for (int _i = 0; _i < cnt; _i++)
@@ -298,19 +298,25 @@ namespace NSL.Deploy.Client.Deploy
 
                 int currLen = default;
 
+#if DEBUG
                 var r = Stopwatch.StartNew();
+#endif
 
                 var offset = fs.Position = i * uploadBufferLen;
 
                 currLen = fs.Read(buf, 0, buf.Length);
 
+#if DEBUG
                 readInvoke.Add(r.ElapsedMilliseconds);
+#endif
 
                 if (currLen < buf.Length)
                     Array.Resize(ref buf, currLen);
 
+#if DEBUG
                 var u = Stopwatch.StartNew();
                 Interlocked.Increment(ref uploadingCount);
+#endif
 
                 await network.UploadFilePart(new PublishProjectUploadFileBytesRequestModel()
                 {
@@ -319,10 +325,10 @@ namespace NSL.Deploy.Client.Deploy
                     FileId = fsr.FileId
                 });
 
+#if DEBUG
                 uploadInvoke.Add(u.ElapsedMilliseconds);
+#endif
             }
-
-            //await Task.WhenAll(tasks);
 
             fs.Close();
         }

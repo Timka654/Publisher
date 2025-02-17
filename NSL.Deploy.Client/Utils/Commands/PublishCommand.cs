@@ -6,6 +6,8 @@ using NSL.Utils.CommandLine.CLHandles;
 using NSL.Utils.CommandLine.CLHandles.Arguments;
 using ServerPublisher.Client;
 using ServerPublisher.Shared.Info;
+using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -88,6 +90,27 @@ namespace NSL.Deploy.Client.Utils.Commands
         public override async Task<CommandReadStateEnum> ProcessCommand(CommandLineArgsReader reader, CLArgumentValues values)
         {
             ProcessingAutoArgs(values);
+
+#if DEBUG
+            var di = new DirectoryInfo(PublishDirectory);
+
+            if (!di.Exists)
+                di.Create();
+
+            if (!di.GetFiles().Any())
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    using var f = File.OpenWrite(Path.Combine(di.FullName, $"{i}.bin"));
+                    byte[] temp = new byte[100 * 1024 * 1024];
+
+                    Random.Shared.NextBytes(temp);
+
+                    f.Write(temp);
+                }
+
+            }
+#endif
 
 
             ProjectInfo publishInfo = default;
